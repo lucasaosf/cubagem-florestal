@@ -22,6 +22,9 @@ class CubagemApp {
 
     // Filtros no histórico
     this.historyFilterTipo = 'todos';
+
+    // Sistema de Autenticação e Nuvem
+    this.auth = window.CubagemAuth ? new window.CubagemAuth() : null;
   }
 
   async init() {
@@ -37,6 +40,11 @@ class CubagemApp {
     this.registrarServiceWorker();
     this.configurarMonitorRede();
     this.configurarInstalacaoPWA();
+
+    if (this.auth) {
+      this.auth.init().catch((e) => console.warn('[Auth] Init:', e));
+    }
+
     this.renderizarGridsAlturas();
     this.configurarCalculoTempoReal();
     await this.carregarPreferenciasIniciais();
@@ -81,6 +89,9 @@ class CubagemApp {
       if (navigator.onLine) {
         dot.style.backgroundColor = 'var(--sage)';
         text.textContent = 'Online';
+        if (this.auth && this.auth.user) {
+          this.auth.syncAllWithCloud(true);
+        }
       } else {
         dot.style.backgroundColor = 'var(--gold)';
         text.textContent = '100% Offline';
@@ -542,6 +553,11 @@ class CubagemApp {
 
     try {
       await window.cubagemDB.add(record);
+
+      if (this.auth) {
+        this.auth.syncRecordToCloud(record);
+      }
+
       const vFmt = window.CubagemCalculator.formatNumber(record.volumeGeometrico, record.tipo === 'tora' ? 3 : 2);
       this.showToast(`Cubagem de ${record.tipo.toUpperCase()} salva com sucesso! Volume: ${vFmt} m³`, 'success');
 
@@ -809,8 +825,14 @@ class CubagemApp {
 
   async confirmarExclusao() {
     if (!this.itemToDeleteId) return;
+    const idParaExcluir = this.itemToDeleteId;
     try {
-      await window.cubagemDB.delete(this.itemToDeleteId);
+      await window.cubagemDB.delete(idParaExcluir);
+
+      if (this.auth) {
+        this.auth.deleteRecordFromCloud(idParaExcluir);
+      }
+
       this.fecharModal('modalExcluir');
       this.itemToDeleteId = null;
       this.showToast('Registro excluído com sucesso.', 'warning');

@@ -273,6 +273,27 @@ html, body {
   color: var(--muted);
 }
 
+button.header-chip {
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+button.header-chip:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+  border-color: var(--gold);
+}
+
+button.header-chip:active {
+  transform: scale(0.96);
+}
+
+.header-chip.logged {
+  border-color: var(--gold);
+  color: var(--ink);
+}
+
 .dot-status {
   width: 7px;
   height: 7px;
