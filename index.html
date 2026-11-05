@@ -35,6 +35,9 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body data-active-tab="inicio">
+  <!-- Notificação de Atualização Disponível -->
+  <div class="update-bar" id="updateBar" hidden></div>
+
   <div class="app-container">
     <!-- Header Oficial: Estritamente 'Cubagem Florestal' -->
     <header class="app-header">
@@ -692,6 +695,14 @@
 
         <div class="card">
           <h3 class="card-title">Sobre o Aplicativo</h3>
+          
+          <button class="btn btn-secondary btn-block" style="margin-bottom: 10px;" onclick="app.checkUpdate(true)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            Verificar Atualizações
+          </button>
+
           <button class="btn btn-primary btn-block" id="btnInstallPwa" style="display: none; margin-bottom: 12px;" onclick="app.instalarPwa()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
@@ -702,6 +713,7 @@
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v3.0.0</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>

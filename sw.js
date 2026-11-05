@@ -47,12 +47,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Ativação imediata sob comando
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
+
 // Fetch: Network-First for Navigation, Cache-First with Dynamic Fallback for Assets
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+
+  // version.json nunca é cacheado para detecção imediata de novas versões
+  if (url.origin === location.origin && url.pathname.endsWith('/version.json')) {
+    return;
+  }
 
   // Navegação: Network-first com fallback para cache local do index.html
   if (req.mode === 'navigate') {

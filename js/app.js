@@ -26,6 +26,12 @@ class CubagemApp {
     // Filtros no histórico
     this.historyFilterTipo = 'todos';
 
+    // Versão oficial do aplicativo e gestão de atualizações
+    this.appVersion = '3.0.0';
+    this.swRegistration = null;
+    this.updateChecking = false;
+    this.updateAvailable = null;
+
     // Sistema de Autenticação e Nuvem
     this.auth = window.CubagemAuth ? new window.CubagemAuth() : null;
 
@@ -68,6 +74,10 @@ class CubagemApp {
     }
 
     this.setReportPeriod('mes-atual', false);
+
+    // Verifica por novas atualizações em segundo plano
+    setTimeout(() => this.checkUpdate(false), 2500);
+
     console.log('[Cubagem Florestal] Inicialização concluída!');
   }
 
@@ -83,19 +93,200 @@ class CubagemApp {
 
   registrarServiceWorker() {
     if ('serviceWorker' in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register('./sw.js')
           .then((reg) => {
+            this.swRegistration = reg;
             console.log('[Service Worker] Ativo:', reg.scope);
+
+            // Se já houver um Service Worker novo aguardando para ativar
+            if (reg.waiting) {
+              this.notificarAtualizacaoDisponivel({ nome: 'Atualização pronta' });
+            }
+
+            // Escuta novas instalações de Service Worker
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  this.notificarAtualizacaoDisponivel({ nome: 'Nova versão' });
+                }
+              });
+            });
+
+            // Monitor de visibilidade: verifica atualizações ao reabrir a aba
             document.addEventListener('visibilitychange', () => {
               if (document.visibilityState === 'visible') {
                 reg.update().catch(() => {});
+                this.checkUpdate(false);
               }
             });
           })
           .catch((err) => console.warn('[Service Worker] Falha:', err));
       });
+    }
+  }
+
+  // =========================================================================
+  // SISTEMA DE ATUALIZAÇÃO DO APLICATIVO
+  // =========================================================================
+  compararVersoes(v1, v2) {
+    const p1 = String(v1).replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
+    const p2 = String(v2).replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
+    const len = Math.max(p1.length, p2.length);
+    for (let i = 0; i < len; i++) {
+      const num1 = p1[i] || 0;
+      const num2 = p2[i] || 0;
+      if (num1 > num2) return 1;
+      if (num1 < num2) return -1;
+    }
+    return 0;
+  }
+
+  async checkUpdate(force = false) {
+    if (this.updateChecking) return;
+    this.updateChecking = true;
+
+    // Respeita intervalo de 6 horas se dispensado recentemente (a menos que seja clique forçado)
+    const lastDismissed = localStorage.getItem('cubagem.update_dismissed');
+    if (!force && lastDismissed && (Date.now() - parseInt(lastDismissed, 10) < 6 * 3600000)) {
+      this.updateChecking = false;
+      return;
+    }
+
+    if (!navigator.onLine) {
+      if (force) this.showToast('Sem conexão com a internet para verificar atualizações.', 'warning');
+      this.updateChecking = false;
+      return;
+    }
+
+    if (force) {
+      this.showToast('Verificando se há atualizações...', 'info');
+    }
+
+    try {
+      if (this.swRegistration) {
+        try {
+          await this.swRegistration.update();
+          if (this.swRegistration.waiting) {
+            this.notificarAtualizacaoDisponivel({ nome: 'Nova versão' });
+            this.updateChecking = false;
+            return;
+          }
+        } catch (e) {}
+      }
+
+      const res = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.v && this.compararVersoes(data.v, this.appVersion) > 0) {
+          this.notificarAtualizacaoDisponivel(data);
+          this.updateChecking = false;
+          return;
+        }
+      }
+
+      if (force) {
+        this.showToast(`Você já está usando a versão mais recente (v${this.appVersion}).`, 'info');
+      }
+    } catch (err) {
+      console.warn('[Update] Erro ao verificar atualização:', err);
+      if (force) {
+        this.showToast('Não foi possível verificar atualizações no momento.', 'warning');
+      }
+    } finally {
+      this.updateChecking = false;
+    }
+  }
+
+  notificarAtualizacaoDisponivel(versionData) {
+    this.updateAvailable = versionData || { nome: 'Nova versão' };
+    const bar = document.getElementById('updateBar');
+    if (!bar) return;
+
+    const nome = versionData.nome || versionData.v || 'Nova versão';
+    const novidades = Array.isArray(versionData.novidades) ? versionData.novidades.slice(0, 3) : [];
+    const listaHtml = novidades.length
+      ? `<ul>${novidades.map((n) => `<li>${this.escapeHtml(n)}</li>`).join('')}</ul>`
+      : '';
+
+    bar.innerHTML = `
+      <div class="ub-row">
+        <span class="ub-title">
+          <span>🚀</span> <b>Nova versão ${this.escapeHtml(nome)} disponível</b>
+        </span>
+        <div class="ub-actions">
+          <button type="button" class="ub-btn-later" onclick="app.dispensarAtualizacao()">Depois</button>
+          <button type="button" class="ub-btn-now" onclick="app.aplicarAtualizacao()">Atualizar</button>
+        </div>
+      </div>
+      ${listaHtml}
+    `;
+
+    bar.hidden = false;
+  }
+
+  dispensarAtualizacao() {
+    const bar = document.getElementById('updateBar');
+    if (bar) bar.hidden = true;
+    try {
+      localStorage.setItem('cubagem.update_dismissed', String(Date.now()));
+    } catch (e) {}
+    this.showToast('Atualização adiada. Você pode verificar quando quiser em Configurações.', 'info');
+  }
+
+  async aplicarAtualizacao() {
+    const bar = document.getElementById('updateBar');
+    if (bar) {
+      bar.innerHTML = `
+        <div class="ub-row" style="justify-content: center; padding: 6px 0;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <span>⏳</span> <b>Atualizando aplicativo, aguarde um instante...</b>
+          </span>
+        </div>
+      `;
+    }
+
+    this.showToast('Aplicando nova versão...', 'info');
+
+    const recarregar = () => {
+      window.location.reload(true);
+    };
+
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) return recarregar();
+
+        if (reg.waiting) {
+          reg.waiting.postMessage({ action: 'skipWaiting' });
+        }
+
+        await reg.update();
+        const w = reg.installing || reg.waiting;
+        if (!w || w.state === 'activated') return recarregar();
+
+        w.addEventListener('statechange', () => {
+          if (w.state === 'activated' || w.state === 'redundant') {
+            recarregar();
+          }
+        });
+        setTimeout(recarregar, 3500);
+      } catch (e) {
+        recarregar();
+      }
+    } else {
+      recarregar();
     }
   }
 
