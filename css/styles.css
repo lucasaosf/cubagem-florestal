@@ -1183,30 +1183,51 @@ textarea.form-control {
 }
 
 /* =========================================================================
-   AUTOCOMPLETE DE ESPÉCIES FLORESTAIS
+   AUTOCOMPLETE DE ESPÉCIES FLORESTAIS (BARRA AMPLA E SUGESTÕES VISÍVEIS)
    ========================================================================= */
+.form-group-species-wide {
+  position: relative;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.input-species-wide {
+  width: 100% !important;
+  font-size: 0.96rem !important;
+  padding: 11px 14px !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+}
+
+.input-species-wide:focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 3px rgba(176, 136, 84, 0.25) !important;
+}
+
 .species-autocomplete-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
+  width: 100%;
+  min-width: 100%;
   background: var(--surface);
   border: 1.5px solid var(--gold);
   border-radius: 10px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-  max-height: 280px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  max-height: 320px;
   overflow-y: auto;
   z-index: 1050;
-  margin-top: 4px;
+  margin-top: 5px;
   -webkit-overflow-scrolling: touch;
 }
 
 .species-autocomplete-item {
-  padding: 10px 12px;
+  padding: 12px 14px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -1228,60 +1249,72 @@ textarea.form-control {
 
 .species-pop-name {
   color: var(--ink);
-  font-size: 0.86rem;
+  font-size: 0.92rem;
   font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .species-sub-pop {
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   color: var(--muted);
   font-weight: normal;
   margin-left: 4px;
 }
 
 .species-sc-name {
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   color: var(--gold);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 3px;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .species-family {
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   color: var(--muted);
   font-style: normal;
   margin-left: 4px;
 }
 
 .species-origin-pill {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 12px;
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .species-origin-pill.badge-nativa {
-  background: rgba(143, 163, 127, 0.2);
+  background: rgba(143, 163, 127, 0.22);
   color: var(--sage);
   border: 1px solid var(--sage);
 }
 
 .species-origin-pill.badge-exotica {
-  background: rgba(176, 136, 84, 0.2);
+  background: rgba(176, 136, 84, 0.25);
   color: var(--gold);
   border: 1px solid var(--gold);
 }
 
+:root[data-theme="light"] .species-origin-pill.badge-nativa {
+  background: rgba(46, 125, 50, 0.12);
+  color: #1e5927;
+  border-color: #2e7d32;
+}
+
+:root[data-theme="light"] .species-origin-pill.badge-exotica {
+  background: rgba(176, 136, 84, 0.16);
+  color: #8a5716;
+  border-color: #b08854;
+}
+
 .species-item-empty {
-  padding: 14px;
+  padding: 16px;
   text-align: center;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   line-height: 1.4;
 }

@@ -233,31 +233,31 @@
                 <input type="text" id="cubIdentPilhaTora" class="form-control" placeholder="Nº da plaqueta grampeada por tora (Ex: 0124)" oninput="if(document.getElementById('cubPlaqueta') && !document.getElementById('cubPlaqueta').value) document.getElementById('cubPlaqueta').value = this.value">
                 <span class="helper">Número da plaqueta grampeado por tora</span>
               </div>
+            </div>
 
-              <!-- Campo Origem da Madeira (Para Caminhão e Pilha de Madeira) -->
-              <div class="form-group" id="grpOrigemMadeira">
-                <label class="form-label">Origem da Madeira <span class="required">*</span></label>
-                <div class="toggle-pills-row">
-                  <button type="button" class="btn-toggle-pill active" id="btnOrigemNativa" onclick="app.setOrigemMadeira('Nativa')">
-                    🌿 Nativa
-                  </button>
-                  <button type="button" class="btn-toggle-pill" id="btnOrigemExotica" onclick="app.setOrigemMadeira('Exótica')">
-                    🌲 Exótica
-                  </button>
-                </div>
+            <!-- Campo Origem da Madeira (Para Caminhão e Pilha de Madeira) -->
+            <div class="form-group" id="grpOrigemMadeira">
+              <label class="form-label">Origem da Madeira <span class="required">*</span></label>
+              <div class="toggle-pills-row">
+                <button type="button" class="btn-toggle-pill active" id="btnOrigemNativa" onclick="app.setOrigemMadeira('Nativa')">
+                  🌿 Nativa
+                </button>
+                <button type="button" class="btn-toggle-pill" id="btnOrigemExotica" onclick="app.setOrigemMadeira('Exótica')">
+                  🌲 Exótica
+                </button>
               </div>
+            </div>
 
-              <!-- Campo Espécie Predominante (Para Caminhão e Pilha de Madeira) -->
-              <div class="form-group" id="grpEspecieCamPil">
-                <label class="form-label" for="cubEspecieCamPil">Espécie Florestal Predominante <span class="helper">(Opcional)</span></label>
-                <input type="text" id="cubEspecieCamPil" class="form-control" placeholder="Digite para buscar (ex: eucalipto, pinus, ipe amarelo, pau ferro...)">
-              </div>
+            <!-- Campo Espécie Predominante (Para Caminhão e Pilha de Madeira) - LARGURA AMPLA -->
+            <div class="form-group form-group-species-wide" id="grpEspecieCamPil">
+              <label class="form-label" for="cubEspecieCamPil">Espécie Florestal Predominante <span class="helper">(Opcional - Busca Inteligente)</span></label>
+              <input type="text" id="cubEspecieCamPil" class="form-control input-species-wide" placeholder="Digite para buscar por nome popular ou científico (ex: eucalipto, pinus, ipê, cedro...)">
+            </div>
 
-              <!-- Campo Espécie Geral da Pilha / Lote de Toras -->
-              <div class="form-group" id="grpEspecieGeral" style="display: none;">
-                <label class="form-label" for="cubEspecieGeral">Espécie Florestal da Pilha / Lote</label>
-                <input type="text" id="cubEspecieGeral" class="form-control" placeholder="Ex: Eucalyptus grandis, Pinus taeda, Ipê..." oninput="if(document.getElementById('cubEspecieTora') && !document.getElementById('cubEspecieTora').value) document.getElementById('cubEspecieTora').value = this.value">
-              </div>
+            <!-- Campo Espécie Geral da Pilha / Lote de Toras - LARGURA AMPLA -->
+            <div class="form-group form-group-species-wide" id="grpEspecieGeral" style="display: none;">
+              <label class="form-label" for="cubEspecieGeral">Espécie Florestal da Pilha / Lote <span class="helper">(Busca Inteligente)</span></label>
+              <input type="text" id="cubEspecieGeral" class="form-control input-species-wide" placeholder="Digite para buscar espécie (ex: Eucalyptus grandis, Pinus taeda, Ipê...)" oninput="if(document.getElementById('cubEspecieTora') && !document.getElementById('cubEspecieTora').value) document.getElementById('cubEspecieTora').value = this.value">
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
@@ -363,14 +363,16 @@
               </div>
 
               <div class="form-row">
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 10px;">
                   <label class="form-label" for="cubPlaqueta">Nº da Plaqueta (Identificação Individual) <span class="required">*</span></label>
                   <input type="text" id="cubPlaqueta" class="form-control calc-trigger" placeholder="Ex: 001, PLQ-104" oninput="if(document.getElementById('cubIdentPilhaTora') && !document.getElementById('cubIdentPilhaTora').value) document.getElementById('cubIdentPilhaTora').value = this.value">
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="cubEspecieTora">Espécie da Tora <span class="helper">(Opcional)</span></label>
-                  <input type="text" id="cubEspecieTora" class="form-control" placeholder="Ex: Eucalipto, Pinus, Ipê, Cedro...">
-                </div>
+              </div>
+
+              <!-- Espécie da Tora - LARGURA AMPLA -->
+              <div class="form-group form-group-species-wide" style="margin-bottom: 12px;">
+                <label class="form-label" for="cubEspecieTora">Espécie Florestal da Tora <span class="helper">(Opcional - Busca Inteligente)</span></label>
+                <input type="text" id="cubEspecieTora" class="form-control input-species-wide" placeholder="Digite para buscar espécie (ex: eucalipto, pinus, ipê, cedro...)">
               </div>
 
               <div class="form-row">
