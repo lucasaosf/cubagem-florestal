@@ -9,11 +9,15 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="msapplication-TileColor" content="#0E2515">
+  <meta name="msapplication-TileImage" content="icons/icon-192.png">
 
   <script>
     (function(){
@@ -147,6 +151,10 @@
           <button type="button" class="cover-action-btn ghost" onclick="app.abrirModalGuiaEspecies()">
             🌿 Guia de Espécies do Brasil
           </button>
+
+          <button type="button" class="cover-action-btn install" id="coverBtnInstallApp" onclick="app.iniciarInstalacaoApp()">
+            📲 Instalar Aplicativo
+          </button>
         </div>
 
         <!-- Rodapé da Capa: Criado por Lucas Aøsf até links de suporte -->
@@ -154,7 +162,8 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill">Versão 2.3</span>
+            <span class="cover-ver-pill">Versão 2.4</span>
+            <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalComoUsar()">Como usar</button>
@@ -707,17 +716,25 @@
             Verificar Atualizações
           </button>
 
-          <button class="btn btn-primary btn-block" id="btnInstallPwa" style="display: none; margin-bottom: 12px;" onclick="app.instalarPwa()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-              <line x1="12" y1="18" x2="12.01" y2="18"/>
-            </svg>
-            Instalar Aplicativo no Celular
-          </button>
+          <div id="cfgInstallContainer" style="margin-bottom: 12px;">
+            <button class="btn btn-primary btn-block" id="btnInstallPwa" onclick="app.iniciarInstalacaoApp()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                <line x1="12" y1="18" x2="12.01" y2="18"/>
+              </svg>
+              Instalar Aplicativo no Celular / PC
+            </button>
+            <div id="cfgInstalledBadge" class="installed-badge" style="display: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Aplicativo Instalado no Aparelho (Modo Nativo)
+            </div>
+          </div>
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
-            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.3</span><br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.4</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
@@ -831,26 +848,194 @@
     </div>
   </div>
 
-  <!-- MODAL: NOVIDADES DA VERSÃO 2.3 -->
+  <!-- MODAL: INSTALAÇÃO UNIVERSAL DO APLICATIVO -->
+  <div id="modalInstalarApp" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalInstalarApp')">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📲 Instalar Cubagem Florestal</h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalInstalarApp')">&times;</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
+        
+        <!-- Faixa de detecção automática -->
+        <div class="install-detected-bar" id="installDetectedBar">
+          <span style="font-size: 1.3rem;" id="installDetectedIcon">🌐</span>
+          <div style="flex: 1;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold); font-weight: 700;">Seu Navegador</div>
+            <strong id="installDetectedName">Google Chrome / Android</strong>
+          </div>
+        </div>
+
+        <p style="margin: 0 0 12px; color: var(--muted); font-size: 0.85rem;">
+          Escolha seu navegador abaixo para ver o passo a passo simples de instalação:
+        </p>
+
+        <!-- Abas de Navegadores -->
+        <div class="install-tabs" role="tablist">
+          <button type="button" class="install-tab-btn active" id="tabBtnChrome" onclick="app.trocarAbaInstalacao('chrome')">
+            🌐 Chrome / Edge / Opera
+          </button>
+          <button type="button" class="install-tab-btn" id="tabBtnFirefox" onclick="app.trocarAbaInstalacao('firefox')">
+            🦊 Firefox
+          </button>
+          <button type="button" class="install-tab-btn" id="tabBtnIos" onclick="app.trocarAbaInstalacao('ios')">
+            🍎 iPhone / Safari
+          </button>
+          <button type="button" class="install-tab-btn" id="tabBtnDesktop" onclick="app.trocarAbaInstalacao('desktop')">
+            💻 Computador
+          </button>
+        </div>
+
+        <!-- Conteúdo Aba 1: Chrome / Edge / Opera (Android) -->
+        <div id="installPaneChrome" class="install-pane active">
+          <div class="install-steps-list">
+            <div class="install-step-card">
+              <div class="install-step-num">1</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Abra o menu de opções</div>
+                Toque nos três pontinhos <span class="install-kbd">⋮</span> (ou <span class="install-kbd">⋯</span>) no canto superior ou inferior da tela do navegador.
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">2</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Selecione para Instalar</div>
+                Toque na opção <span class="install-kbd">Instalar aplicativo</span> ou <span class="install-kbd">Adicionar à tela inicial</span>.
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">3</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Confirme a Instalação</div>
+                Toque em <span class="install-kbd">Instalar</span>. O ícone oficial será adicionado à sua tela inicial e funcionará 100% offline!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conteúdo Aba 2: Mozilla Firefox -->
+        <div id="installPaneFirefox" class="install-pane">
+          <div class="install-steps-list">
+            <div class="install-step-card">
+              <div class="install-step-num">1</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Abra o menu do Firefox</div>
+                Toque nos três pontinhos <span class="install-kbd">⋮</span> no canto da tela (em cima ou embaixo na barra do Firefox).
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">2</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Toque em Instalar</div>
+                Toque em <span class="install-kbd">Instalar</span> (ou <span class="install-kbd">Adicionar à tela principal</span>).
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">3</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Confirme</div>
+                Toque em <span class="install-kbd">Adicionar</span>. O Firefox instalará o app como aplicativo autônomo sem barras de navegação!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conteúdo Aba 3: iPhone / iPad (Safari) -->
+        <div id="installPaneIos" class="install-pane">
+          <div class="install-steps-list">
+            <div class="install-step-card">
+              <div class="install-step-num">1</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Abra no Apple Safari</div>
+                Certifique-se de estar usando o navegador <b>Safari</b> no seu iPhone ou iPad.
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">2</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Toque em Compartilhar</div>
+                Toque no botão de <b>Compartilhar</b> <span class="install-kbd">⎋ / 📤</span> (quadrado com seta para cima na barra inferior).
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">3</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Adicionar à Tela de Início</div>
+                Role a folha de opções para baixo e toque em <span class="install-kbd">➕ Adicionar à Tela de Início</span>.
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">4</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Concluir</div>
+                Toque em <span class="install-kbd">Adicionar</span> no canto superior direito. Pronto! O app fica na sua tela de início como aplicativo nativo.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conteúdo Aba 4: Computador (Chrome / Edge / Opera no PC/Mac) -->
+        <div id="installPaneDesktop" class="install-pane">
+          <div class="install-steps-list">
+            <div class="install-step-card">
+              <div class="install-step-num">1</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Ícone na Barra de Endereços</div>
+                No topo do seu navegador (Chrome, Edge ou Opera), olhe no canto direito da barra de endereços (onde fica o link).
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">2</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Clique em Instalar</div>
+                Clique no ícone de instalar <span class="install-kbd">💻 ou ⊕</span> ("Instalar aplicativo").
+              </div>
+            </div>
+            <div class="install-step-card">
+              <div class="install-step-num">3</div>
+              <div class="install-step-body">
+                <div class="install-step-title">Ou pelo Menu</div>
+                Clique no menu <span class="install-kbd">⋮ ou ⋯</span> &gt; <span class="install-kbd">Instalar Cubagem Florestal</span> (no Edge: <i>Aplicativos &gt; Instalar este site como aplicativo</i>).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botão de 1 clique quando disponível nativamente -->
+        <div id="installNativeActionBox" style="display: none; margin-top: 14px;">
+          <button type="button" class="btn btn-primary btn-block" onclick="app.acionarPromptNativo()">
+            ⚡ Instalar em 1 Clique Agora
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.fecharModal('modalInstalarApp')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVIDADES DA VERSÃO 2.4 -->
   <div id="modalNovidades" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalNovidades')">
     <div class="modal-dialog" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">Novidades da Versão 2.3</h3>
+        <h3 class="modal-title">Novidades da Versão 2.4</h3>
         <button class="modal-close-btn" onclick="app.fecharModal('modalNovidades')">&times;</button>
       </div>
       <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
         <ul style="padding-left: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px;">
-          <li>➕ <b>Botão de Adicionar Toras Corrigido</b>: botão '+ Adicionar Esta Tora à Pilha' com alto contraste e destaque visual nos modos Claro e Escuro, além de atalho '+ Adicionar Tora' na lista de toras.</li>
+          <li>🌐 <b>Instalação Universal em Qualquer Navegador</b>: suporte total a Google Chrome, Mozilla Firefox, Microsoft Edge, Opera e Safari (iPhone/iPad).</li>
+          <li>📱 <b>Guia Passo a Passo Inteligente</b>: detecção automática do seu aparelho e navegador para orientar a instalação exata com 1 clique ou atalho nativo.</li>
+          <li>📲 <b>Botão de Instalação na Capa</b>: atalho rápido na tela inicial e nas configurações com identificação de app já instalado.</li>
+          <li>➕ <b>Botão de Adicionar Toras Corrigido</b>: botão '+ Adicionar Esta Tora à Pilha' com alto contraste nos modos Claro e Escuro, e atalho '+ Adicionar Tora' na lista.</li>
           <li>🚀 <b>Abertura Direta de Medição</b>: transição instantânea para o formulário de cubagem ao tocar em '+ Nova medição', ocultando a capa sem rolagem de tela.</li>
-          <li>✨ <b>Emblema Único Oficial</b>: correção da exibição da logo na tela inicial, perfeitamente integrada aos modos Claro e Escuro.</li>
+          <li>✨ <b>Emblema Único Oficial</b>: exibição perfeita da logo na tela inicial integrada aos modos Claro e Escuro.</li>
           <li>🔄 <b>Atualização Direta no App</b>: notificação automática de novas versões e botão para atualizar instantaneamente.</li>
-          <li>🌲 <b>Nova Capa Inicial Oficial</b>: tela inicial minimalista e de alta performance na identidade BIOKURI, com atalhos rápidos e painel de volume total cubado.</li>
           <li>🚛 <b>Cubagem de Caminhões</b>: medição de ambos os lados (Lado Esquerdo e Lado Direito) com alturas ilimitadas e cálculo do fator de empilhamento.</li>
           <li>🪵 <b>Pilhas de Madeira</b>: cubagem simplificada em face única com número dinâmico de alturas na pilha.</li>
-          <li>🌲 <b>Toras Roliças (Fórmula de Smalian)</b>: cálculo rigoroso por tora com diâmetros das pontas, comprimento, número de plaqueta e espécie individual.</li>
-          <li>🌿 <b>Catálogo Botânico Brasileiro</b>: busca inteligente por espécies nativas e exóticas da Flora do Brasil.</li>
-          <li>📍 <b>Coordenadas UTM via GPS</b>: geolocalização e conversão matemática automática WGS84 / SIRGAS2000 direto no campo.</li>
-          <li>📊 <b>Planilhas Excel (.xlsx)</b>: geração automática de relatórios multipasta prontos para órgãos ambientais e auditorias.</li>
+          <li>🌲 <b>Toras Roliças (Smalian)</b>: cálculo rigoroso com plaqueta, espécie e diâmetros de ponta fina e grossa.</li>
+          <li>🌿 <b>Catálogo Botânico Brasileiro</b>: busca inteligente por espécies da Flora do Brasil.</li>
+          <li>📊 <b>Planilhas Excel (.xlsx)</b>: geração automática de relatórios multipasta prontos para órgãos ambientais.</li>
           <li>⚡ <b>100% Offline-First</b>: funciona plenamente sem sinal de internet no campo.</li>
         </ul>
       </div>

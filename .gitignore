@@ -4,3 +4,7 @@ desktop.ini
 *.log
 .vscode/
 .idea/
+App Dev/
+*.docx
+*.pdf
+

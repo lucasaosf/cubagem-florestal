@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v2.3';
+const CACHE_NAME = 'cubagem-florestal-v2.4';
 const CORE = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const CORE = [
   './manifest.webmanifest',
   './css/styles.css',
   './firebase-config.js',
+  './vendor/exceljs.min.js',
   './js/app.js',
   './js/auth.js',
   './js/species-database.js',

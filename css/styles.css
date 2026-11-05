@@ -2055,3 +2055,197 @@ body[data-active-tab="inicio"] .cover-screen,
     opacity: 1;
   }
 }
+
+/* ==========================================================================
+   SISTEMA UNIVERSAL DE INSTALAÇÃO PWA (TODOS OS NAVEGADORES)
+   ========================================================================== */
+.cover-action-btn.install {
+  border-color: var(--gold, #B08854);
+  color: #F3EEE3;
+  background: rgba(22, 53, 31, 0.72);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme="light"] .cover-action-btn.install {
+  background: rgba(242, 235, 221, 0.95);
+  color: #0E2515;
+  border-color: #86602E;
+  box-shadow: 0 4px 14px rgba(14, 37, 21, 0.15);
+}
+
+.cover-action-btn.install:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.cover-action-btn.install.installed {
+  border-color: rgba(69, 137, 72, 0.6);
+  opacity: 0.85;
+}
+
+/* Modal de Instalação Universal */
+.install-detected-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(176, 136, 84, 0.15);
+  border: 1px solid var(--gold, #B08854);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+
+.install-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 14px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.install-tab-btn {
+  flex: 1 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.install-tab-btn:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.install-tab-btn.active {
+  background: var(--gold, #B08854);
+  color: #0E2515;
+  border-color: var(--gold, #B08854);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="light"] .install-tab-btn.active {
+  background: #0E2515;
+  color: #F2EBDD;
+  border-color: #0E2515;
+}
+
+.install-pane {
+  display: none;
+  animation: fadeInPane 0.2s ease;
+}
+
+.install-pane.active {
+  display: block;
+}
+
+@keyframes fadeInPane {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.install-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.install-step-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.install-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gold, #B08854);
+  color: #0E2515;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+:root[data-theme="light"] .install-step-num {
+  background: #0E2515;
+  color: #F2EBDD;
+}
+
+.install-step-body {
+  flex: 1;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.install-step-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+  color: var(--ink);
+}
+
+.install-kbd {
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold, #B08854);
+  white-space: nowrap;
+}
+
+:root[data-theme="light"] .install-kbd {
+  background: rgba(14, 37, 21, 0.08);
+  color: #86602E;
+}
+
+.installed-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: rgba(46, 125, 50, 0.18);
+  border: 1.5px solid #4CAF50;
+  border-radius: 10px;
+  color: #A5D6A7;
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+:root[data-theme="light"] .installed-badge {
+  background: rgba(46, 125, 50, 0.12);
+  color: #1B5E20;
+  border-color: #2E7D32;
+}
+

@@ -26,8 +26,8 @@ class CubagemApp {
     // Filtros no histórico
     this.historyFilterTipo = 'todos';
 
-    // Versão oficial do aplicativo e gestão de atualizações (esquema decimal: 10=1.0, 11=1.1, 20=2.0, 21=2.1, 22=2.2)
-    this.appVersion = '2.2';
+    // Versão oficial do aplicativo e gestão de atualizações (esquema decimal: 10=1.0, 11=1.1, 20=2.0, 21=2.1, 22=2.2, 23=2.3, 24=2.4)
+    this.appVersion = '2.4';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -313,33 +313,199 @@ class CubagemApp {
     updateStatus();
   }
 
+  isAppInstalled() {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+      window.navigator.standalone === true ||
+      document.referrer.includes('android-app://')
+    );
+  }
+
+  detectarNavegadorEPlataforma() {
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+    const isFirefox = /Firefox|FxiOS/i.test(ua);
+    const isOpera = /OPR|Opera|OPT/i.test(ua);
+    const isEdge = /Edg/i.test(ua);
+    const isChrome = /Chrome|CriOS/i.test(ua) && !isEdge && !isOpera;
+    const isSafari = /Safari/i.test(ua) && !isChrome && !isEdge && !isOpera;
+    const isDesktop = !isIOS && !isAndroid;
+
+    if (isIOS) {
+      return {
+        tab: 'ios',
+        nome: 'Apple Safari / iPhone ou iPad',
+        icon: '🍎'
+      };
+    }
+
+    if (isFirefox) {
+      return {
+        tab: 'firefox',
+        nome: isAndroid ? 'Mozilla Firefox (Android)' : 'Mozilla Firefox (Computador)',
+        icon: '🦊'
+      };
+    }
+
+    if (isDesktop) {
+      let bName = 'Computador';
+      if (isEdge) bName = 'Microsoft Edge (Computador)';
+      else if (isOpera) bName = 'Opera (Computador)';
+      else if (isChrome) bName = 'Google Chrome (Computador)';
+      else if (isSafari) bName = 'Apple Safari (Mac)';
+      return {
+        tab: 'desktop',
+        nome: bName,
+        icon: '💻'
+      };
+    }
+
+    let mob = 'Android';
+    if (isOpera) mob = 'Opera (Android)';
+    else if (isEdge) mob = 'Microsoft Edge (Android)';
+    else if (isChrome) mob = 'Google Chrome (Android)';
+    else mob = 'Navegador Web (Android)';
+
+    return {
+      tab: 'chrome',
+      nome: mob,
+      icon: '🌐'
+    };
+  }
+
+  atualizarUIInstalacao() {
+    const installed = this.isAppInstalled();
+    const coverBtn = document.getElementById('coverBtnInstallApp');
+    const coverFooterBtn = document.getElementById('coverFooterInstallBtn');
+    const cfgBtn = document.getElementById('btnInstallPwa');
+    const cfgBadge = document.getElementById('cfgInstalledBadge');
+
+    if (installed) {
+      if (coverBtn) {
+        coverBtn.innerHTML = '✅ Aplicativo Instalado';
+        coverBtn.classList.add('installed');
+        coverBtn.title = 'Aplicativo operando em modo instalado nativo';
+      }
+      if (coverFooterBtn) {
+        coverFooterBtn.innerHTML = '✅ App Instalado';
+      }
+      if (cfgBtn) cfgBtn.style.display = 'none';
+      if (cfgBadge) cfgBadge.style.display = 'flex';
+    } else {
+      if (coverBtn) {
+        coverBtn.innerHTML = '📲 Instalar Aplicativo';
+        coverBtn.classList.remove('installed');
+      }
+      if (coverFooterBtn) {
+        coverFooterBtn.innerHTML = '📲 Instalar App';
+      }
+      if (cfgBtn) cfgBtn.style.display = 'flex';
+      if (cfgBadge) cfgBadge.style.display = 'none';
+    }
+  }
+
   configurarInstalacaoPWA() {
+    this.atualizarUIInstalacao();
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       this.deferredInstallPrompt = e;
-      const btn = document.getElementById('btnInstallPwa');
-      if (btn) btn.style.display = 'block';
+      this.atualizarUIInstalacao();
+
+      const nativeBox = document.getElementById('installNativeActionBox');
+      if (nativeBox) nativeBox.style.display = 'block';
     });
 
     window.addEventListener('appinstalled', () => {
       this.deferredInstallPrompt = null;
-      const btn = document.getElementById('btnInstallPwa');
-      if (btn) btn.style.display = 'none';
-      this.showToast('Aplicativo instalado no celular com sucesso!', 'success');
+      this.atualizarUIInstalacao();
+      this.fecharModal('modalInstalarApp');
+      this.showToast('Cubagem Florestal instalado com sucesso no aparelho!', 'success');
+    });
+
+    try {
+      const mm = window.matchMedia('(display-mode: standalone)');
+      if (mm && typeof mm.addEventListener === 'function') {
+        mm.addEventListener('change', () => this.atualizarUIInstalacao());
+      }
+    } catch (e) {}
+  }
+
+  async iniciarInstalacaoApp() {
+    if (this.isAppInstalled()) {
+      this.showToast('Você já está usando o aplicativo instalado no aparelho! ✅', 'info');
+      return;
+    }
+
+    if (this.deferredInstallPrompt) {
+      try {
+        this.deferredInstallPrompt.prompt();
+        const choice = await this.deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          this.showToast('Instalando aplicativo...', 'success');
+          this.deferredInstallPrompt = null;
+          this.atualizarUIInstalacao();
+          return;
+        }
+      } catch (err) {
+        console.warn('[PWA] Prompt falhou ou foi descartado:', err);
+      }
+    }
+
+    this.abrirModalInstalarApp();
+  }
+
+  abrirModalInstalarApp(tabEspecifica = null) {
+    const info = this.detectarNavegadorEPlataforma();
+    const iconeEl = document.getElementById('installDetectedIcon');
+    const nomeEl = document.getElementById('installDetectedName');
+    const nativeBox = document.getElementById('installNativeActionBox');
+
+    if (iconeEl) iconeEl.textContent = info.icon;
+    if (nomeEl) nomeEl.textContent = info.nome;
+
+    if (nativeBox) {
+      nativeBox.style.display = this.deferredInstallPrompt ? 'block' : 'none';
+    }
+
+    const tabAlvo = tabEspecifica || info.tab;
+    this.trocarAbaInstalacao(tabAlvo);
+    this.abrirModal('modalInstalarApp');
+  }
+
+  trocarAbaInstalacao(tabId) {
+    const tabs = ['chrome', 'firefox', 'ios', 'desktop'];
+    tabs.forEach((t) => {
+      const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      const pane = document.getElementById(`installPane${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      if (btn) btn.classList.toggle('active', t === tabId);
+      if (pane) pane.classList.toggle('active', t === tabId);
     });
   }
 
-  async instalarPwa() {
+  async acionarPromptNativo() {
     if (this.deferredInstallPrompt) {
-      this.deferredInstallPrompt.prompt();
-      const choice = await this.deferredInstallPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        this.showToast('Instalando aplicativo...', 'success');
+      try {
+        this.deferredInstallPrompt.prompt();
+        const choice = await this.deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          this.showToast('Instalando aplicativo...', 'success');
+        }
+        this.deferredInstallPrompt = null;
+        this.atualizarUIInstalacao();
+        this.fecharModal('modalInstalarApp');
+      } catch (err) {
+        console.warn('[PWA] Erro ao acionar prompt nativo:', err);
       }
-      this.deferredInstallPrompt = null;
-      const btn = document.getElementById('btnInstallPwa');
-      if (btn) btn.style.display = 'none';
+    } else {
+      this.showToast('Siga os passos acima do seu navegador para instalar.', 'info');
     }
+  }
+
+  instalarPwa() {
+    this.iniciarInstalacaoApp();
   }
 
   async navigate(viewId) {
