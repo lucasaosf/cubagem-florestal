@@ -94,6 +94,9 @@ class CubagemAuth {
     const chipText = document.getElementById('authHeaderText');
     const dot = document.getElementById('authHeaderDot');
 
+    const coverAvatar = document.getElementById('coverAvatarContainer');
+    const coverBtn = document.getElementById('coverAcctBtn');
+
     if (this.user) {
       const nome = this.user.displayName || this.user.email.split('@')[0];
       if (chipText) chipText.textContent = nome.length > 12 ? nome.slice(0, 10) + '..' : nome;
@@ -105,12 +108,38 @@ class CubagemAuth {
         chipBtn.classList.add('logged');
         chipBtn.setAttribute('title', `Conectado como ${this.user.email}`);
       }
+
+      if (coverBtn) {
+        coverBtn.classList.add('logged');
+        coverBtn.setAttribute('title', `Conectado como ${this.user.email}`);
+      }
+      if (coverAvatar) {
+        if (this.user.photoURL) {
+          coverAvatar.innerHTML = `<img src="${this.user.photoURL}" alt="Perfil" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`;
+        } else {
+          const inicial = (this.user.displayName || this.user.email || 'U').charAt(0).toUpperCase();
+          coverAvatar.innerHTML = `<span style="font-weight:700;color:var(--gold);font-size:15px;">${inicial}</span>`;
+        }
+      }
     } else {
       if (chipText) chipText.textContent = 'Entrar';
       if (dot) dot.style.display = 'none';
       if (chipBtn) {
         chipBtn.classList.remove('logged');
         chipBtn.setAttribute('title', 'Entrar com Google ou E-mail');
+      }
+
+      if (coverBtn) {
+        coverBtn.classList.remove('logged');
+        coverBtn.setAttribute('title', 'Entrar com Google ou E-mail');
+      }
+      if (coverAvatar) {
+        coverAvatar.innerHTML = `
+          <svg class="ico-avatar" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>
+          </svg>
+        `;
       }
     }
   }

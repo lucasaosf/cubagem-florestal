@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v2.13.0';
+const CACHE_NAME = 'cubagem-florestal-v2.14.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -20,7 +20,9 @@ const ASSETS_TO_CACHE = [
   './icons/logo-verde.png',
   './icons/logo-planilha.png',
   './icons/biokuri-light.png',
-  './icons/biokuri-dark.png'
+  './icons/biokuri-dark.png',
+  './icons/capa.jpg',
+  './icons/capa-clara.jpg'
 ];
 
 // Install: Cache all static resources

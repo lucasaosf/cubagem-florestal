@@ -74,76 +74,91 @@
     <main class="app-content">
 
       <!-- ========================================== -->
-      <!-- SEÇÃO 1: INÍCIO (DASHBOARD)               -->
+      <!-- SEÇÃO 1: CAPA INICIAL (COVER SCREEN)      -->
       <!-- ========================================== -->
-      <section id="view-inicio" class="view-section active">
-        <div class="section-header">
-          <h2 class="section-title">Painel Operacional</h2>
-          <p class="section-desc">Visão consolidada de caminhões, pilhas e toras cubados no dispositivo.</p>
-        </div>
-
-        <!-- Grade de Indicadores (KPIs) -->
-        <div class="kpi-grid">
-          <div class="kpi-card highlight">
-            <span class="kpi-label">Volume Acumulado</span>
-            <div class="kpi-value" id="kpiTotalVolume">0,00 <span class="kpi-unit">m³</span></div>
-            <span class="kpi-sub" id="kpiVolumeDetail">0 cam • 0 pilhas • 0 toras</span>
-          </div>
-
-          <div class="kpi-card">
-            <span class="kpi-label">Total de Cargas</span>
-            <div class="kpi-value" id="kpiTotalCaminhoes">0</div>
-            <span class="kpi-sub">Caminhões registrados</span>
-          </div>
-
-          <div class="kpi-card">
-            <span class="kpi-label">Pilhas no Pátio</span>
-            <div class="kpi-value" id="kpiTotalPilhas">0</div>
-            <span class="kpi-sub" id="kpiPilhasVolume">0,00 m³ estéreo</span>
-          </div>
-
-          <div class="kpi-card">
-            <span class="kpi-label">Toras Roliças</span>
-            <div class="kpi-value" id="kpiTotalToras">0</div>
-            <span class="kpi-sub" id="kpiTorasVolume">0,00 m³ Smalian</span>
-          </div>
-        </div>
-
-        <!-- Ações Rápidas -->
-        <div class="quick-actions">
-          <button class="action-card-btn primary" onclick="app.navigate('nova')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            <span class="action-card-title">Nova Medição</span>
-            <span class="action-card-desc">Caminhão, Pilha ou Tora</span>
+      <section id="view-inicio" class="view-section active cover-screen">
+        
+        <!-- Topo: Modo Claro/Escuro na esquerda e Perfil na direita -->
+        <div class="cover-top">
+          <button type="button" class="cover-top-btn" id="coverThemeBtn" onclick="app.toggleTheme()" aria-label="Trocar modo claro ou escuro" title="Alternar Modo Claro / Escuro">
+            <span class="t-sun" aria-hidden="true">☀️</span>
+            <span class="t-moon" aria-hidden="true">🌙</span>
           </button>
-
-          <button class="action-card-btn" onclick="app.navigate('relatorios')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            <span class="action-card-title">Gerar Excel (.xlsx)</span>
-            <span class="action-card-desc">Exportar relatório completo</span>
+          
+          <button type="button" class="cover-top-btn cover-avatar-btn" id="coverAcctBtn" onclick="app.auth.abrirModalAuth()" aria-label="Conta e perfil" title="Minha Conta / Login">
+            <div id="coverAvatarContainer" class="cover-avatar-container">
+              <svg class="ico-avatar" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="8" r="4"/>
+                <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>
+              </svg>
+            </div>
           </button>
         </div>
 
-        <!-- Últimos Registros Cadastrados -->
-        <div class="card">
-          <div class="card-title">
-            <span>Últimas Cubagens Realizadas</span>
-            <button class="btn-action-small" onclick="app.navigate('historico')">Ver Todas</button>
+        <!-- Centro: Logo e Nome da Empresa no topo -->
+        <div class="cover-brand-block">
+          <img src="icons/logo-creme.png" alt="BIOKURI" class="cover-emblem-img logo-dark">
+          <img src="icons/logo-verde.png" alt="BIOKURI" class="cover-emblem-img logo-light">
+          
+          <div class="cover-brand-title">
+            <span class="bio">BIO</span><span class="kuri">KURI</span>
           </div>
-          <div id="dashboardRecentList"></div>
+          <div class="cover-brand-subtitle">
+            Pesquisa e Soluções Ambientais
+          </div>
+          <hr class="cover-divider-rule">
         </div>
 
-        <div class="author-credit-footer">
-          Desenvolvido por <b>Lucas Aøsf</b><br>
-          BIOKURI • Pesquisa e Soluções Ambientais • CRBio 127233/01-D
+        <!-- Título do App no Meio -->
+        <div class="cover-app-title-group">
+          <h1 class="cover-app-heading">Cubagem<br>Florestal</h1>
+          <p class="cover-app-tagline">DENDROMETRIA · CAMINHÕES · PILHAS · TORAS</p>
         </div>
+
+        <!-- Painel mostrando APENAS o total cubado -->
+        <div class="cover-stat-panel">
+          <span class="cover-stat-badge">TOTAL CUBADO NO APARELHO</span>
+          <div class="cover-stat-main">
+            <span class="cover-stat-num" id="coverTotalCubado">0,00</span>
+            <span class="cover-stat-unit">m³</span>
+          </div>
+          <div class="cover-stat-sub" id="coverStatSub">
+            Nenhuma medição registrada
+          </div>
+        </div>
+
+        <!-- Botão de Nova Medição e Ações Rápidas -->
+        <div class="cover-actions-group">
+          <button type="button" class="cover-action-btn primary" onclick="app.navigate('nova')">
+            + Nova medição
+          </button>
+
+          <button type="button" class="cover-action-btn ghost" onclick="app.navigate('historico')">
+            Minhas medições (<span id="coverHistCount">0</span>)
+          </button>
+
+          <button type="button" class="cover-action-btn ghost" onclick="app.navigate('relatorios')">
+            📊 Relatório &amp; Planilha Excel
+          </button>
+
+          <button type="button" class="cover-action-btn ghost" onclick="app.abrirModalGuiaEspecies()">
+            🌿 Guia de Espécies do Brasil
+          </button>
+        </div>
+
+        <!-- Rodapé da Capa: Criado por Lucas Aøsf até links de suporte -->
+        <div class="cover-footer-block">
+          <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
+          <hr class="cover-bottom-rule">
+          <div class="cover-footer-links">
+            <span class="cover-ver-pill">Versão 2.13</span>
+            <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
+            <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
+            <button type="button" class="cover-link-action" onclick="app.abrirModalComoUsar()">Como usar</button>
+            <a href="privacidade.html" target="_blank" class="cover-link-action">Política de privacidade</a>
+          </div>
+        </div>
+
       </section>
 
       <!-- ========================================== -->
@@ -796,6 +811,112 @@
       <div class="modal-body" id="authModalBody"></div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="app.auth.fecharModalAuth()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVIDADES DA VERSÃO 2.13 -->
+  <div id="modalNovidades" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalNovidades')">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Novidades da Versão 2.13</h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalNovidades')">&times;</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
+        <ul style="padding-left: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+          <li>🌲 <b>Nova Capa Inicial Oficial</b>: tela inicial minimalista e de alta performance na identidade BIOKURI, com atalhos rápidos e painel de volume total cubado.</li>
+          <li>🚛 <b>Cubagem de Caminhões</b>: medição de ambos os lados (Lado Esquerdo e Lado Direito) com alturas ilimitadas e cálculo do fator de empilhamento.</li>
+          <li>🪵 <b>Pilhas de Madeira</b>: cubagem simplificada em face única com número dinâmico de alturas na pilha.</li>
+          <li>🌲 <b>Toras Roliças (Fórmula de Smalian)</b>: cálculo rigoroso por tora com diâmetros das pontas, comprimento, número de plaqueta e espécie individual.</li>
+          <li>🌿 <b>Catálogo Botânico Brasileiro</b>: busca inteligente por espécies nativas e exóticas da Flora do Brasil.</li>
+          <li>📍 <b>Coordenadas UTM via GPS</b>: geolocalização e conversão matemática automática WGS84 / SIRGAS2000 direto no campo.</li>
+          <li>📊 <b>Planilhas Excel (.xlsx)</b>: geração automática de relatórios multipasta prontos para órgãos ambientais e auditorias.</li>
+          <li>⚡ <b>100% Offline-First</b>: funciona plenamente sem sinal de internet no campo.</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="app.fecharModal('modalNovidades')">Entendi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SUPORTE TÉCNICO -->
+  <div id="modalSuporte" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalSuporte')">
+    <div class="modal-dialog" style="max-width: 460px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Contato &amp; Suporte Técnico</h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalSuporte')">&times;</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
+        <p style="margin-bottom: 14px; color: var(--muted);">
+          Fale diretamente com o desenvolvedor do <b>Cubagem Florestal</b> para dúvidas técnicas, sugestões de campo ou personalizações.
+        </p>
+
+        <a href="https://wa.me/5512991821729?text=Ol%C3%A1%20Lucas!%20Estou%20entrando%20em%20contato%20pelo%20suporte%20do%20app%20Cubagem%20Florestal." target="_blank" class="btn btn-block" style="background: #25D366; color: #0B1E11; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; margin-bottom: 10px;">
+          💬 Falar pelo WhatsApp ((12) 99182-1729)
+        </a>
+
+        <a href="mailto:lucasaosf@gmail.com?subject=Cubagem%20Florestal%20-%20Suporte%20T%C3%A9cnico" class="btn btn-secondary btn-block" style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; margin-bottom: 14px;">
+          ✉️ Enviar E-mail (lucasaosf@gmail.com)
+        </a>
+
+        <div style="border-top: 1px solid var(--line); padding-top: 10px; font-size: 0.8rem; color: var(--muted); text-align: center;">
+          <b>Lucas Aøsf</b> · CRBio 127233/01-D<br>
+          <i>BIOKURI · Pesquisa e Soluções Ambientais</i>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.fecharModal('modalSuporte')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: COMO USAR -->
+  <div id="modalComoUsar" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalComoUsar')">
+    <div class="modal-dialog" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Como Usar o Aplicativo</h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalComoUsar')">&times;</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.88rem; line-height: 1.6;">
+        <div style="margin-bottom: 14px;">
+          <h4 style="font-family: var(--display); font-size: 1.15rem; color: var(--gold); margin: 0 0 4px;">1. Caminhões Florestais</h4>
+          <p style="margin: 0; color: var(--muted);">Insira as alturas no Lado Esquerdo (LE) e Lado Direito (LD), comprimento e largura da carroceria. O app calcula a altura média ponderada e os volumes estéreo e sólido.</p>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <h4 style="font-family: var(--display); font-size: 1.15rem; color: var(--gold); margin: 0 0 4px;">2. Pilhas de Madeira</h4>
+          <p style="margin: 0; color: var(--muted);">Meça a face única da pilha inserindo as alturas verticais em intervalos regulares, o comprimento da pilha e o comprimento médio das toras (profundidade).</p>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <h4 style="font-family: var(--display); font-size: 1.15rem; color: var(--gold); margin: 0 0 4px;">3. Toras Roliças (Smalian)</h4>
+          <p style="margin: 0; color: var(--muted);">Para cada tora, digite a plaqueta, espécie e os diâmetros da ponta fina e ponta grossa em centímetros (cm), além do comprimento (m). Toque em "+ Adicionar Tora" para somar ao lote.</p>
+        </div>
+        <div>
+          <h4 style="font-family: var(--display); font-size: 1.15rem; color: var(--gold); margin: 0 0 4px;">4. Exportação Excel</h4>
+          <p style="margin: 0; color: var(--muted);">Acesse a aba "Relatórios" ou toque em "Relatório &amp; Planilha Excel" na capa para exportar a planilha multipasta (.xlsx) formatada.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="app.fecharModal('modalComoUsar')">Entendi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GUIA DE ESPÉCIES DO BRASIL -->
+  <div id="modalGuiaEspecies" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalGuiaEspecies')">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Guia de Espécies do Brasil</h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalGuiaEspecies')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 12px;">
+          <input type="search" class="form-control" placeholder="Buscar por nome popular ou científico..." oninput="app.pesquisarGuiaEspecies(this.value)">
+        </div>
+        <div class="guia-especies-box" id="guiaEspeciesList"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.fecharModal('modalGuiaEspecies')">Fechar</button>
       </div>
     </div>
   </div>

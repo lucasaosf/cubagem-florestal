@@ -35,6 +35,7 @@ class CubagemApp {
 
   async init() {
     console.log('[Cubagem Florestal] Inicializando aplicativo multipasta...');
+    document.body.setAttribute('data-active-tab', 'inicio');
 
     try {
       await window.cubagemDB.init();
@@ -146,6 +147,8 @@ class CubagemApp {
   async navigate(viewId) {
     const views = ['inicio', 'nova', 'historico', 'relatorios', 'configuracoes'];
     if (!views.includes(viewId)) return;
+
+    document.body.setAttribute('data-active-tab', viewId);
 
     views.forEach((v) => {
       const el = document.getElementById(`view-${v}`);
@@ -813,13 +816,35 @@ class CubagemApp {
     try {
       const stats = await window.cubagemDB.getStats();
 
-      document.getElementById('kpiTotalVolume').innerHTML = `${window.CubagemCalculator.formatNumber(stats.totalVolume, 2)} <span class="kpi-unit">m³</span>`;
-      document.getElementById('kpiTotalCaminhoes').textContent = stats.totalCaminhoes;
-      document.getElementById('kpiTotalPilhas').textContent = stats.totalPilhas;
-      document.getElementById('kpiPilhasVolume').textContent = `${window.CubagemCalculator.formatNumber(stats.volPilhas, 2)} m³ estéreo`;
-      document.getElementById('kpiTotalToras').textContent = stats.totalToras;
-      document.getElementById('kpiTorasVolume').textContent = `${window.CubagemCalculator.formatNumber(stats.volToras, 3)} m³ Smalian`;
-      document.getElementById('kpiVolumeDetail').textContent = `${stats.totalCaminhoes} cam • ${stats.totalPilhas} pilhas • ${stats.totalToras} toras`;
+      // Atualiza valores do painel da Capa Inicial
+      const totalCubadoEl = document.getElementById('coverTotalCubado');
+      const coverStatSubEl = document.getElementById('coverStatSub');
+      const coverHistCountEl = document.getElementById('coverHistCount');
+
+      const totalItems = (stats.totalCaminhoes || 0) + (stats.totalPilhas || 0) + (stats.totalToras > 0 ? 1 : 0);
+      const totalCargasText = totalItems === 0
+        ? 'Nenhuma medição registrada'
+        : (totalItems === 1 ? '1 medição registrada no aparelho' : `${totalItems} medições registradas no aparelho`);
+
+      if (totalCubadoEl) totalCubadoEl.textContent = window.CubagemCalculator.formatNumber(stats.totalVolume, 2);
+      if (coverStatSubEl) coverStatSubEl.textContent = totalCargasText;
+      if (coverHistCountEl) coverHistCountEl.textContent = totalItems;
+
+      // Mantém compatibilidade com outros elementos se presentes
+      const kpiVol = document.getElementById('kpiTotalVolume');
+      if (kpiVol) kpiVol.innerHTML = `${window.CubagemCalculator.formatNumber(stats.totalVolume, 2)} <span class="kpi-unit">m³</span>`;
+      const elCam = document.getElementById('kpiTotalCaminhoes');
+      if (elCam) elCam.textContent = stats.totalCaminhoes;
+      const elPil = document.getElementById('kpiTotalPilhas');
+      if (elPil) elPil.textContent = stats.totalPilhas;
+      const elPilVol = document.getElementById('kpiPilhasVolume');
+      if (elPilVol) elPilVol.textContent = `${window.CubagemCalculator.formatNumber(stats.volPilhas, 2)} m³ estéreo`;
+      const elTor = document.getElementById('kpiTotalToras');
+      if (elTor) elTor.textContent = stats.totalToras;
+      const elTorVol = document.getElementById('kpiTorasVolume');
+      if (elTorVol) elTorVol.textContent = `${window.CubagemCalculator.formatNumber(stats.volToras, 3)} m³ Smalian`;
+      const elVolDet = document.getElementById('kpiVolumeDetail');
+      if (elVolDet) elVolDet.textContent = `${stats.totalCaminhoes} cam • ${stats.totalPilhas} pilhas • ${stats.totalToras} toras`;
 
       const container = document.getElementById('dashboardRecentList');
       if (!container) return;
@@ -1438,6 +1463,64 @@ class CubagemApp {
   fecharModal(id) {
     const modal = document.getElementById(id);
     if (modal) modal.classList.remove('open');
+  }
+
+  abrirModalNovidades() {
+    this.abrirModal('modalNovidades');
+  }
+
+  abrirModalSuporte() {
+    this.abrirModal('modalSuporte');
+  }
+
+  abrirModalComoUsar() {
+    this.abrirModal('modalComoUsar');
+  }
+
+  abrirModalGuiaEspecies() {
+    this.abrirModal('modalGuiaEspecies');
+    this.pesquisarGuiaEspecies('');
+  }
+
+  pesquisarGuiaEspecies(query) {
+    const container = document.getElementById('guiaEspeciesList');
+    if (!container || !window.speciesDatabase) return;
+
+    const results = window.speciesDatabase.search(query, 30);
+    if (!results || results.length === 0) {
+      container.innerHTML = `
+        <div class="species-item-empty">
+          Nenhuma espécie encontrada para "<b>${this.escapeHtml(query)}</b>".
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = results.map((sp) => {
+      const isExotica = sp.origem === 'Exótica';
+      const badgeCls = isExotica ? 'badge-exotica' : 'badge-nativa';
+      const badgeTxt = isExotica ? 'Exótica' : 'Nativa';
+      return `
+        <div class="guia-specie-card">
+          <div class="guia-specie-info">
+            <div class="guia-specie-nome">${this.escapeHtml(sp.nomePopular)}</div>
+            <div class="guia-specie-cientifico">${this.escapeHtml(sp.nomeCientifico)}</div>
+            ${sp.familia ? `<div class="guia-specie-fam">${this.escapeHtml(sp.familia)}</div>` : ''}
+          </div>
+          <span class="species-origin-pill ${badgeCls}">${badgeTxt}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   showToast(message, type = 'info') {

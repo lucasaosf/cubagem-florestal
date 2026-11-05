@@ -1318,3 +1318,524 @@ textarea.form-control {
   font-size: 0.85rem;
   line-height: 1.4;
 }
+
+/* ==========================================================================
+   CAPA INICIAL OFICIAL (COVER SCREEN) — BIOKURI
+   ========================================================================== */
+body[data-active-tab="inicio"] .app-header {
+  display: none !important;
+}
+body[data-active-tab="inicio"] .app-bottom-nav {
+  display: none !important;
+}
+body[data-active-tab="inicio"] .app-content {
+  padding: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+.cover-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  box-sizing: border-box;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 20px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  background: #0E2515 url("../icons/capa.jpg") center bottom / cover no-repeat;
+  color: #F2EBDD;
+  transition: background 0.3s ease;
+}
+
+:root[data-theme="light"] .cover-screen {
+  background: #F2EBDD url("../icons/capa-clara.jpg") center bottom / cover no-repeat;
+  color: #0E2515;
+}
+
+/* Top bar: Botões circulares superiores */
+.cover-top {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 5;
+  margin-bottom: 4px;
+}
+
+.cover-top-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(242, 235, 221, 0.4);
+  background: rgba(14, 37, 21, 0.55);
+  color: #F2EBDD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease;
+  padding: 0;
+  outline: none;
+}
+
+:root[data-theme="light"] .cover-top-btn {
+  border-color: rgba(14, 37, 21, 0.3);
+  background: rgba(242, 235, 221, 0.7);
+  color: #0E2515;
+}
+
+.cover-top-btn:active {
+  transform: scale(0.92);
+}
+
+.cover-avatar-btn {
+  border-color: var(--gold);
+  overflow: hidden;
+  position: relative;
+}
+
+.cover-avatar-btn.logged {
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 10px rgba(150, 120, 74, 0.4);
+}
+
+.cover-avatar-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Bloco da Marca e Logo BIOKURI */
+.cover-brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.cover-emblem-img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+}
+
+.cover-brand-title {
+  font-family: var(--display);
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  margin-top: 8px;
+  line-height: 1;
+}
+
+.cover-brand-title .bio {
+  color: var(--gold);
+}
+
+.cover-brand-title .kuri {
+  color: #F2EBDD;
+}
+
+:root[data-theme="light"] .cover-brand-title .kuri {
+  color: #0E2515;
+}
+
+.cover-brand-subtitle {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 14.5px;
+  color: #CDD8C1;
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}
+
+:root[data-theme="light"] .cover-brand-subtitle {
+  color: #385E40;
+}
+
+.cover-divider-rule {
+  width: 50px;
+  height: 1.5px;
+  background: var(--gold);
+  border: none;
+  margin: 12px auto 6px;
+  opacity: 0.85;
+}
+
+/* Título Principal do App */
+.cover-app-title-group {
+  margin: 6px 0 10px;
+}
+
+.cover-app-heading {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(40px, 11vw, 54px);
+  line-height: 0.96;
+  color: #F3EEE3;
+  margin: 0;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="light"] .cover-app-heading {
+  color: #0E2515;
+  text-shadow: none;
+}
+
+.cover-app-tagline {
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 10px 0 0;
+}
+
+/* Painel mostrando apenas o total cubado */
+.cover-stat-panel {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(14, 37, 21, 0.55);
+  border: 1.5px solid rgba(178, 194, 165, 0.3);
+  border-radius: 18px;
+  padding: 12px 20px;
+  margin: 10px 0 12px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+:root[data-theme="light"] .cover-stat-panel {
+  background: rgba(242, 235, 221, 0.72);
+  border-color: rgba(14, 37, 21, 0.2);
+  box-shadow: 0 4px 16px rgba(14, 37, 21, 0.08);
+}
+
+.cover-stat-badge {
+  font-family: var(--body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.cover-stat-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cover-stat-num {
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 700;
+  color: #F3EEE3;
+  line-height: 1.1;
+}
+
+:root[data-theme="light"] .cover-stat-num {
+  color: #0E2515;
+}
+
+.cover-stat-unit {
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.cover-stat-sub {
+  font-size: 12.5px;
+  color: #CDD8C1;
+  font-weight: 500;
+}
+
+:root[data-theme="light"] .cover-stat-sub {
+  color: #5B675A;
+}
+
+/* Grupo de Ações / Botões */
+.cover-actions-group {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 14px;
+}
+
+.cover-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  border-radius: 14px;
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: 16.5px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  text-decoration: none;
+}
+
+.cover-action-btn:active {
+  transform: scale(0.98);
+}
+
+.cover-action-btn.primary {
+  background: #F3EEE3;
+  color: #0E2515;
+  border: none;
+  font-weight: 700;
+  font-size: 18px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="light"] .cover-action-btn.primary {
+  background: #0E2515;
+  color: #F2EBDD;
+  box-shadow: 0 8px 24px rgba(14, 37, 21, 0.25);
+}
+
+.cover-action-btn.primary:active {
+  background: #E2E5D5;
+}
+
+:root[data-theme="light"] .cover-action-btn.primary:active {
+  background: #173A1E;
+}
+
+.cover-action-btn.ghost {
+  background: rgba(14, 37, 21, 0.6);
+  color: #F3EEE3;
+  border: 1.5px solid rgba(242, 235, 221, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+:root[data-theme="light"] .cover-action-btn.ghost {
+  background: rgba(242, 235, 221, 0.85);
+  color: #0E2515;
+  border-color: rgba(14, 37, 21, 0.35);
+}
+
+.cover-action-btn.ghost:active {
+  background: rgba(14, 37, 21, 0.85);
+}
+
+/* Rodapé da Capa */
+.cover-footer-block {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.cover-signature {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 16px;
+  color: rgba(242, 235, 221, 0.8);
+  margin: 0 0 6px;
+  letter-spacing: 0.02em;
+}
+
+:root[data-theme="light"] .cover-signature {
+  color: rgba(14, 37, 21, 0.75);
+}
+
+.cover-signature b {
+  font-weight: 600;
+  color: #F3EEE3;
+}
+
+:root[data-theme="light"] .cover-signature b {
+  color: #0E2515;
+}
+
+.cover-bottom-rule {
+  width: 100%;
+  max-width: 320px;
+  height: 1px;
+  background: radial-gradient(circle, rgba(150, 120, 74, 0.75) 0%, rgba(150, 120, 74, 0) 100%);
+  border: none;
+  margin: 0 auto 8px;
+}
+
+.cover-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  font-size: 12.5px;
+  color: rgba(242, 235, 221, 0.75);
+}
+
+:root[data-theme="light"] .cover-footer-links {
+  color: rgba(14, 37, 21, 0.7);
+}
+
+.cover-ver-pill {
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.cover-link-action {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #F3EEE3;
+  font-family: var(--body);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.2s ease;
+}
+
+:root[data-theme="light"] .cover-link-action {
+  color: #0E2515;
+}
+
+.cover-link-action:hover {
+  opacity: 0.8;
+}
+
+/* Modais Especiais da Capa */
+.guia-especies-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.guia-specie-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.guia-specie-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.guia-specie-nome {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.guia-specie-cientifico {
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--gold);
+}
+
+.guia-specie-fam {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.support-channel-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+
+.support-channel-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  background: rgba(14, 37, 21, 0.2);
+}
+
+.support-channel-details {
+  flex: 1;
+}
+
+.support-channel-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.support-channel-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Responsividade para telas menores de celular */
+@media (max-height: 740px) {
+  .cover-emblem-img { width: 72px; height: 72px; }
+  .cover-brand-title { font-size: 22px; margin-top: 4px; }
+  .cover-brand-subtitle { font-size: 13px; }
+  .cover-divider-rule { margin: 8px auto 4px; }
+  .cover-app-heading { font-size: clamp(34px, 9vw, 42px); }
+  .cover-app-tagline { font-size: 9.5px; margin-top: 6px; }
+  .cover-stat-panel { padding: 8px 16px; margin: 8px 0; }
+  .cover-stat-num { font-size: 28px; }
+  .cover-actions-group { gap: 8px; margin: 4px 0 10px; }
+  .cover-action-btn { min-height: 48px; font-size: 15.5px; }
+  .cover-action-btn.primary { font-size: 16.5px; }
+  .cover-signature { font-size: 15px; margin-bottom: 4px; }
+  .cover-bottom-rule { margin-bottom: 6px; }
+}
+
+@media (max-height: 620px) {
+  .cover-emblem-img { width: 55px; height: 55px; }
+  .cover-brand-subtitle { display: none; }
+  .cover-app-heading { font-size: 30px; }
+  .cover-stat-panel { padding: 6px 12px; margin: 4px 0; }
+  .cover-stat-num { font-size: 24px; }
+  .cover-action-btn { min-height: 42px; font-size: 14.5px; }
+}
