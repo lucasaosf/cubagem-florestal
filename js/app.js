@@ -29,11 +29,6 @@ class CubagemApp {
     // Sistema de Autenticação e Nuvem
     this.auth = window.CubagemAuth ? new window.CubagemAuth() : null;
 
-    // Sistema de Câmera, Timestamp e Fotos de Toras
-    this.camera = window.CubagemCamera ? new window.CubagemCamera() : null;
-    this.currentToraPhoto = null;
-    this.activeZoomPhoto = null;
-
     // Lista dinâmica de toras para cubagem de pilhas de toras
     this.torasPilha = [];
   }
@@ -587,9 +582,6 @@ class CubagemApp {
           plaqueta: plaqueta
         });
         if (calcAuto.isValid) {
-          const nomeFoto = this.currentToraPhoto
-            ? `Plaqueta_${calcAuto.plaqueta}_${data}.jpg`
-            : null;
           this.torasPilha.push({
             numero: this.torasPilha.length + 1,
             plaqueta: calcAuto.plaqueta,
@@ -600,14 +592,8 @@ class CubagemApp {
             diametroPonta2_m: calcAuto.diametroPonta2_m,
             diametroMedio_cm: calcAuto.diametroMedio_cm,
             comprimento: calcAuto.comprimento,
-            volumeGeometrico: calcAuto.volumeGeometrico,
-            foto: this.currentToraPhoto ? this.currentToraPhoto.dataUrl : null,
-            fotoUtm: this.currentToraPhoto ? this.currentToraPhoto.utm : null,
-            fotoDataHora: this.currentToraPhoto ? this.currentToraPhoto.dataHora : null,
-            fotoLegenda: this.currentToraPhoto ? this.currentToraPhoto.legenda : null,
-            fotoNome: nomeFoto
+            volumeGeometrico: calcAuto.volumeGeometrico
           });
-          this.removerFotoToraAtiva();
         }
       }
 
@@ -816,7 +802,7 @@ class CubagemApp {
       const nAlt = Array.isArray(item.alturas) ? item.alturas.length : (item.totalAlturas || '-');
       subItem = `${item.rodovia} • ${nAlt} alturas`;
     } else if (tipo === 'tora') {
-      tagTipo = item.foto ? '🌲 Tora • 📷 Foto' : '🌲 Tora (Smalian)';
+      tagTipo = '🌲 Tora (Smalian)';
       tituloItem = `Plaqueta: ${item.plaqueta || 'S/P'}`;
       const espStr = item.especie ? ` • ${item.especie}` : '';
       subItem = `D: ${item.diametroMedio_cm ? Number(item.diametroMedio_cm).toFixed(1) + ' cm' : '-'} • L: ${item.comprimento || '-'} m${espStr}`;
@@ -948,7 +934,6 @@ class CubagemApp {
                     <th style="padding: 6px 8px;">D1 × D2 (cm)</th>
                     <th style="padding: 6px 8px;">Comp.</th>
                     <th style="padding: 6px 8px; text-align: right;">Vol (m³)</th>
-                    <th style="padding: 6px 8px; text-align: center;">Foto</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -960,27 +945,10 @@ class CubagemApp {
                       <td style="padding: 6px 8px;">${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)}</td>
                       <td style="padding: 6px 8px;">${fNum(t.comprimento, 2)} m</td>
                       <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: var(--gold);">${fNum(t.volumeGeometrico, 3)}</td>
-                      <td style="padding: 6px 8px; text-align: center;">
-                        ${t.foto ? `<button type="button" class="btn-action-small" onclick="app.visualizarFotoToraAmpliada('${t.foto}', 'Plaqueta #${t.plaqueta}', '${t.fotoLegenda || ''}')" title="Ver foto">📷</button>` : '-'}
-                      </td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
-            </div>
-          </div>
-        `;
-      } else if (item.foto) {
-        detalheHtml += `
-          <div style="margin-top: 12px; background: var(--surface-2); padding: 12px; border-radius: 10px; border: 1px solid var(--line);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <strong style="font-size: 0.85rem; color: var(--gold);">📷 Foto da Plaqueta &amp; Timestamp</strong>
-              <button type="button" class="btn-action-small" onclick="app.baixarFotoDireta('${item.id}')">💾 Baixar Foto</button>
-            </div>
-            <img src="${item.foto}" style="width: 100%; max-height: 240px; object-fit: contain; border-radius: 8px; background: #000; cursor: pointer;" onclick="app.visualizarFotoToraAmpliada('${item.foto}', 'Plaqueta #${item.plaqueta || item.id}', '${item.fotoLegenda || ''}')" title="Toque para ampliar">
-            <div style="margin-top: 6px; font-size: 0.74rem; color: var(--muted); line-height: 1.4;">
-              <strong>Coordenadas:</strong> ${item.fotoUtm || 'N/A'}<br>
-              ${item.fotoLegenda ? `<strong>Legenda:</strong> ${item.fotoLegenda}` : ''}
             </div>
           </div>
         `;
@@ -1249,11 +1217,6 @@ class CubagemApp {
       return;
     }
 
-    const dataCub = document.getElementById('cubData').value || new Date().toISOString().slice(0, 10);
-    const nomeFoto = this.currentToraPhoto
-      ? `Plaqueta_${calc.plaqueta}_${dataCub}.jpg`
-      : null;
-
     const espToraInput = document.getElementById('cubEspecieTora');
     const espGeralInput = document.getElementById('cubEspecieGeral');
     const especie = (espToraInput && espToraInput.value.trim()) || (espGeralInput && espGeralInput.value.trim()) || '';
@@ -1268,16 +1231,10 @@ class CubagemApp {
       diametroPonta2_m: calc.diametroPonta2_m,
       diametroMedio_cm: calc.diametroMedio_cm,
       comprimento: calc.comprimento,
-      volumeGeometrico: calc.volumeGeometrico,
-      foto: this.currentToraPhoto ? this.currentToraPhoto.dataUrl : null,
-      fotoUtm: this.currentToraPhoto ? this.currentToraPhoto.utm : null,
-      fotoDataHora: this.currentToraPhoto ? this.currentToraPhoto.dataHora : null,
-      fotoLegenda: this.currentToraPhoto ? this.currentToraPhoto.legenda : null,
-      fotoNome: nomeFoto
+      volumeGeometrico: calc.volumeGeometrico
     };
 
     this.torasPilha.push(toraItem);
-    this.removerFotoToraAtiva();
 
     // Limpa diâmetros para a próxima tora, preservando comprimento
     document.getElementById('cubDiametroPonta1').value = '';
@@ -1347,7 +1304,6 @@ class CubagemApp {
       <div class="tora-item-row">
         <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
           <span class="tora-item-badge">#${t.numero}</span>
-          ${t.foto ? `<img src="${t.foto}" style="width: 38px; height: 28px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); cursor: pointer;" onclick="app.visualizarFotoToraAmpliada('${t.foto}', 'Plaqueta #${t.plaqueta}', '${t.fotoLegenda || ''}')" title="Ver foto">` : ''}
           <div style="min-width: 0; flex: 1;">
             <div style="font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
               Plaqueta: ${t.plaqueta} ${t.especie ? `<span style="font-weight: 400; font-style: italic; color: var(--gold); font-size: 0.78rem;">(${t.especie})</span>` : ''}
@@ -1360,7 +1316,6 @@ class CubagemApp {
         <div style="display: flex; align-items: center; gap: 8px;">
           <div style="text-align: right;">
             <div style="font-weight: 700; color: var(--gold); font-size: 0.9rem;">${fNum(t.volumeGeometrico, 3)} m³</div>
-            ${t.fotoUtm ? `<div style="font-size: 0.68rem; color: var(--sage);">📍 UTM</div>` : ''}
           </div>
           <button type="button" class="btn-action-small danger" onclick="app.removerToraDaPilha(${idx})" title="Remover tora">🗑️</button>
         </div>
@@ -1377,181 +1332,7 @@ class CubagemApp {
     }
   }
 
-  // =========================================================================
-  // GESTÃO DE FOTOS DE TORAS E TIMESTAMP CAMERA
-  // =========================================================================
-  abrirCameraTora() {
-    if (this.camera) {
-      this.camera.abrirCameraModal('live');
-    }
-  }
 
-  definirFotoToraAtiva(photoObj) {
-    this.currentToraPhoto = photoObj;
-    const badge = document.getElementById('toraPhotoAttachedBadge');
-    const box = document.getElementById('toraFotoPreviewBox');
-    const thumb = document.getElementById('toraFotoThumbnail');
-    const txtPlac = document.getElementById('toraFotoInfoPlaqueta');
-    const txtUtm = document.getElementById('toraFotoInfoUtm');
-    const txtData = document.getElementById('toraFotoInfoData');
-
-    if (badge) badge.style.display = 'inline-block';
-    if (box) box.style.display = 'flex';
-    if (thumb) thumb.src = photoObj.dataUrl;
-    if (txtPlac) txtPlac.textContent = photoObj.plaqueta ? `Plaqueta #${photoObj.plaqueta}` : 'Foto Anexada';
-    if (txtUtm) txtUtm.textContent = photoObj.utm || 'UTM: Não registrado';
-    if (txtData) txtData.textContent = photoObj.dataHora || '';
-  }
-
-  removerFotoToraAtiva() {
-    this.currentToraPhoto = null;
-    const badge = document.getElementById('toraPhotoAttachedBadge');
-    const box = document.getElementById('toraFotoPreviewBox');
-    const thumb = document.getElementById('toraFotoThumbnail');
-    if (badge) badge.style.display = 'none';
-    if (box) box.style.display = 'none';
-    if (thumb) thumb.src = '';
-  }
-
-  visualizarFotoToraAmpliada(url, titulo, legenda) {
-    const finalUrl = url || (this.currentToraPhoto ? this.currentToraPhoto.dataUrl : '');
-    if (!finalUrl) return;
-
-    this.activeZoomPhoto = {
-      url: finalUrl,
-      titulo: titulo || (this.currentToraPhoto && this.currentToraPhoto.plaqueta ? `Plaqueta #${this.currentToraPhoto.plaqueta}` : 'Foto da Tora')
-    };
-
-    const img = document.getElementById('fotoZoomImg');
-    const tit = document.getElementById('fotoZoomTitulo');
-    const leg = document.getElementById('fotoZoomLegenda');
-
-    if (img) img.src = finalUrl;
-    if (tit) tit.textContent = this.activeZoomPhoto.titulo;
-    if (leg) leg.textContent = legenda || (this.currentToraPhoto ? this.currentToraPhoto.legenda : '');
-
-    this.abrirModal('modalFotoZoom');
-  }
-
-  baixarFotoAtualZoom() {
-    if (!this.activeZoomPhoto || !this.activeZoomPhoto.url) return;
-    const link = document.createElement('a');
-    link.href = this.activeZoomPhoto.url;
-    const cleanName = (this.activeZoomPhoto.titulo || 'Foto_Tora').replace(/[^a-zA-Z0-9_-]/g, '_');
-    link.download = `${cleanName}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    this.showToast('Download da foto iniciado!', 'info');
-  }
-
-  async baixarFotoDireta(id) {
-    const item = await window.cubagemDB.get(id);
-    if (!item || !item.foto) return;
-    const link = document.createElement('a');
-    link.href = item.foto;
-    link.download = item.fotoNome || `Plaqueta_${item.plaqueta || item.id}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    this.showToast('Download da foto iniciado!', 'info');
-  }
-
-  async exportarFotosTorasZip() {
-    const start = document.getElementById('reportDataInicio').value;
-    const end = document.getElementById('reportDataFim').value;
-
-    if (!start || !end) {
-      this.showToast('Selecione o período de datas no relatório primeiro.', 'warning');
-      return;
-    }
-
-    try {
-      this.showToast('Localizando toras com fotos no período...', 'info');
-      const records = await window.cubagemDB.getByDateRange(start, end);
-
-      const torasComFoto = [];
-      records.forEach((r) => {
-        if (r.tipo === 'tora') {
-          if (Array.isArray(r.toras) && r.toras.length > 0) {
-            r.toras.forEach((t) => {
-              if (t.foto) {
-                torasComFoto.push({
-                  plaqueta: t.plaqueta,
-                  data: r.data,
-                  horario: r.horario,
-                  foto: t.foto,
-                  fotoUtm: t.fotoUtm,
-                  fotoNome: t.fotoNome || `Plaqueta_${t.plaqueta}_${r.data}.jpg`,
-                  volumeGeometrico: t.volumeGeometrico
-                });
-              }
-            });
-          } else if (r.foto) {
-            torasComFoto.push({
-              plaqueta: r.plaqueta,
-              data: r.data,
-              horario: r.horario,
-              foto: r.foto,
-              fotoUtm: r.fotoUtm,
-              fotoNome: r.fotoNome || `Plaqueta_${r.plaqueta}_${r.data}.jpg`,
-              volumeGeometrico: r.volumeGeometrico
-            });
-          }
-        }
-      });
-
-      if (torasComFoto.length === 0) {
-        this.showToast('Nenhuma tora com foto registrada no período selecionado.', 'warning');
-        return;
-      }
-
-      if (typeof window.JSZip === 'undefined') {
-        this.showToast('Carregando biblioteca ZIP... Tente novamente em instantes.', 'warning');
-        return;
-      }
-
-      this.showToast(`Compactando ${torasComFoto.length} fotos em arquivo ZIP...`, 'info');
-      const zip = new window.JSZip();
-      const folder = zip.folder(`Toras_${start}_a_${end}`);
-
-      let manifesto = `CUBAGEM FLORESTAL — REGISTRO FOTOGRÁFICO DE TORAS\n`;
-      manifesto += `Período: ${start} a ${end}\n`;
-      manifesto += `Total de Fotos: ${torasComFoto.length}\n`;
-      manifesto += `Desenvolvido por Lucas Aøsf - CRBio 127233/01-D\n`;
-      manifesto += `Exportado em: ${new Date().toLocaleString('pt-BR')}\n`;
-      manifesto += `============================================================\n\n`;
-      manifesto += `# | Plaqueta | Data | Horário | UTM | Volume (m³) | Arquivo\n`;
-
-      torasComFoto.forEach((item, idx) => {
-        const rawBase64 = item.foto.replace(/^data:image\/[a-z]+;base64,/, '');
-        const fileName = item.fotoNome || `Plaqueta_${item.plaqueta}_${item.data}.jpg`;
-        folder.file(fileName, rawBase64, { base64: true });
-
-        const vol = window.CubagemCalculator.formatNumber(item.volumeGeometrico, 3);
-        manifesto += `${idx + 1} | ${item.plaqueta || 'S/P'} | ${item.data} | ${item.horario || ''} | ${item.fotoUtm || 'N/A'} | ${vol} m³ | ${fileName}\n`;
-      });
-
-      folder.file('Manifesto_Toras_Fotos.txt', manifesto);
-
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const zipFileName = `Fotos_Toras_${start}_a_${end}.zip`;
-
-      const downloadUrl = window.URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = zipFileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-
-      this.showToast(`Pacote com ${torasComFoto.length} fotos baixado com sucesso!`, 'success');
-    } catch (err) {
-      console.error('Erro ao gerar ZIP de fotos:', err);
-      this.showToast('Erro ao exportar arquivo ZIP.', 'danger');
-    }
-  }
 
   abrirModal(id) {
     const modal = document.getElementById(id);

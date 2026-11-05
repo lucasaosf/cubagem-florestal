@@ -190,8 +190,8 @@ class CubagemExcelExport {
         { key: 'id', width: 22 },
         { key: 'data', width: 12 },
         { key: 'horario', width: 9 },
-        { key: 'rodovia', width: 14 },
-        { key: 'km', width: 10 },
+        { key: 'rodovia', width: 16 },
+        { key: 'km', width: 14 },
         { key: 'responsavel', width: 20 },
         { key: 'placa', width: 12 },
         { key: 'origem', width: 15 },
@@ -271,6 +271,7 @@ class CubagemExcelExport {
         { key: 'data', width: 12 },
         { key: 'horario', width: 9 },
         { key: 'rodovia', width: 16 },
+        { key: 'km', width: 14 },
         { key: 'identificacao', width: 16 },
         { key: 'origem', width: 15 },
         { key: 'responsavel', width: 20 },
@@ -283,7 +284,7 @@ class CubagemExcelExport {
         { key: 'obs', width: 26 }
       ];
 
-      wsPil.mergeCells('A1:O1');
+      wsPil.mergeCells('A1:P1');
       const hPil = wsPil.getCell('A1');
       hPil.value = '   CUBAGEM DE PILHAS DE MADEIRA (MEDIÇÃO EM UMA FACE)';
       hPil.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
@@ -291,14 +292,14 @@ class CubagemExcelExport {
       hPil.alignment = { vertical: 'middle', horizontal: 'center' };
       wsPil.getRow(1).height = 32;
 
-      const pilCols = ['#', 'ID Registro', 'Data', 'Horário', 'Local / Rodovia', 'Identificação Pilha', 'Origem da Madeira', 'Responsável', 'Alturas Medidas na Face (m)', 'Soma Alt. (m)', 'Hm Média (m)', 'Comprimento (m)', 'Profundidade (m)', 'Vol. Estéreo (m³)', 'Observações'];
+      const pilCols = ['#', 'ID Registro', 'Data', 'Horário', 'Local / Rodovia', 'Km', 'Identificação Pilha', 'Origem da Madeira', 'Responsável', 'Alturas Medidas na Face (m)', 'Soma Alt. (m)', 'Hm Média (m)', 'Comprimento (m)', 'Profundidade (m)', 'Vol. Estéreo (m³)', 'Observações'];
       const rPilH = wsPil.getRow(2);
       rPilH.height = 24;
       pilCols.forEach((col, i) => {
         const c = rPilH.getCell(i + 1);
         c.value = col;
         c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i === 13 ? C.ouro : C.verde2 } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i === 14 ? C.ouro : C.verde2 } };
         c.alignment = { horizontal: 'center', vertical: 'middle' };
         c.border = thinBorder;
       });
@@ -313,7 +314,7 @@ class CubagemExcelExport {
         const origFinalPil = item.especie ? `${origBasePil} (${item.especie})` : origBasePil;
 
         const vals = [
-          idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.rodovia,
+          idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.rodovia, item.km || '',
           item.identificacao || item.placa || `Pilha ${idx + 1}`, origFinalPil, item.responsavel,
           altStr, Number(item.somaAlturas) || 0, Number(item.alturaMedia) || 0,
           Number(item.comprimento) || 0, Number(item.largura) || 0,
@@ -325,12 +326,12 @@ class CubagemExcelExport {
           c.value = v;
           c.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
           c.border = thinBorder;
-          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 13 ? 'D6C7A1' : bg } };
-          if (vi === 0 || vi === 2 || vi === 3 || vi === 5 || vi === 6) c.alignment = { horizontal: 'center', vertical: 'middle' };
-          else if (vi >= 9 && vi <= 13) {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 14 ? 'D6C7A1' : bg } };
+          if (vi === 0 || vi === 2 || vi === 3 || vi === 5 || vi === 6 || vi === 7) c.alignment = { horizontal: 'center', vertical: 'middle' };
+          else if (vi >= 10 && vi <= 14) {
             c.alignment = { horizontal: 'right', vertical: 'middle' };
-            c.numFmt = vi === 10 ? '#,##0.0000' : '#,##0.00';
-            if (vi === 13) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
+            c.numFmt = vi === 11 ? '#,##0.0000' : '#,##0.00';
+            if (vi === 14) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
           } else c.alignment = { horizontal: 'left', vertical: 'middle' };
         });
         rPilIdx++;
@@ -348,20 +349,19 @@ class CubagemExcelExport {
         { key: 'data', width: 12 },
         { key: 'horario', width: 9 },
         { key: 'plaqueta', width: 16 },
-        { key: 'especie', width: 20 },
-        { key: 'foto', width: 28 },
-        { key: 'utm', width: 30 },
-        { key: 'local', width: 16 },
+        { key: 'especie', width: 22 },
+        { key: 'local', width: 18 },
+        { key: 'km', width: 14 },
         { key: 'responsavel', width: 20 },
         { key: 'd1_cm', width: 15 },
         { key: 'd2_cm', width: 15 },
         { key: 'dm_cm', width: 15 },
         { key: 'comp', width: 15 },
         { key: 'vol_smalian', width: 20 },
-        { key: 'obs', width: 32 }
+        { key: 'obs', width: 28 }
       ];
 
-      wsTor.mergeCells('A1:P1');
+      wsTor.mergeCells('A1:O1');
       const hTor = wsTor.getCell('A1');
       hTor.value = '   CUBAGEM DE TORAS ROLIÇAS INDIVIDUAIS (FÓRMULA DE SMALIAN)';
       hTor.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
@@ -371,9 +371,9 @@ class CubagemExcelExport {
 
       const torCols = [
         '#', 'ID Registro', 'Data', 'Horário', 'Nº Plaqueta', 'Espécie Florestal',
-        'Foto da Plaqueta (Arquivo)', 'Coordenadas UTM', 'Local / Pátio', 'Responsável',
+        'Local / Pátio', 'Km', 'Responsável',
         'Diâm. Ponta 1 (cm)', 'Diâm. Ponta 2 (cm)', 'Diâm. Médio (cm)', 'Comprimento (m)',
-        'Vol. Smalian (m³)', 'Legenda da Foto / Obs'
+        'Vol. Smalian (m³)', 'Observações'
       ];
       const rTorH = wsTor.getRow(2);
       rTorH.height = 24;
@@ -381,7 +381,7 @@ class CubagemExcelExport {
         const c = rTorH.getCell(i + 1);
         c.value = col;
         c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i === 14 ? C.ouro : C.verde2 } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i === 13 ? C.ouro : C.verde2 } };
         c.alignment = { horizontal: 'center', vertical: 'middle' };
         c.border = thinBorder;
       });
@@ -400,16 +400,8 @@ class CubagemExcelExport {
         torasIndiv.forEach((item) => {
           totalTorasLinhas++;
           const row = wsTor.getRow(rTorIdx);
-          row.height = item.foto ? 42 : 20;
+          row.height = 20;
           const bg = totalTorasLinhas % 2 === 1 ? C.creme2 : C.creme;
-
-          const nomeFoto = item.foto
-            ? (item.fotoNome || `Plaqueta_${item.plaqueta || pileItem.id}_${pileItem.data}.jpg`)
-            : 'SEM FOTO';
-          const utmStr = item.fotoUtm || pileItem.fotoUtm || 'NÃO REGISTRADO';
-          const obsFinal = item.fotoLegenda
-            ? `${item.fotoLegenda}${pileItem.observacoes ? ' | ' + pileItem.observacoes : ''}`
-            : (pileItem.observacoes || '');
 
           const vVol = Number(item.volumeGeometrico) || 0;
           const vDm = Number(item.diametroMedio_cm) || 0;
@@ -423,16 +415,15 @@ class CubagemExcelExport {
             pileItem.horario,
             item.plaqueta || 'S/P',
             item.especie || pileItem.especie || 'Não informada',
-            nomeFoto,
-            utmStr,
             pileItem.rodovia || 'Pátio',
+            pileItem.km || '',
             pileItem.responsavel,
             Number(item.diametroPonta1_cm) || (Number(item.diametroPonta1_m) * 100) || 0,
             Number(item.diametroPonta2_cm) || (Number(item.diametroPonta2_m) * 100) || 0,
             vDm,
             Number(item.comprimento) || 0,
             vVol,
-            obsFinal
+            pileItem.observacoes || item.observacoes || ''
           ];
 
           vals.forEach((v, vi) => {
@@ -440,33 +431,17 @@ class CubagemExcelExport {
             c.value = v;
             c.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
             c.border = thinBorder;
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 14 ? 'D6C7A1' : bg } };
-            if (vi === 0 || vi === 2 || vi === 3 || vi === 4) c.alignment = { horizontal: 'center', vertical: 'middle' };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 13 ? 'D6C7A1' : bg } };
+            if (vi === 0 || vi === 2 || vi === 3 || vi === 4 || vi === 7) c.alignment = { horizontal: 'center', vertical: 'middle' };
             else if (vi === 5) {
               c.alignment = { horizontal: 'left', vertical: 'middle' };
               c.font = { name: FONT_NAME, size: 9, italic: true, color: { argb: C.texto } };
-            } else if (vi >= 10 && vi <= 14) {
+            } else if (vi >= 9 && vi <= 13) {
               c.alignment = { horizontal: 'right', vertical: 'middle' };
-              c.numFmt = vi === 14 ? '#,##0.000' : '#,##0.0';
-              if (vi === 14) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
+              c.numFmt = vi === 13 ? '#,##0.000' : '#,##0.0';
+              if (vi === 13) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
             } else c.alignment = { horizontal: 'left', vertical: 'middle' };
           });
-
-          // Embutir miniatura da foto na planilha se existir
-          if (item.foto) {
-            try {
-              const imgId = workbook.addImage({
-                base64: item.foto,
-                extension: 'jpeg'
-              });
-              wsTor.addImage(imgId, {
-                tl: { col: 6.1, row: rTorIdx - 0.95 },
-                ext: { width: 50, height: 38 }
-              });
-            } catch (e) {
-              console.warn('Erro ao embutir foto na planilha:', e);
-            }
-          }
 
           rTorIdx++;
         });
@@ -477,8 +452,8 @@ class CubagemExcelExport {
           subRow.height = 22;
           const avgDm = subtotalDmPilha / torasIndiv.length;
 
-          // Mescla colunas 1 a 10 para o título do subtotal
-          wsTor.mergeCells(`A${rTorIdx}:J${rTorIdx}`);
+          // Mescla colunas 1 a 9 para o título do subtotal
+          wsTor.mergeCells(`A${rTorIdx}:I${rTorIdx}`);
           const cTit = subRow.getCell(1);
           cTit.value = `SUBTOTAL DA PILHA (${torasIndiv.length} toras) — ${pileItem.identificacao || pileItem.id}`;
           cTit.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
@@ -486,7 +461,7 @@ class CubagemExcelExport {
           cTit.alignment = { horizontal: 'right', vertical: 'middle' };
           cTit.border = thinBorder;
 
-          for (let col = 11; col <= 12; col++) {
+          for (let col = 10; col <= 11; col++) {
             const c = subRow.getCell(col);
             c.value = '-';
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
@@ -494,7 +469,7 @@ class CubagemExcelExport {
             c.alignment = { horizontal: 'center', vertical: 'middle' };
           }
 
-          const cDm = subRow.getCell(13);
+          const cDm = subRow.getCell(12);
           cDm.value = avgDm;
           cDm.numFmt = '#,##0.0';
           cDm.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.verde } };
@@ -502,13 +477,13 @@ class CubagemExcelExport {
           cDm.border = thinBorder;
           cDm.alignment = { horizontal: 'right', vertical: 'middle' };
 
-          const cComp = subRow.getCell(14);
+          const cComp = subRow.getCell(13);
           cComp.value = '-';
           cComp.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
           cComp.border = thinBorder;
           cComp.alignment = { horizontal: 'center', vertical: 'middle' };
 
-          const cVol = subRow.getCell(15);
+          const cVol = subRow.getCell(14);
           cVol.value = subtotalVolPilha;
           cVol.numFmt = '#,##0.000';
           cVol.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
@@ -516,7 +491,7 @@ class CubagemExcelExport {
           cVol.border = thinBorder;
           cVol.alignment = { horizontal: 'right', vertical: 'middle' };
 
-          const cObs = subRow.getCell(16);
+          const cObs = subRow.getCell(15);
           cObs.value = 'Volume Total da Pilha';
           cObs.font = { name: FONT_NAME, size: 8, italic: true, color: { argb: C.texto } };
           cObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
