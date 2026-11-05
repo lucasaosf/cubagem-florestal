@@ -1836,34 +1836,9 @@
     normalizar: normalizarTexto,
     Autocomplete: SpeciesAutocomplete,
 
-    // Inicializa autocomplete nos inputs padrões da aplicação
+    // Inicializa autocomplete no input individual de espécies de toras
     initInputs(appInstance) {
-      const inpGeral = document.getElementById('cubEspecieGeral');
       const inpTora = document.getElementById('cubEspecieTora');
-      const inpCamPil = document.getElementById('cubEspecieCamPil');
-
-      if (inpCamPil) {
-        new SpeciesAutocomplete(inpCamPil, {
-          onSelect: (sp) => {
-            if (appInstance && typeof appInstance.setOrigemMadeira === 'function') {
-              appInstance.setOrigemMadeira(sp.origem);
-            }
-          }
-        });
-      }
-
-      if (inpGeral) {
-        new SpeciesAutocomplete(inpGeral, {
-          onSelect: (sp, formattedText) => {
-            if (appInstance && typeof appInstance.setOrigemMadeira === 'function') {
-              appInstance.setOrigemMadeira(sp.origem);
-            }
-            if (inpTora && !inpTora.value) {
-              inpTora.value = formattedText;
-            }
-          }
-        });
-      }
 
       if (inpTora) {
         new SpeciesAutocomplete(inpTora, {

@@ -220,8 +220,6 @@ class CubagemApp {
     const grpIdentPilhaTora = document.getElementById('grpIdentPilhaTora');
     const lblRodovia = document.getElementById('lblRodovia');
     const grpOrigemMadeira = document.getElementById('grpOrigemMadeira');
-    const grpEspecieCamPil = document.getElementById('grpEspecieCamPil');
-    const grpEspecieGeral = document.getElementById('grpEspecieGeral');
 
     if (tipo === 'caminhao') {
       secCam.style.display = 'block';
@@ -231,8 +229,6 @@ class CubagemApp {
       if (grpIdentPilha) grpIdentPilha.style.display = 'none';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
       if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'block';
-      if (grpEspecieCamPil) grpEspecieCamPil.style.display = 'block';
-      if (grpEspecieGeral) grpEspecieGeral.style.display = 'none';
       lblRodovia.innerHTML = 'Rodovia / BR <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Carga de Caminhão';
     } else if (tipo === 'pilha') {
@@ -243,8 +239,6 @@ class CubagemApp {
       if (grpIdentPilha) grpIdentPilha.style.display = 'block';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
       if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'block';
-      if (grpEspecieCamPil) grpEspecieCamPil.style.display = 'block';
-      if (grpEspecieGeral) grpEspecieGeral.style.display = 'none';
       lblRodovia.innerHTML = 'Local / Pátio / Rodovia <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Madeira';
     } else if (tipo === 'tora') {
@@ -255,8 +249,6 @@ class CubagemApp {
       if (grpIdentPilha) grpIdentPilha.style.display = 'none';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'block';
       if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'none';
-      if (grpEspecieCamPil) grpEspecieCamPil.style.display = 'none';
-      if (grpEspecieGeral) grpEspecieGeral.style.display = 'block';
       lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Toras Roliças (Smalian)';
       this.renderizarListaTorasPilha();
@@ -501,12 +493,11 @@ class CubagemApp {
         return;
       }
 
-      const espCamPil = (document.getElementById('cubEspecieCamPil')?.value.trim()) || '';
       record = {
         id: window.cubagemDB.generateId('CAM'),
         tipo: 'caminhao',
         origemMadeira: this.origemMadeira || 'Nativa',
-        especie: espCamPil,
+        especie: '',
         data, horario, rodovia, km, responsavel,
         placa: placa || 'NÃO INFORMADA',
         observacoes,
@@ -526,7 +517,6 @@ class CubagemApp {
       const comp = document.getElementById('cubComprimentoPilha').value;
       const larg = document.getElementById('cubLarguraPilha').value;
       const identPilha = document.getElementById('cubIdentPilha').value.trim();
-      const espCamPil = (document.getElementById('cubEspecieCamPil')?.value.trim()) || '';
 
       if (!identPilha) {
         this.showToast('Informe a identificação da pilha (ex: Pilha 01).', 'warning');
@@ -548,7 +538,7 @@ class CubagemApp {
         id: window.cubagemDB.generateId('PILHA'),
         tipo: 'pilha',
         origemMadeira: this.origemMadeira || 'Nativa',
-        especie: espCamPil,
+        especie: '',
         data, horario, rodovia, km, responsavel,
         identificacao: identPilha,
         placa: identPilha,
@@ -571,8 +561,7 @@ class CubagemApp {
       const comp = document.getElementById('cubComprimentoTora').value;
       const plaqueta = document.getElementById('cubPlaqueta').value.trim();
       const espToraInp = document.getElementById('cubEspecieTora');
-      const espGeralInp = document.getElementById('cubEspecieGeral');
-      const espAuto = (espToraInp && espToraInp.value.trim()) || (espGeralInp && espGeralInp.value.trim()) || '';
+      const espAuto = (espToraInp && espToraInp.value.trim()) || '';
 
       if (d1 && d2 && comp && plaqueta) {
         const calcAuto = window.CubagemCalculator.calculateTora({
@@ -607,7 +596,10 @@ class CubagemApp {
       const plaquetasList = this.torasPilha.map(t => t.plaqueta).filter(Boolean);
       const identIndividualVal = (identInput ? identInput.value.trim() : '');
       const identPilhaTora = identIndividualVal || (plaquetasList.length > 0 ? (plaquetasList.length === 1 ? `Plaqueta ${plaquetasList[0]}` : `Plaquetas ${plaquetasList.join(', ')}`) : `Tora Individual`);
-      const especieFinal = (espGeralInp && espGeralInp.value.trim()) || (this.torasPilha.find(t => t.especie)?.especie) || '';
+      const especiesUnicas = [...new Set(this.torasPilha.map(t => t.especie).filter(Boolean))];
+      const especieFinal = especiesUnicas.length > 0
+        ? (especiesUnicas.length <= 2 ? especiesUnicas.join(', ') : `${especiesUnicas.slice(0, 2).join(', ')} (+${especiesUnicas.length - 2})`)
+        : '';
 
       const plaquetasResumo = plaquetasList.length > 0
         ? (plaquetasList.length > 3 ? `${plaquetasList[0]} a ${plaquetasList[plaquetasList.length - 1]} (${lote.totalToras} toras)` : plaquetasList.join(', '))
@@ -654,8 +646,6 @@ class CubagemApp {
 
   limparApenasMedidas() {
     this.setOrigemMadeira('Nativa');
-    const espCamPil = document.getElementById('cubEspecieCamPil');
-    if (espCamPil) espCamPil.value = '';
 
     if (this.tipoCubagem === 'caminhao') {
       this.alturasLE = ['', '', ''];
@@ -677,13 +667,10 @@ class CubagemApp {
       document.getElementById('cubPlaqueta').value = '';
       const espTora = document.getElementById('cubEspecieTora');
       if (espTora) espTora.value = '';
-      const espGeral = document.getElementById('cubEspecieGeral');
-      if (espGeral) espGeral.value = '';
       const identTora = document.getElementById('cubIdentPilhaTora');
       if (identTora) identTora.value = '';
       this.torasPilha = [];
       this.renderizarListaTorasPilha();
-      this.removerFotoToraAtiva();
     }
     document.getElementById('cubObservacoes').value = '';
     this.executarCalculoTempoReal();
@@ -692,19 +679,14 @@ class CubagemApp {
   limparFormularioNova() {
     document.getElementById('formNovaCubagem').reset();
     this.setOrigemMadeira('Nativa');
-    const espCamPil = document.getElementById('cubEspecieCamPil');
-    if (espCamPil) espCamPil.value = '';
     const espTora = document.getElementById('cubEspecieTora');
     if (espTora) espTora.value = '';
-    const espGeral = document.getElementById('cubEspecieGeral');
-    if (espGeral) espGeral.value = '';
     this.alturasLE = ['', '', ''];
     this.alturasLD = ['', '', ''];
     this.alturasPilha = ['', '', '', ''];
     this.renderizarGridsAlturas();
     this.torasPilha = [];
     this.renderizarListaTorasPilha();
-    this.removerFotoToraAtiva();
     this.carregarPreferenciasIniciais();
     this.executarCalculoTempoReal();
     this.showToast('Formulário limpo.', 'warning');
@@ -1216,8 +1198,7 @@ class CubagemApp {
     }
 
     const espToraInput = document.getElementById('cubEspecieTora');
-    const espGeralInput = document.getElementById('cubEspecieGeral');
-    const especie = (espToraInput && espToraInput.value.trim()) || (espGeralInput && espGeralInput.value.trim()) || '';
+    const especie = (espToraInput && espToraInput.value.trim()) || '';
 
     const toraItem = {
       numero: this.torasPilha.length + 1,

@@ -248,21 +248,9 @@
               </div>
             </div>
 
-            <!-- Campo Espécie Predominante (Para Caminhão e Pilha de Madeira) - LARGURA AMPLA -->
-            <div class="form-group form-group-species-wide" id="grpEspecieCamPil">
-              <label class="form-label" for="cubEspecieCamPil">Espécie Florestal Predominante <span class="helper">(Opcional - Busca Inteligente)</span></label>
-              <input type="text" id="cubEspecieCamPil" class="form-control input-species-wide" placeholder="Digite para buscar por nome popular ou científico (ex: eucalipto, pinus, ipê, cedro...)">
-            </div>
-
-            <!-- Campo Espécie Geral da Pilha / Lote de Toras - LARGURA AMPLA -->
-            <div class="form-group form-group-species-wide" id="grpEspecieGeral" style="display: none;">
-              <label class="form-label" for="cubEspecieGeral">Espécie Florestal da Pilha / Lote <span class="helper">(Busca Inteligente)</span></label>
-              <input type="text" id="cubEspecieGeral" class="form-control input-species-wide" placeholder="Digite para buscar espécie (ex: Eucalyptus grandis, Pinus taeda, Ipê...)" oninput="if(document.getElementById('cubEspecieTora') && !document.getElementById('cubEspecieTora').value) document.getElementById('cubEspecieTora').value = this.value">
-            </div>
-
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" for="cubObservacoes">Observações de Campo <span class="helper">(Opcional)</span></label>
-              <textarea id="cubObservacoes" class="form-control" placeholder="Espécie vegetal, condições do lote, notas adicionais..."></textarea>
+              <textarea id="cubObservacoes" class="form-control" placeholder="Condições da carga, lote, notas adicionais..."></textarea>
             </div>
           </div>
 
@@ -369,10 +357,10 @@
                 </div>
               </div>
 
-              <!-- Espécie da Tora - LARGURA AMPLA -->
+              <!-- Espécie Individual da Tora - LARGURA AMPLA -->
               <div class="form-group form-group-species-wide" style="margin-bottom: 12px;">
-                <label class="form-label" for="cubEspecieTora">Espécie Florestal da Tora <span class="helper">(Opcional - Busca Inteligente)</span></label>
-                <input type="text" id="cubEspecieTora" class="form-control input-species-wide" placeholder="Digite para buscar espécie (ex: eucalipto, pinus, ipê, cedro...)">
+                <label class="form-label" for="cubEspecieTora">Espécie Individual da Tora <span class="helper">(Opcional - Busca Botânica)</span></label>
+                <input type="text" id="cubEspecieTora" class="form-control input-species-wide" placeholder="Digite para buscar espécie desta tora (ex: eucalipto, pinus, ipê, cedro...)">
               </div>
 
               <div class="form-row">
