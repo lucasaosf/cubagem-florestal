@@ -2,6 +2,7 @@
    Cubagem Florestal - Identidade Visual Oficial: Pesquisa & Soluções Ambientais
    Cores e Padrão: Lucas Aøsf (Cormorant Garamond + Jost, Verde-Floresta, Creme, Sálvia e Bronze)
    Suporte a Modo Claro e Modo Escuro
+   Suporte a Caminhões, Pilhas de Madeira e Toras Roliças
    ========================================================================== */
 
 /* Tema Claro (Padrão) */
@@ -193,7 +194,6 @@ html, body {
   display: block;
 }
 
-/* Alternância de logo conforme o tema */
 :root[data-theme="dark"] .brand-logo-img.logo-light { display: none; }
 :root[data-theme="dark"] .brand-logo-img.logo-dark { display: block; }
 :root[data-theme="light"] .brand-logo-img.logo-light { display: block; }
@@ -233,7 +233,7 @@ html, body {
   gap: 8px;
 }
 
-/* Botão de Trocar Tema (Sol / Lua) */
+/* Botão de Tema */
 .theme-btn {
   width: 40px;
   height: 40px;
@@ -248,9 +248,7 @@ html, body {
   transition: all 0.2s ease;
 }
 
-.theme-btn:active {
-  transform: scale(0.92);
-}
+.theme-btn:active { transform: scale(0.92); }
 
 :root[data-theme="dark"] .t-moon { display: none; }
 :root[data-theme="dark"] .t-sun { display: block; }
@@ -262,7 +260,6 @@ html, body {
   :root:not([data-theme="light"]) .t-sun { display: block; }
 }
 
-/* Badge de Rede / Offline */
 .header-chip {
   display: flex;
   align-items: center;
@@ -295,19 +292,14 @@ html, body {
   animation: fadeIn 0.2s ease-in-out;
 }
 
-.view-section.active {
-  display: block;
-}
+.view-section.active { display: block; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Cabeçalhos de Seções */
-.section-header {
-  margin-bottom: 16px;
-}
+.section-header { margin-bottom: 16px; }
 
 .section-title {
   font-family: var(--display);
@@ -320,6 +312,54 @@ html, body {
   font-size: 0.88rem;
   color: var(--muted);
   margin-top: 2px;
+}
+
+/* Seletor de Tipo de Cubagem (Tabs no Topo do Formulário) */
+.type-selector-card {
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 6px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.type-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1.5px solid transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  gap: 3px;
+}
+
+.type-pill:hover {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.type-pill.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent-strong);
+  box-shadow: var(--shadow);
+}
+
+.type-pill svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Cards */
@@ -344,7 +384,7 @@ html, body {
   justify-content: space-between;
 }
 
-/* Grade de Indicadores (Dashboard) */
+/* KPIs */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -429,37 +469,13 @@ html, body {
   border-color: var(--accent-strong);
 }
 
-.action-card-btn svg {
-  width: 26px;
-  height: 26px;
-}
-
-.action-card-title {
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.action-card-desc {
-  font-size: 0.72rem;
-  opacity: 0.85;
-}
+.action-card-btn svg { width: 26px; height: 26px; }
+.action-card-title { font-weight: 700; font-size: 0.95rem; }
+.action-card-desc { font-size: 0.72rem; opacity: 0.85; }
 
 /* Formulários */
-.form-group {
-  margin-bottom: 12px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.form-row-3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
+.form-group { margin-bottom: 12px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 .form-label {
   display: block;
@@ -467,19 +483,10 @@ html, body {
   font-weight: 700;
   color: var(--ink);
   margin-bottom: 4px;
-  letter-spacing: 0.2px;
 }
 
-.form-label .required {
-  color: var(--rec);
-  margin-left: 2px;
-}
-
-.form-label .helper {
-  font-weight: 400;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
+.form-label .required { color: var(--rec); margin-left: 2px; }
+.form-label .helper { font-weight: 400; color: var(--muted); font-size: 0.72rem; }
 
 .form-control {
   width: 100%;
@@ -507,7 +514,7 @@ textarea.form-control {
   resize: vertical;
 }
 
-/* Caixas de Medição de Altura */
+/* Caixas e Linhas Dinâmicas de Medição de Altura */
 .measure-box-container {
   background: var(--surface-2);
   border: 1.5px solid var(--line);
@@ -533,21 +540,25 @@ textarea.form-control {
   gap: 6px;
 }
 
+.measure-dynamic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .measure-input-card {
   background: var(--surface);
   border: 1.5px solid var(--line);
   border-radius: 8px;
   padding: 6px 8px;
   text-align: center;
+  position: relative;
 }
 
-.measure-input-card.highlight-le {
-  border-top: 3px solid var(--sage);
-}
-
-.measure-input-card.highlight-ld {
-  border-top: 3px solid var(--gold);
-}
+.measure-input-card.highlight-le { border-top: 3px solid var(--sage); }
+.measure-input-card.highlight-ld { border-top: 3px solid var(--gold); }
+.measure-input-card.highlight-pilha { border-top: 3px solid var(--accent); }
 
 .measure-input-label {
   font-size: 0.68rem;
@@ -555,11 +566,24 @@ textarea.form-control {
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-remove-alt {
+  background: none;
+  border: none;
+  color: var(--rec);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
 }
 
 .measure-input-field {
   width: 100%;
-  height: 42px;
+  height: 40px;
   font-family: var(--body);
   font-size: 1.15rem;
   font-weight: 700;
@@ -574,6 +598,12 @@ textarea.form-control {
   outline: none;
   background: var(--surface);
   border-color: var(--accent);
+}
+
+.measure-btn-bar {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 /* Card de Memória de Cálculo e Resultado */
@@ -692,9 +722,7 @@ textarea.form-control {
   text-decoration: none;
 }
 
-.btn:active {
-  transform: scale(0.97);
-}
+.btn:active { transform: scale(0.97); }
 
 .btn-primary {
   background: var(--accent);
@@ -708,18 +736,11 @@ textarea.form-control {
   border: 1.5px solid var(--line);
 }
 
-.btn-secondary:hover {
-  background: var(--surface-2);
-}
+.btn-secondary:hover { background: var(--surface-2); }
 
-.btn-danger {
-  background: var(--rec);
-  color: #fff;
-}
+.btn-danger { background: var(--rec); color: #fff; }
 
-.btn-block {
-  width: 100%;
-}
+.btn-block { width: 100%; }
 
 .btn-lg {
   height: 50px;
@@ -755,10 +776,36 @@ textarea.form-control {
   border-color: var(--rec);
 }
 
-/* Histórico */
-.history-controls {
-  margin-bottom: 12px;
+/* Badges de Tipo */
+.badge-type {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--line);
 }
+
+.badge-type.caminhao {
+  background: var(--surface-2);
+  color: var(--gold);
+}
+
+.badge-type.pilha {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.badge-type.tora {
+  background: var(--surface-2);
+  color: var(--rec);
+  border-color: var(--rec);
+}
+
+/* Histórico */
+.history-controls { margin-bottom: 12px; }
 
 .search-input-wrapper {
   position: relative;
@@ -773,9 +820,7 @@ textarea.form-control {
   color: var(--muted);
 }
 
-.search-input {
-  padding-left: 38px;
-}
+.search-input { padding-left: 38px; }
 
 .history-item-card {
   background: var(--surface);
@@ -800,16 +845,6 @@ textarea.form-control {
   color: var(--muted);
 }
 
-.history-tag-highway {
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: var(--surface-2);
-  color: var(--gold);
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-}
-
 .history-card-body {
   display: flex;
   align-items: center;
@@ -830,9 +865,7 @@ textarea.form-control {
   color: var(--muted);
 }
 
-.history-vol-badge {
-  text-align: right;
-}
+.history-vol-badge { text-align: right; }
 
 .history-vol-num {
   font-family: var(--display);
@@ -859,7 +892,7 @@ textarea.form-control {
   border-top: 1px solid var(--line);
 }
 
-/* Barra de Navegação Inferior */
+/* Barra Inferior */
 .app-bottom-nav {
   position: fixed;
   bottom: 0;
@@ -896,11 +929,7 @@ textarea.form-control {
   transition: color 0.15s ease;
 }
 
-.nav-item svg {
-  width: 22px;
-  height: 22px;
-  stroke-width: 2;
-}
+.nav-item svg { width: 22px; height: 22px; stroke-width: 2; }
 
 .nav-item.active {
   color: var(--gold);
@@ -912,7 +941,7 @@ textarea.form-control {
   stroke-width: 2.5;
 }
 
-/* Modal */
+/* Modais */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -927,10 +956,7 @@ textarea.form-control {
   transition: opacity 0.2s ease;
 }
 
-.modal-overlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
 
 .modal-dialog {
   background: var(--surface);
@@ -948,18 +974,11 @@ textarea.form-control {
   overflow: hidden;
 }
 
-.modal-overlay.open .modal-dialog {
-  transform: translateY(0);
-}
+.modal-overlay.open .modal-dialog { transform: translateY(0); }
 
 @media (min-width: 640px) {
-  .modal-overlay {
-    align-items: center;
-    padding: 20px;
-  }
-  .modal-dialog {
-    border-radius: 18px;
-  }
+  .modal-overlay { align-items: center; padding: 20px; }
+  .modal-dialog { border-radius: 18px; }
 }
 
 .modal-header {
@@ -987,11 +1006,7 @@ textarea.form-control {
   padding: 4px;
 }
 
-.modal-body {
-  padding: 20px;
-  overflow-y: auto;
-  flex: 1;
-}
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; }
 
 .modal-footer {
   padding: 12px 20px;
@@ -1043,7 +1058,6 @@ textarea.form-control {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Empty State */
 .empty-state {
   text-align: center;
   padding: 36px 16px;
@@ -1058,12 +1072,8 @@ textarea.form-control {
   margin-bottom: 4px;
 }
 
-.empty-state-desc {
-  font-size: 0.85rem;
-  margin-bottom: 14px;
-}
+.empty-state-desc { font-size: 0.85rem; margin-bottom: 14px; }
 
-/* Rodapé de Crédito Oficial */
 .author-credit-footer {
   text-align: center;
   padding: 18px 12px;

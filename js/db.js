@@ -1,18 +1,16 @@
 /**
  * db.js - Camada de persistência local 100% offline via IndexedDB
- * Cubagem Florestal
+ * Cubagem Florestal — Suporte a Caminhões, Pilhas e Toras
+ * Desenvolvido por Lucas Aøsf
  */
 
 class CubagemDB {
   constructor() {
     this.dbName = 'CubagemFlorestalDB';
-    this.version = 1;
+    this.version = 2; // Atualizado para suportar índices de tipo e plaqueta
     this.db = null;
   }
 
-  /**
-   * Inicializa o banco IndexedDB
-   */
   async init() {
     if (this.db) return this.db;
 
@@ -22,17 +20,27 @@ class CubagemDB {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
 
-        // Store para os registros de cubagem
+        let store;
         if (!db.objectStoreNames.contains('cubagens')) {
-          const store = db.createObjectStore('cubagens', { keyPath: 'id' });
-          store.createIndex('data', 'data', { unique: false });
-          store.createIndex('rodovia', 'rodovia', { unique: false });
-          store.createIndex('responsavel', 'responsavel', { unique: false });
-          store.createIndex('placa', 'placa', { unique: false });
-          store.createIndex('timestamp', 'timestamp', { unique: false });
+          store = db.createObjectStore('cubagens', { keyPath: 'id' });
+        } else {
+          store = event.target.transaction.objectStore('cubagens');
         }
 
-        // Store para configurações do usuário
+        const ensureIndex = (name, key) => {
+          if (!store.indexNames.contains(name)) {
+            store.createIndex(name, key, { unique: false });
+          }
+        };
+
+        ensureIndex('data', 'data');
+        ensureIndex('tipo', 'tipo');
+        ensureIndex('rodovia', 'rodovia');
+        ensureIndex('responsavel', 'responsavel');
+        ensureIndex('placa', 'placa');
+        ensureIndex('plaqueta', 'plaqueta');
+        ensureIndex('timestamp', 'timestamp');
+
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'key' });
         }
@@ -50,28 +58,26 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Gera um ID único e legível para a cubagem
-   */
-  generateId() {
+  generateId(prefix = 'CUB') {
     const now = new Date();
     const pad = (n, len = 2) => String(n).padStart(len, '0');
     const dateStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
     const timeStr = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const rand = Math.floor(Math.random() * 900 + 100);
-    return `CUB-${dateStr}-${timeStr}-${rand}`;
+    return `${prefix}-${dateStr}-${timeStr}-${rand}`;
   }
 
-  /**
-   * Salva uma nova cubagem
-   */
   async add(record) {
     await this.init();
     if (!record.id) {
-      record.id = this.generateId();
+      const pfx = record.tipo === 'tora' ? 'TORA' : (record.tipo === 'pilha' ? 'PILHA' : 'CAM');
+      record.id = this.generateId(pfx);
     }
     if (!record.timestamp) {
       record.timestamp = Date.now();
+    }
+    if (!record.tipo) {
+      record.tipo = 'caminhao';
     }
 
     return new Promise((resolve, reject) => {
@@ -84,9 +90,6 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Atualiza uma cubagem existente
-   */
   async update(record) {
     await this.init();
     record.updatedAt = Date.now();
@@ -101,9 +104,6 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Remove uma cubagem por ID
-   */
   async delete(id) {
     await this.init();
     return new Promise((resolve, reject) => {
@@ -116,9 +116,6 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Obtém uma cubagem por ID
-   */
   async get(id) {
     await this.init();
     return new Promise((resolve, reject) => {
@@ -131,9 +128,6 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Retorna todas as cubagens ordenadas por data/timestamp desc
-   */
   async getAll(sortDesc = true) {
     await this.init();
     return new Promise((resolve, reject) => {
@@ -154,30 +148,35 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Filtra cubagens por intervalo de datas (inclusive)
-   */
-  async getByDateRange(startDateStr, endDateStr) {
+  async getByDateRange(startDateStr, endDateStr, tipoFiltro = 'todos') {
     const all = await this.getAll(false);
     return all.filter((item) => {
       if (!item.data) return false;
-      return item.data >= startDateStr && item.data <= endDateStr;
+      const dataMatch = item.data >= startDateStr && item.data <= endDateStr;
+      if (!dataMatch) return false;
+      if (tipoFiltro !== 'todos' && item.tipo !== tipoFiltro) return false;
+      return true;
     });
   }
 
-  /**
-   * Busca registros por múltiplos campos
-   */
-  async search(query) {
+  async search(query, tipoFiltro = 'todos') {
     const all = await this.getAll(true);
-    if (!query || !query.trim()) return all;
+    let filtered = all;
+
+    if (tipoFiltro && tipoFiltro !== 'todos') {
+      filtered = filtered.filter(i => (i.tipo || 'caminhao') === tipoFiltro);
+    }
+
+    if (!query || !query.trim()) return filtered;
 
     const term = query.toLowerCase().trim();
-    return all.filter((item) => {
+    return filtered.filter((item) => {
       return (
         (item.rodovia && item.rodovia.toLowerCase().includes(term)) ||
         (item.responsavel && item.responsavel.toLowerCase().includes(term)) ||
         (item.placa && item.placa.toLowerCase().includes(term)) ||
+        (item.plaqueta && item.plaqueta.toLowerCase().includes(term)) ||
+        (item.identificacao && item.identificacao.toLowerCase().includes(term)) ||
         (item.km && String(item.km).toLowerCase().includes(term)) ||
         (item.data && item.data.includes(term)) ||
         (item.observacoes && item.observacoes.toLowerCase().includes(term)) ||
@@ -186,9 +185,6 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Retorna estatísticas para o painel inicial
-   */
   async getStats() {
     const all = await this.getAll(true);
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -197,9 +193,30 @@ class CubagemDB {
     let todayCount = 0;
     let todayVolume = 0;
 
+    let totalCaminhoes = 0;
+    let totalPilhas = 0;
+    let totalToras = 0;
+
+    let volCaminhoes = 0;
+    let volPilhas = 0;
+    let volToras = 0;
+
     for (const item of all) {
       const vol = Number(item.volumeGeometrico) || 0;
       totalVolume += vol;
+      const t = item.tipo || 'caminhao';
+
+      if (t === 'caminhao') {
+        totalCaminhoes++;
+        volCaminhoes += vol;
+      } else if (t === 'pilha') {
+        totalPilhas++;
+        volPilhas += vol;
+      } else if (t === 'tora') {
+        totalToras++;
+        volToras += vol;
+      }
+
       if (item.data === todayStr) {
         todayCount++;
         todayVolume += vol;
@@ -211,14 +228,17 @@ class CubagemDB {
       totalVolume,
       todayCount,
       todayVolume,
+      totalCaminhoes,
+      totalPilhas,
+      totalToras,
+      volCaminhoes,
+      volPilhas,
+      volToras,
       averageVolume: all.length > 0 ? totalVolume / all.length : 0,
-      recentItems: all.slice(0, 5)
+      recentItems: all.slice(0, 6)
     };
   }
 
-  /**
-   * Salva uma configuração
-   */
   async setSetting(key, value) {
     await this.init();
     return new Promise((resolve, reject) => {
@@ -231,9 +251,6 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Lê uma configuração
-   */
   async getSetting(key, defaultValue = null) {
     await this.init();
     return new Promise((resolve, reject) => {
@@ -252,9 +269,6 @@ class CubagemDB {
     });
   }
 
-  /**
-   * Gera arquivo JSON para backup completo
-   */
   async exportBackup() {
     const cubagens = await this.getAll(false);
     const settings = await new Promise((resolve) => {
@@ -267,7 +281,8 @@ class CubagemDB {
 
     return {
       app: 'Cubagem Florestal',
-      version: '1.0.0',
+      version: '2.0.0',
+      desenvolvedor: 'Lucas Aøsf',
       exportedAt: new Date().toISOString(),
       totalRecords: cubagens.length,
       data: {
@@ -277,9 +292,6 @@ class CubagemDB {
     };
   }
 
-  /**
-   * Importa dados de backup com validação
-   */
   async importBackup(backupJson, mode = 'merge') {
     await this.init();
 
@@ -289,10 +301,9 @@ class CubagemDB {
 
     const newCubagens = backupJson.data.cubagens;
 
-    // Validação mínima de cada item
     for (const item of newCubagens) {
       if (!item.id || !item.data || item.volumeGeometrico === undefined) {
-        throw new Error('O backup contém registros corrompidos ou mal formatados.');
+        throw new Error('O backup contém registros com estrutura corrompida.');
       }
     }
 
@@ -319,7 +330,6 @@ class CubagemDB {
       });
     }
 
-    // Importar settings se existirem
     if (Array.isArray(backupJson.data.settings)) {
       const settingsStore = tx.objectStore('settings');
       for (const s of backupJson.data.settings) {
@@ -337,5 +347,4 @@ class CubagemDB {
   }
 }
 
-// Instância singleton global
 window.cubagemDB = new CubagemDB();

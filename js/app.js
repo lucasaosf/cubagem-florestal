@@ -1,6 +1,8 @@
 /**
  * app.js - Controlador principal do Aplicativo Cubagem Florestal
  * Gestão de interface, eventos, cálculos em tempo real e orquestração offline
+ * Suporte a: Caminhão (LE/LD dinâmicos), Pilha de Madeira e Toras Roliças
+ * Desenvolvido por Lucas Aøsf
  */
 
 class CubagemApp {
@@ -9,16 +11,22 @@ class CubagemApp {
     this.deferredInstallPrompt = null;
     this.currentDetailItem = null;
     this.itemToDeleteId = null;
-    this.historyFilterMode = 'todos';
+
+    // Modalidade ativa: 'caminhao' | 'pilha' | 'tora'
+    this.tipoCubagem = 'caminhao';
+
+    // Listas dinâmicas de alturas
+    this.alturasLE = ['', '', ''];
+    this.alturasLD = ['', '', ''];
+    this.alturasPilha = ['', '', '', ''];
+
+    // Filtros no histórico
+    this.historyFilterTipo = 'todos';
   }
 
-  /**
-   * Inicialização da aplicação
-   */
   async init() {
-    console.log('[Cubagem Florestal] Inicializando aplicativo...');
+    console.log('[Cubagem Florestal] Inicializando aplicativo multipasta...');
 
-    // 1. Inicializar Banco IndexedDB
     try {
       await window.cubagemDB.init();
     } catch (err) {
@@ -26,57 +34,23 @@ class CubagemApp {
       this.showToast('Erro ao inicializar banco de dados local.', 'danger');
     }
 
-    // 2. Registrar Service Worker para PWA Offline
     this.registrarServiceWorker();
-
-    // 3. Configurar listeners de rede (Online/Offline)
     this.configurarMonitorRede();
-
-    // 4. Configurar listener de instalação PWA
     this.configurarInstalacaoPWA();
-
-    // 5. Configurar listeners de cálculo em tempo real
+    this.renderizarGridsAlturas();
     this.configurarCalculoTempoReal();
-
-    // 6. Preencher data/hora automáticas e carregar preferências
     await this.carregarPreferenciasIniciais();
-
-    // 7. Atualizar Painel Inicial
     await this.atualizarDashboard();
 
-    // 8. Configurar busca no histórico
     const searchInput = document.getElementById('historySearchInput');
     if (searchInput) {
       searchInput.addEventListener('input', () => this.carregarHistorico());
     }
 
-    // 9. Configurar datas padrão no relatório
     this.setReportPeriod('mes-atual', false);
-
-    console.log('[Cubagem Florestal] Inicialização concluída com sucesso!');
+    console.log('[Cubagem Florestal] Inicialização concluída!');
   }
 
-  /**
-   * Registro do Service Worker
-   */
-  registrarServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker
-          .register('./sw.js')
-          .then((reg) => {
-            console.log('[Service Worker] Registrado com sucesso:', reg.scope);
-          })
-          .catch((err) => {
-            console.warn('[Service Worker] Falha no registro:', err);
-          });
-      });
-    }
-  }
-
-  /**
-   * Alternância de Tema (Modo Claro / Modo Escuro)
-   */
   toggleTheme() {
     const cur = document.documentElement.getAttribute('data-theme') || 'dark';
     const next = cur === 'light' ? 'dark' : 'light';
@@ -87,9 +61,17 @@ class CubagemApp {
     this.showToast(`Modo ${next === 'light' ? 'Claro' : 'Escuro'} ativado.`, 'info');
   }
 
-  /**
-   * Monitoramento de conectividade (Online / Offline)
-   */
+  registrarServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('./sw.js')
+          .then((reg) => console.log('[Service Worker] Ativo:', reg.scope))
+          .catch((err) => console.warn('[Service Worker] Falha:', err));
+      });
+    }
+  }
+
   configurarMonitorRede() {
     const updateStatus = () => {
       const dot = document.getElementById('statusDot');
@@ -97,13 +79,11 @@ class CubagemApp {
       if (!dot || !text) return;
 
       if (navigator.onLine) {
-        dot.style.backgroundColor = '#52B788';
-        dot.style.boxShadow = '0 0 6px #52B788';
-        text.textContent = 'Online / Offline Ready';
+        dot.style.backgroundColor = 'var(--sage)';
+        text.textContent = 'Online';
       } else {
-        dot.style.backgroundColor = '#D4A373';
-        dot.style.boxShadow = '0 0 6px #D4A373';
-        text.textContent = 'Modo Campo (100% Offline)';
+        dot.style.backgroundColor = 'var(--gold)';
+        text.textContent = '100% Offline';
       }
     };
 
@@ -112,9 +92,6 @@ class CubagemApp {
     updateStatus();
   }
 
-  /**
-   * Captura evento de instalação PWA no celular
-   */
   configurarInstalacaoPWA() {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -127,7 +104,7 @@ class CubagemApp {
       this.deferredInstallPrompt = null;
       const btn = document.getElementById('btnInstallPwa');
       if (btn) btn.style.display = 'none';
-      this.showToast('Aplicativo instalado com sucesso!', 'success');
+      this.showToast('Aplicativo instalado no celular com sucesso!', 'success');
     });
   }
 
@@ -136,7 +113,7 @@ class CubagemApp {
       this.deferredInstallPrompt.prompt();
       const choice = await this.deferredInstallPrompt.userChoice;
       if (choice.outcome === 'accepted') {
-        this.showToast('Iniciando instalação...', 'success');
+        this.showToast('Instalando aplicativo...', 'success');
       }
       this.deferredInstallPrompt = null;
       const btn = document.getElementById('btnInstallPwa');
@@ -144,20 +121,15 @@ class CubagemApp {
     }
   }
 
-  /**
-   * Navegação entre seções
-   */
   async navigate(viewId) {
     const views = ['inicio', 'nova', 'historico', 'relatorios', 'configuracoes'];
     if (!views.includes(viewId)) return;
 
-    // Atualiza classes das views
     views.forEach((v) => {
       const el = document.getElementById(`view-${v}`);
       if (el) el.classList.toggle('active', v === viewId);
     });
 
-    // Atualiza botões da barra de navegação
     document.querySelectorAll('.nav-item').forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-target') === viewId);
     });
@@ -165,239 +137,482 @@ class CubagemApp {
     this.currentView = viewId;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Ações ao entrar em cada tela
-    if (viewId === 'inicio') {
-      await this.atualizarDashboard();
-    } else if (viewId === 'nova') {
-      this.resetarDataHoraAtual();
-    } else if (viewId === 'historico') {
-      await this.carregarHistorico();
-    } else if (viewId === 'relatorios') {
-      await this.atualizarRelatorioPeriodo();
-    } else if (viewId === 'configuracoes') {
-      await this.carregarCamposConfiguracoes();
-    }
+    if (viewId === 'inicio') await this.atualizarDashboard();
+    else if (viewId === 'nova') this.resetarDataHoraAtual();
+    else if (viewId === 'historico') await this.carregarHistorico();
+    else if (viewId === 'relatorios') await this.atualizarRelatorioPeriodo();
+    else if (viewId === 'configuracoes') await this.carregarCamposConfiguracoes();
   }
 
-  /**
-   * Preenchimento automático de data e horário atual
-   */
   resetarDataHoraAtual() {
     const dataInput = document.getElementById('cubData');
     const horarioInput = document.getElementById('cubHorario');
-
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
 
     if (dataInput && !dataInput.value) {
       dataInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     }
-
     if (horarioInput && !horarioInput.value) {
       horarioInput.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     }
   }
 
-  /**
-   * Carrega preferências de campo do usuário (Nome do Responsável / Rodovia)
-   */
   async carregarPreferenciasIniciais() {
     this.resetarDataHoraAtual();
-
-    const respPadrao = await window.cubagemDB.getSetting('defaultResponsavel', '');
+    const respPadrao = await window.cubagemDB.getSetting('defaultResponsavel', 'Lucas Aøsf');
     const rodPadrao = await window.cubagemDB.getSetting('defaultRodovia', '');
 
     const respInput = document.getElementById('cubResponsavel');
     const rodInput = document.getElementById('cubRodovia');
 
-    if (respInput && respPadrao && !respInput.value) {
-      respInput.value = respPadrao;
-    }
-    if (rodInput && rodPadrao && !rodInput.value) {
-      rodInput.value = rodPadrao;
-    }
+    if (respInput && respPadrao && !respInput.value) respInput.value = respPadrao;
+    if (rodInput && rodPadrao && !rodInput.value) rodInput.value = rodPadrao;
   }
 
-  /**
-   * Configura recálculo automático quando o usuário digita medidas
-   */
-  configurarCalculoTempoReal() {
-    const inputs = document.querySelectorAll('.calc-trigger');
-    inputs.forEach((input) => {
-      input.addEventListener('input', () => this.executarCalculoTempoReal());
+  // =========================================================================
+  // GESTÃO DE MODALIDADES (CAMINHÃO / PILHA / TORA)
+  // =========================================================================
+  setTipoCubagem(tipo) {
+    this.tipoCubagem = tipo;
+
+    document.querySelectorAll('.type-pill').forEach((p) => p.classList.remove('active'));
+    const activeBtn = document.getElementById(tipo === 'caminhao' ? 'btnTypeCaminhao' : (tipo === 'pilha' ? 'btnTypePilha' : 'btnTypeTora'));
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // Alternar visibilidade das seções
+    const secCam = document.getElementById('sectionCaminhao');
+    const secPil = document.getElementById('sectionPilha');
+    const secTor = document.getElementById('sectionTora');
+
+    const grpPlaca = document.getElementById('grpPlaca');
+    const grpIdentPilha = document.getElementById('grpIdentPilha');
+    const grpPlaqueta = document.getElementById('grpPlaqueta');
+    const lblRodovia = document.getElementById('lblRodovia');
+
+    if (tipo === 'caminhao') {
+      secCam.style.display = 'block';
+      secPil.style.display = 'none';
+      secTor.style.display = 'none';
+      grpPlaca.style.display = 'block';
+      grpIdentPilha.style.display = 'none';
+      grpPlaqueta.style.display = 'none';
+      lblRodovia.innerHTML = 'Rodovia / BR <span class="required">*</span>';
+      document.getElementById('liveTypeBadge').textContent = 'Carga de Caminhão';
+    } else if (tipo === 'pilha') {
+      secCam.style.display = 'none';
+      secPil.style.display = 'block';
+      secTor.style.display = 'none';
+      grpPlaca.style.display = 'none';
+      grpIdentPilha.style.display = 'block';
+      grpPlaqueta.style.display = 'none';
+      lblRodovia.innerHTML = 'Local / Pátio / Rodovia <span class="required">*</span>';
+      document.getElementById('liveTypeBadge').textContent = 'Pilha de Madeira';
+    } else if (tipo === 'tora') {
+      secCam.style.display = 'none';
+      secPil.style.display = 'none';
+      secTor.style.display = 'block';
+      grpPlaca.style.display = 'none';
+      grpIdentPilha.style.display = 'none';
+      grpPlaqueta.style.display = 'block';
+      lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
+      document.getElementById('liveTypeBadge').textContent = 'Tora Roliça (Smalian)';
+    }
+
+    this.executarCalculoTempoReal();
+  }
+
+  // =========================================================================
+  // GESTÃO DINÂMICA DE ALTURAS (ADICIONAR / REMOVER)
+  // =========================================================================
+  adicionarAltura(lado) {
+    if (lado === 'LE') {
+      this.alturasLE.push('');
+      this.renderizarGridLado('LE', this.alturasLE, 'gridAlturasLE', 'highlight-le');
+    } else if (lado === 'LD') {
+      this.alturasLD.push('');
+      this.renderizarGridLado('LD', this.alturasLD, 'gridAlturasLD', 'highlight-ld');
+    } else if (lado === 'Pilha') {
+      this.alturasPilha.push('');
+      this.renderizarGridLado('Pilha', this.alturasPilha, 'gridAlturasPilha', 'highlight-pilha');
+    }
+    this.atualizarContadoresAlturas();
+    this.executarCalculoTempoReal();
+  }
+
+  removerAltura(lado, index) {
+    if (lado === 'LE') {
+      if (this.alturasLE.length <= 1) return;
+      this.alturasLE.splice(index, 1);
+      this.renderizarGridLado('LE', this.alturasLE, 'gridAlturasLE', 'highlight-le');
+    } else if (lado === 'LD') {
+      if (this.alturasLD.length <= 1) return;
+      this.alturasLD.splice(index, 1);
+      this.renderizarGridLado('LD', this.alturasLD, 'gridAlturasLD', 'highlight-ld');
+    } else if (lado === 'Pilha') {
+      if (this.alturasPilha.length <= 1) return;
+      this.alturasPilha.splice(index, 1);
+      this.renderizarGridLado('Pilha', this.alturasPilha, 'gridAlturasPilha', 'highlight-pilha');
+    }
+    this.atualizarContadoresAlturas();
+    this.executarCalculoTempoReal();
+  }
+
+  renderizarGridsAlturas() {
+    this.renderizarGridLado('LE', this.alturasLE, 'gridAlturasLE', 'highlight-le');
+    this.renderizarGridLado('LD', this.alturasLD, 'gridAlturasLD', 'highlight-ld');
+    this.renderizarGridLado('Pilha', this.alturasPilha, 'gridAlturasPilha', 'highlight-pilha');
+    this.atualizarContadoresAlturas();
+  }
+
+  renderizarGridLado(lado, array, containerId, highlightClass) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = array.map((val, i) => `
+      <div class="measure-input-card ${highlightClass}">
+        <div class="measure-input-label">
+          <span>${lado} ${i + 1}</span>
+          ${array.length > 1 ? `<button type="button" class="btn-remove-alt" onclick="app.removerAltura('${lado}', ${i})" title="Remover">&times;</button>` : ''}
+        </div>
+        <input type="text" inputmode="decimal" value="${val}" class="measure-input-field dynamic-alt-input" data-lado="${lado}" data-index="${i}" placeholder="0,00">
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.dynamic-alt-input').forEach((input) => {
+      input.addEventListener('input', (e) => {
+        const l = e.target.getAttribute('data-lado');
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        if (l === 'LE') this.alturasLE[idx] = e.target.value;
+        else if (l === 'LD') this.alturasLD[idx] = e.target.value;
+        else if (l === 'Pilha') this.alturasPilha[idx] = e.target.value;
+        this.executarCalculoTempoReal();
+      });
     });
   }
 
-  /**
-   * Executa cálculo e atualiza card de memória em tempo real
-   */
+  atualizarContadoresAlturas() {
+    const cLE = document.getElementById('countLELabel');
+    const cLD = document.getElementById('countLDLabel');
+    const cPil = document.getElementById('countPilhaLabel');
+    if (cLE) cLE.textContent = `${this.alturasLE.length} alturas`;
+    if (cLD) cLD.textContent = `${this.alturasLD.length} alturas`;
+    if (cPil) cPil.textContent = `${this.alturasPilha.length} alturas`;
+  }
+
+  // =========================================================================
+  // CÁLCULO EM TEMPO REAL E ATUALIZAÇÃO DA TELA
+  // =========================================================================
+  configurarCalculoTempoReal() {
+    document.querySelectorAll('.calc-trigger').forEach((inp) => {
+      inp.addEventListener('input', () => this.executarCalculoTempoReal());
+    });
+  }
+
   executarCalculoTempoReal() {
-    const measures = {
-      le1: document.getElementById('cubLE1').value,
-      le2: document.getElementById('cubLE2').value,
-      le3: document.getElementById('cubLE3').value,
-      ld1: document.getElementById('cubLD1').value,
-      ld2: document.getElementById('cubLD2').value,
-      ld3: document.getElementById('cubLD3').value,
-      comprimento: document.getElementById('cubComprimento').value,
-      largura: document.getElementById('cubLargura').value
-    };
-
-    const res = window.CubagemCalculator.calculate(measures);
-
     const volEl = document.getElementById('liveVolumeDisplay');
-    const somaEl = document.getElementById('liveSomaDisplay');
-    const hmEl = document.getElementById('liveHmDisplay');
-    const dimEl = document.getElementById('liveDimDisplay');
     const memEl = document.getElementById('liveMemoryText');
+    const l1 = document.getElementById('liveDetLabel1');
+    const v1 = document.getElementById('liveDetVal1');
+    const l2 = document.getElementById('liveDetLabel2');
+    const v2 = document.getElementById('liveDetVal2');
+    const l3 = document.getElementById('liveDetLabel3');
+    const v3 = document.getElementById('liveDetVal3');
 
-    if (res.isValid) {
-      volEl.textContent = res.display.volumeGeometrico;
-      somaEl.textContent = `${res.display.somaAlturas} m`;
-      hmEl.textContent = `${res.display.alturaMedia} m`;
-      dimEl.textContent = `${res.display.comprimento} × ${res.display.largura} m`;
-      memEl.innerHTML = res.memoriaCalculo.join('<br>');
-    } else {
-      volEl.textContent = '0,00';
-      somaEl.textContent = '0,00 m';
-      hmEl.textContent = '0,00 m';
-      dimEl.textContent = '0 × 0 m';
-      memEl.textContent = 'Preencha todas as medidas válidas (> 0) para ver o resultado.';
+    if (this.tipoCubagem === 'caminhao') {
+      const comp = document.getElementById('cubComprimentoCam').value;
+      const larg = document.getElementById('cubLarguraCam').value;
+      const res = window.CubagemCalculator.calculateCaminhao({
+        alturasLE: this.alturasLE,
+        alturasLD: this.alturasLD,
+        comprimentoRaw: comp,
+        larguraRaw: larg
+      });
+
+      l1.textContent = 'Soma Alturas';
+      l2.textContent = 'Hm Média';
+      l3.textContent = 'Dimensões (C × L)';
+
+      if (res.isValid) {
+        volEl.textContent = res.display.volumeGeometrico;
+        v1.textContent = `${res.display.somaAlturas} m`;
+        v2.textContent = `${res.display.alturaMedia} m`;
+        v3.textContent = `${res.display.comprimento} × ${res.display.largura} m`;
+        memEl.innerHTML = res.memoriaCalculo.join('<br>');
+      } else {
+        volEl.textContent = '0,00';
+        v1.textContent = '0,00 m';
+        v2.textContent = '0,00 m';
+        v3.textContent = '0 × 0 m';
+        memEl.textContent = 'Preencha todas as alturas (LE e LD) e as dimensões da carga.';
+      }
+    } else if (this.tipoCubagem === 'pilha') {
+      const comp = document.getElementById('cubComprimentoPilha').value;
+      const larg = document.getElementById('cubLarguraPilha').value;
+      const res = window.CubagemCalculator.calculatePilha({
+        alturas: this.alturasPilha,
+        comprimentoRaw: comp,
+        larguraRaw: larg
+      });
+
+      l1.textContent = 'Soma Face';
+      l2.textContent = 'Hm da Pilha';
+      l3.textContent = 'Dimensões (C × P)';
+
+      if (res.isValid) {
+        volEl.textContent = res.display.volumeGeometrico;
+        v1.textContent = `${res.display.somaAlturas} m`;
+        v2.textContent = `${res.display.alturaMedia} m`;
+        v3.textContent = `${res.display.comprimento} × ${res.display.largura} m`;
+        memEl.innerHTML = res.memoriaCalculo.join('<br>');
+      } else {
+        volEl.textContent = '0,00';
+        v1.textContent = '0,00 m';
+        v2.textContent = '0,00 m';
+        v3.textContent = '0 × 0 m';
+        memEl.textContent = 'Preencha as alturas da face da pilha, comprimento e profundidade.';
+      }
+    } else if (this.tipoCubagem === 'tora') {
+      const d1 = document.getElementById('cubDiametroPonta1').value;
+      const d2 = document.getElementById('cubDiametroPonta2').value;
+      const comp = document.getElementById('cubComprimentoTora').value;
+      const plaqueta = document.getElementById('cubPlaqueta').value;
+
+      const res = window.CubagemCalculator.calculateTora({
+        diametroPonta1Raw: d1,
+        diametroPonta2Raw: d2,
+        comprimentoRaw: comp,
+        plaqueta: plaqueta
+      });
+
+      l1.textContent = 'Diâmetro Médio';
+      l2.textContent = 'Comprimento';
+      l3.textContent = 'Plaqueta';
+
+      if (res.isValid) {
+        volEl.textContent = res.display.volumeGeometrico;
+        v1.textContent = res.display.diametroMedio;
+        v2.textContent = res.display.comprimento;
+        v3.textContent = res.plaqueta;
+        memEl.innerHTML = res.memoriaCalculo.join('<br>');
+      } else {
+        volEl.textContent = '0,000';
+        v1.textContent = '0 cm';
+        v2.textContent = '0 m';
+        v3.textContent = plaqueta || '-';
+        memEl.textContent = 'Informe os diâmetros das duas pontas da tora e o comprimento.';
+      }
     }
   }
 
-  /**
-   * Salva uma nova medição no IndexedDB
-   */
+  // =========================================================================
+  // SALVAR CUBAGEM (CAMINHÃO, PILHA OU TORA)
+  // =========================================================================
   async salvarCubagem() {
-    // 1. Obter dados operacionais
     const data = document.getElementById('cubData').value;
     const horario = document.getElementById('cubHorario').value;
     const rodovia = document.getElementById('cubRodovia').value.trim();
-    const kmStr = document.getElementById('cubKm').value.trim();
+    const km = document.getElementById('cubKm').value.trim();
     const responsavel = document.getElementById('cubResponsavel').value.trim();
-    const placa = document.getElementById('cubPlaca').value.trim().toUpperCase();
     const observacoes = document.getElementById('cubObservacoes').value.trim();
 
-    // Validações básicas de operação
-    if (!data || !horario || !rodovia || !kmStr || !responsavel) {
-      this.showToast('Por favor, preencha todos os campos operacionais obrigatórios.', 'warning');
+    if (!data || !horario || !rodovia || !responsavel) {
+      this.showToast('Preencha os campos operacionais obrigatórios (Data, Horário, Local e Responsável).', 'warning');
       return;
     }
 
-    const km = window.CubagemCalculator.parseNumber(kmStr);
-    if (isNaN(km) || km < 0) {
-      this.showToast('Informe um valor de quilômetro (Km) válido.', 'warning');
-      return;
+    let record = null;
+
+    if (this.tipoCubagem === 'caminhao') {
+      const comp = document.getElementById('cubComprimentoCam').value;
+      const larg = document.getElementById('cubLarguraCam').value;
+      const placa = document.getElementById('cubPlaca').value.trim().toUpperCase();
+
+      const calc = window.CubagemCalculator.calculateCaminhao({
+        alturasLE: this.alturasLE,
+        alturasLD: this.alturasLD,
+        comprimentoRaw: comp,
+        larguraRaw: larg
+      });
+
+      if (!calc.isValid) {
+        this.showToast(calc.errors[0] || 'Verifique as medidas do caminhão.', 'danger');
+        return;
+      }
+
+      record = {
+        id: window.cubagemDB.generateId('CAM'),
+        tipo: 'caminhao',
+        data, horario, rodovia, km, responsavel,
+        placa: placa || 'NÃO INFORMADA',
+        observacoes,
+        alturasLE: calc.alturasLE,
+        alturasLD: calc.alturasLD,
+        somaAlturas: calc.somaAlturas,
+        totalAlturas: calc.totalAlturas,
+        alturaMedia: calc.alturaMedia,
+        comprimento: calc.comprimento,
+        largura: calc.largura,
+        volumeGeometrico: calc.volumeGeometrico,
+        tipoVolume: calc.tipoVolume,
+        memoriaCalculo: calc.memoriaCalculo,
+        timestamp: Date.now()
+      };
+    } else if (this.tipoCubagem === 'pilha') {
+      const comp = document.getElementById('cubComprimentoPilha').value;
+      const larg = document.getElementById('cubLarguraPilha').value;
+      const identPilha = document.getElementById('cubIdentPilha').value.trim();
+
+      if (!identPilha) {
+        this.showToast('Informe a identificação da pilha (ex: Pilha 01).', 'warning');
+        return;
+      }
+
+      const calc = window.CubagemCalculator.calculatePilha({
+        alturas: this.alturasPilha,
+        comprimentoRaw: comp,
+        larguraRaw: larg
+      });
+
+      if (!calc.isValid) {
+        this.showToast(calc.errors[0] || 'Verifique as medidas da pilha.', 'danger');
+        return;
+      }
+
+      record = {
+        id: window.cubagemDB.generateId('PILHA'),
+        tipo: 'pilha',
+        data, horario, rodovia, km, responsavel,
+        identificacao: identPilha,
+        placa: identPilha,
+        observacoes,
+        alturas: calc.alturas,
+        somaAlturas: calc.somaAlturas,
+        totalAlturas: calc.totalAlturas,
+        alturaMedia: calc.alturaMedia,
+        comprimento: calc.comprimento,
+        largura: calc.largura,
+        volumeGeometrico: calc.volumeGeometrico,
+        tipoVolume: calc.tipoVolume,
+        memoriaCalculo: calc.memoriaCalculo,
+        timestamp: Date.now()
+      };
+    } else if (this.tipoCubagem === 'tora') {
+      const d1 = document.getElementById('cubDiametroPonta1').value;
+      const d2 = document.getElementById('cubDiametroPonta2').value;
+      const comp = document.getElementById('cubComprimentoTora').value;
+      const plaqueta = document.getElementById('cubPlaqueta').value.trim();
+
+      if (!plaqueta) {
+        this.showToast('Informe o número da plaqueta de identificação da tora.', 'warning');
+        return;
+      }
+
+      const calc = window.CubagemCalculator.calculateTora({
+        diametroPonta1Raw: d1,
+        diametroPonta2Raw: d2,
+        comprimentoRaw: comp,
+        plaqueta: plaqueta
+      });
+
+      if (!calc.isValid) {
+        this.showToast(calc.errors[0] || 'Verifique os diâmetros e comprimento da tora.', 'danger');
+        return;
+      }
+
+      record = {
+        id: window.cubagemDB.generateId('TORA'),
+        tipo: 'tora',
+        data, horario, rodovia, km, responsavel,
+        plaqueta: calc.plaqueta,
+        placa: calc.plaqueta,
+        observacoes,
+        diametroPonta1_cm: calc.diametroPonta1_cm,
+        diametroPonta2_cm: calc.diametroPonta2_cm,
+        diametroPonta1_m: calc.diametroPonta1_m,
+        diametroPonta2_m: calc.diametroPonta2_m,
+        diametroMedio_cm: calc.diametroMedio_cm,
+        comprimento: calc.comprimento,
+        volumeGeometrico: calc.volumeGeometrico,
+        tipoVolume: calc.tipoVolume,
+        memoriaCalculo: calc.memoriaCalculo,
+        timestamp: Date.now()
+      };
     }
-
-    // 2. Obter medidas
-    const measures = {
-      le1: document.getElementById('cubLE1').value,
-      le2: document.getElementById('cubLE2').value,
-      le3: document.getElementById('cubLE3').value,
-      ld1: document.getElementById('cubLD1').value,
-      ld2: document.getElementById('cubLD2').value,
-      ld3: document.getElementById('cubLD3').value,
-      comprimento: document.getElementById('cubComprimento').value,
-      largura: document.getElementById('cubLargura').value
-    };
-
-    // 3. Validar e Calcular
-    const calc = window.CubagemCalculator.calculate(measures);
-    if (!calc.isValid) {
-      this.showToast(calc.errors[0] || 'Verifique as medidas informadas.', 'danger');
-      return;
-    }
-
-    // 4. Montar Objeto da Cubagem
-    const record = {
-      id: window.cubagemDB.generateId(),
-      data,
-      horario,
-      rodovia,
-      km,
-      responsavel,
-      placa: placa || 'NÃO INFORMADA',
-      observacoes: observacoes || '',
-      // Medições numéricas
-      le1: calc.measures.le1,
-      le2: calc.measures.le2,
-      le3: calc.measures.le3,
-      ld1: calc.measures.ld1,
-      ld2: calc.measures.ld2,
-      ld3: calc.measures.ld3,
-      somaAlturas: calc.somaAlturas,
-      alturaMedia: calc.alturaMedia,
-      comprimento: calc.measures.comprimento,
-      largura: calc.measures.largura,
-      volumeGeometrico: calc.volumeGeometrico,
-      tipoVolume: calc.tipoVolume,
-      memoriaCalculo: calc.memoriaCalculo,
-      timestamp: Date.now()
-    };
 
     try {
       await window.cubagemDB.add(record);
-      this.showToast(`Cubagem salva com sucesso! Volume: ${calc.display.volumeGeometrico} m³`, 'success');
-      
-      // Limpa os campos de medições para o próximo caminhão, mantendo a operação
-      this.limparCamposMedicao();
+      const vFmt = window.CubagemCalculator.formatNumber(record.volumeGeometrico, record.tipo === 'tora' ? 3 : 2);
+      this.showToast(`Cubagem de ${record.tipo.toUpperCase()} salva com sucesso! Volume: ${vFmt} m³`, 'success');
+
+      this.limparApenasMedidas();
       this.resetarDataHoraAtual();
       await this.atualizarDashboard();
     } catch (err) {
       console.error('Erro ao salvar cubagem:', err);
-      this.showToast('Erro ao gravar dados no celular.', 'danger');
+      this.showToast('Erro ao gravar registro.', 'danger');
     }
   }
 
-  /**
-   * Limpa apenas as medições após salvar um caminhão
-   */
-  limparCamposMedicao() {
-    ['cubLE1', 'cubLE2', 'cubLE3', 'cubLD1', 'cubLD2', 'cubLD3', 'cubComprimento', 'cubLargura', 'cubPlaca', 'cubObservacoes'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
+  limparApenasMedidas() {
+    if (this.tipoCubagem === 'caminhao') {
+      this.alturasLE = ['', '', ''];
+      this.alturasLD = ['', '', ''];
+      this.renderizarGridsAlturas();
+      document.getElementById('cubComprimentoCam').value = '';
+      document.getElementById('cubLarguraCam').value = '';
+      document.getElementById('cubPlaca').value = '';
+    } else if (this.tipoCubagem === 'pilha') {
+      this.alturasPilha = ['', '', '', ''];
+      this.renderizarGridsAlturas();
+      document.getElementById('cubComprimentoPilha').value = '';
+      document.getElementById('cubLarguraPilha').value = '';
+      document.getElementById('cubIdentPilha').value = '';
+    } else if (this.tipoCubagem === 'tora') {
+      document.getElementById('cubDiametroPonta1').value = '';
+      document.getElementById('cubDiametroPonta2').value = '';
+      document.getElementById('cubComprimentoTora').value = '';
+      document.getElementById('cubPlaqueta').value = '';
+    }
+    document.getElementById('cubObservacoes').value = '';
     this.executarCalculoTempoReal();
   }
 
-  /**
-   * Limpa o formulário inteiro
-   */
   limparFormularioNova() {
     document.getElementById('formNovaCubagem').reset();
+    this.alturasLE = ['', '', ''];
+    this.alturasLD = ['', '', ''];
+    this.alturasPilha = ['', '', '', ''];
+    this.renderizarGridsAlturas();
     this.carregarPreferenciasIniciais();
     this.executarCalculoTempoReal();
     this.showToast('Formulário limpo.', 'warning');
   }
 
-  /**
-   * Atualiza o painel inicial com estatísticas e lista recente
-   */
+  // =========================================================================
+  // DASHBOARD E ESTATÍSTICAS
+  // =========================================================================
   async atualizarDashboard() {
     try {
       const stats = await window.cubagemDB.getStats();
 
       document.getElementById('kpiTotalVolume').innerHTML = `${window.CubagemCalculator.formatNumber(stats.totalVolume, 2)} <span class="kpi-unit">m³</span>`;
-      document.getElementById('kpiTotalCaminhoes').textContent = stats.totalCount;
-      document.getElementById('kpiHojeCaminhoes').textContent = stats.todayCount;
-      document.getElementById('kpiHojeVolume').textContent = `${window.CubagemCalculator.formatNumber(stats.todayVolume, 2)} m³ acumulados hoje`;
-      document.getElementById('kpiMediaVolume').innerHTML = `${window.CubagemCalculator.formatNumber(stats.averageVolume, 2)} <span class="kpi-unit">m³</span>`;
+      document.getElementById('kpiTotalCaminhoes').textContent = stats.totalCaminhoes;
+      document.getElementById('kpiTotalPilhas').textContent = stats.totalPilhas;
+      document.getElementById('kpiPilhasVolume').textContent = `${window.CubagemCalculator.formatNumber(stats.volPilhas, 2)} m³ estéreo`;
+      document.getElementById('kpiTotalToras').textContent = stats.totalToras;
+      document.getElementById('kpiTorasVolume').textContent = `${window.CubagemCalculator.formatNumber(stats.volToras, 3)} m³ Smalian`;
+      document.getElementById('kpiVolumeDetail').textContent = `${stats.totalCaminhoes} cam • ${stats.totalPilhas} pilhas • ${stats.totalToras} toras`;
 
-      // Renderiza lista recente
       const container = document.getElementById('dashboardRecentList');
       if (!container) return;
 
       if (stats.recentItems.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-            </svg>
             <div class="empty-state-title">Nenhuma cubagem registrada ainda</div>
-            <div class="empty-state-desc">Toque em "Nova Cubagem" para começar a registrar as cargas.</div>
-            <button class="btn btn-primary" onclick="app.navigate('nova')">Nova Cubagem</button>
+            <div class="empty-state-desc">Toque em "Nova Medição" para começar a registrar caminhões, pilhas ou toras.</div>
+            <button class="btn btn-primary" onclick="app.navigate('nova')">Nova Medição</button>
           </div>
         `;
         return;
@@ -405,35 +620,17 @@ class CubagemApp {
 
       container.innerHTML = stats.recentItems.map((item) => this.gerarCardItemHTML(item)).join('');
     } catch (err) {
-      console.error('Erro ao atualizar dashboard:', err);
+      console.error('Erro no dashboard:', err);
     }
   }
 
-  /**
-   * Carrega histórico com busca e filtros
-   */
+  // =========================================================================
+  // HISTÓRICO
+  // =========================================================================
   async carregarHistorico() {
     try {
       const searchVal = document.getElementById('historySearchInput').value;
-      let items = [];
-
-      if (searchVal && searchVal.trim()) {
-        items = await window.cubagemDB.search(searchVal);
-      } else {
-        items = await window.cubagemDB.getAll(true);
-      }
-
-      // Aplica filtro rápido (hoje, mês)
-      const now = new Date();
-      const pad = (n) => String(n).padStart(2, '0');
-      const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      const monthPrefix = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
-
-      if (this.historyFilterMode === 'hoje') {
-        items = items.filter((i) => i.data === todayStr);
-      } else if (this.historyFilterMode === 'mes') {
-        items = items.filter((i) => i.data && i.data.startsWith(monthPrefix));
-      }
+      const items = await window.cubagemDB.search(searchVal, this.historyFilterTipo);
 
       const container = document.getElementById('historyListContainer');
       if (!container) return;
@@ -442,7 +639,7 @@ class CubagemApp {
         container.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-title">Nenhum registro encontrado</div>
-            <div class="empty-state-desc">Tente ajustar o termo de busca ou filtros.</div>
+            <div class="empty-state-desc">Tente ajustar o termo de pesquisa ou os filtros de tipo.</div>
           </div>
         `;
         return;
@@ -450,36 +647,50 @@ class CubagemApp {
 
       container.innerHTML = items.map((item) => this.gerarCardItemHTML(item)).join('');
     } catch (err) {
-      console.error('Erro ao carregar histórico:', err);
+      console.error('Erro no histórico:', err);
     }
   }
 
-  filtrarHistorico(modo) {
-    this.historyFilterMode = modo;
-    document.querySelectorAll('.history-controls .btn-action-small').forEach((btn) => {
-      btn.classList.toggle('active-filter', btn.textContent.toLowerCase().includes(modo));
+  filtrarHistoricoTipo(tipo) {
+    this.historyFilterTipo = tipo;
+    document.querySelectorAll('[data-hfilter]').forEach((btn) => {
+      btn.classList.toggle('active-filter', btn.getAttribute('data-hfilter') === tipo);
     });
     this.carregarHistorico();
   }
 
-  /**
-   * Gera o HTML de um card de caminhão
-   */
   gerarCardItemHTML(item) {
-    const volFormatado = window.CubagemCalculator.formatNumber(item.volumeGeometrico, 2);
+    const tipo = item.tipo || 'caminhao';
+    const isTora = tipo === 'tora';
+    const volFormatado = window.CubagemCalculator.formatNumber(item.volumeGeometrico, isTora ? 3 : 2);
     const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
-    const kmFormatado = item.km !== undefined ? `km ${item.km}` : '';
+
+    let tagTipo = '🚚 Caminhão';
+    let tituloItem = item.placa || 'SEM PLACA';
+    let subItem = `${item.rodovia} ${item.km ? '• km ' + item.km : ''}`;
+
+    if (tipo === 'pilha') {
+      tagTipo = '🪵 Pilha';
+      tituloItem = item.identificacao || item.placa || 'Pilha Sem Identificação';
+      const nAlt = Array.isArray(item.alturas) ? item.alturas.length : (item.totalAlturas || '-');
+      subItem = `${item.rodovia} • ${nAlt} alturas`;
+    } else if (tipo === 'tora') {
+      tagTipo = '🌲 Tora (Smalian)';
+      tituloItem = `Plaqueta: ${item.plaqueta || 'S/P'}`;
+      subItem = `D: ${item.diametroMedio_cm ? Number(item.diametroMedio_cm).toFixed(1) + ' cm' : '-'} • L: ${item.comprimento || '-'} m`;
+    }
 
     return `
       <div class="history-item-card">
         <div class="history-card-top">
+          <span class="badge-type ${tipo}">${tagTipo}</span>
           <span class="history-tag-date">${dataBR} • ${item.horario || ''}</span>
-          <span class="history-tag-highway">${item.rodovia} ${kmFormatado}</span>
         </div>
         <div class="history-card-body">
-          <div class="history-plate-resp">
-            <span class="history-plate">${item.placa || 'SEM PLACA'}</span>
-            <span class="history-resp">Resp: ${item.responsavel || '-'}</span>
+          <div>
+            <div class="history-plate">${tituloItem}</div>
+            <div class="history-resp">${subItem}</div>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">Resp: ${item.responsavel || '-'}</div>
           </div>
           <div class="history-vol-badge">
             <div class="history-vol-num">${volFormatado}</div>
@@ -487,241 +698,117 @@ class CubagemApp {
           </div>
         </div>
         <div class="history-card-actions">
-          <button class="btn-action-small" onclick="app.abrirDetalhes('${item.id}')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="16" x2="12" y2="12"/>
-              <line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg>
-            Detalhes
-          </button>
-          <button class="btn-action-small" onclick="app.abrirEditar('${item.id}')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-            Editar
-          </button>
-          <button class="btn-action-small danger" onclick="app.abrirModalExcluir('${item.id}')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-            Excluir
-          </button>
+          <button class="btn-action-small" onclick="app.abrirDetalhes('${item.id}')">Detalhes</button>
+          <button class="btn-action-small danger" onclick="app.abrirModalExcluir('${item.id}')">Excluir</button>
         </div>
       </div>
     `;
   }
 
-  /**
-   * Modal de Detalhes
-   */
   async abrirDetalhes(id) {
     const item = await window.cubagemDB.get(id);
     if (!item) return;
 
     this.currentDetailItem = item;
     const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
+    const tipo = item.tipo || 'caminhao';
+    const isTora = tipo === 'tora';
     const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
 
-    document.getElementById('detalheModalTitulo').textContent = `Cubagem ${item.placa || ''} (${dataBR})`;
+    document.getElementById('detalheModalTitulo').textContent = `Detalhes: ${tipo.toUpperCase()}`;
 
-    const html = `
-      <div style="margin-bottom: 14px;">
-        <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">ID: ${item.id}</div>
-        <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary-dark); margin-top: 2px;">
-          ${item.rodovia} — Km ${item.km}
+    let detalheHtml = '';
+    if (tipo === 'caminhao') {
+      const leStr = Array.isArray(item.alturasLE) ? item.alturasLE.map(v => fNum(v) + ' m').join(', ') : '-';
+      const ldStr = Array.isArray(item.alturasLD) ? item.alturasLD.map(v => fNum(v) + ' m').join(', ') : '-';
+      detalheHtml = `
+        <div style="margin-bottom: 12px;">
+          <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
+          <strong>Local:</strong> ${item.rodovia} ${item.km ? 'km ' + item.km : ''}<br>
+          <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
+          <strong>Responsável:</strong> ${item.responsavel}
         </div>
-        <div style="font-size: 0.85rem; color: var(--text-secondary);">
-          Data: <strong>${dataBR} às ${item.horario}</strong> | Responsável: <strong>${item.responsavel}</strong>
-        </div>
-      </div>
-
-      <!-- Card do Volume -->
-      <div class="calc-result-card" style="margin-bottom: 16px;">
-        <div class="calc-result-header">
-          <span class="calc-result-tag">Resultado Calculado</span>
-          <span class="calc-result-type-badge">${item.tipoVolume || 'Volume Geométrico'}</span>
-        </div>
-        <div class="calc-volume-display">
-          <span class="calc-volume-number">${fNum(item.volumeGeometrico, 2)}</span>
-          <span class="calc-volume-unit">m³</span>
-        </div>
-        <div class="calc-details-row">
-          <div class="calc-detail-item">
-            <span class="calc-detail-label">Soma Alturas</span>
-            <span class="calc-detail-value">${fNum(item.somaAlturas, 2)} m</span>
+        <div class="calc-result-card">
+          <div class="calc-result-header">
+            <span class="calc-result-tag">Volume Geométrico</span>
+            <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 2)} m³</span>
           </div>
-          <div class="calc-detail-item">
-            <span class="calc-detail-label">Altura Média Hm</span>
-            <span class="calc-detail-value">${fNum(item.alturaMedia, 4)} m</span>
-          </div>
-          <div class="calc-detail-item">
-            <span class="calc-detail-label">C × L</span>
-            <span class="calc-detail-value">${fNum(item.comprimento, 2)} × ${fNum(item.largura, 2)} m</span>
+          <div style="font-size: 0.85rem; line-height: 1.6;">
+            <strong>Alturas LE:</strong> ${leStr}<br>
+            <strong>Alturas LD:</strong> ${ldStr}<br>
+            <strong>Hm Média:</strong> ${fNum(item.alturaMedia, 4)} m<br>
+            <strong>Dimensões:</strong> ${fNum(item.comprimento)} m × ${fNum(item.largura)} m
           </div>
         </div>
-      </div>
-
-      <!-- Tabela de Medições -->
-      <div style="margin-bottom: 14px;">
-        <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">
-          Medições Realizadas
-        </h4>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
-          <div style="background: var(--primary-tint); padding: 8px; border-radius: var(--radius-sm);">
-            <strong>Lado Esquerdo (LE):</strong><br>
-            LE1: ${fNum(item.le1)} m<br>
-            LE2: ${fNum(item.le2)} m<br>
-            LE3: ${fNum(item.le3)} m
+      `;
+    } else if (tipo === 'pilha') {
+      const altStr = Array.isArray(item.alturas) ? item.alturas.map(v => fNum(v) + ' m').join(', ') : '-';
+      detalheHtml = `
+        <div style="margin-bottom: 12px;">
+          <strong>Identificação:</strong> ${item.identificacao || item.placa || 'Pilha'}<br>
+          <strong>Local:</strong> ${item.rodovia} ${item.km ? 'km ' + item.km : ''}<br>
+          <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
+          <strong>Responsável:</strong> ${item.responsavel}
+        </div>
+        <div class="calc-result-card">
+          <div class="calc-result-header">
+            <span class="calc-result-tag">Volume Estéreo</span>
+            <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 2)} m³</span>
           </div>
-          <div style="background: #FDFBF7; padding: 8px; border-radius: var(--radius-sm); border: 1px solid #EAD7C3;">
-            <strong style="color: #8C4A15;">Lado Direito (LD):</strong><br>
-            LD1: ${fNum(item.ld1)} m<br>
-            LD2: ${fNum(item.ld2)} m<br>
-            LD3: ${fNum(item.ld3)} m
+          <div style="font-size: 0.85rem; line-height: 1.6;">
+            <strong>Alturas da Face:</strong> ${altStr}<br>
+            <strong>Hm da Pilha:</strong> ${fNum(item.alturaMedia, 4)} m<br>
+            <strong>Comprimento:</strong> ${fNum(item.comprimento)} m | <strong>Profundidade:</strong> ${fNum(item.largura)} m
           </div>
         </div>
-      </div>
-
-      <!-- Observações -->
-      ${item.observacoes ? `
-        <div style="background: var(--bg-elevated); padding: 10px; border-radius: var(--radius-sm); font-size: 0.85rem;">
-          <strong>Observações:</strong> ${item.observacoes}
+      `;
+    } else if (tipo === 'tora') {
+      detalheHtml = `
+        <div style="margin-bottom: 12px;">
+          <strong>Nº da Plaqueta:</strong> ${item.plaqueta || 'S/P'}<br>
+          <strong>Local / Pátio:</strong> ${item.rodovia}<br>
+          <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
+          <strong>Responsável:</strong> ${item.responsavel}
         </div>
-      ` : ''}
-    `;
+        <div class="calc-result-card">
+          <div class="calc-result-header">
+            <span class="calc-result-tag">Volume Smalian</span>
+            <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 3)} m³</span>
+          </div>
+          <div style="font-size: 0.85rem; line-height: 1.6;">
+            <strong>Diâmetro Ponta 1 (fina):</strong> ${fNum(item.diametroPonta1_cm, 1)} cm<br>
+            <strong>Diâmetro Ponta 2 (grossa):</strong> ${fNum(item.diametroPonta2_cm, 1)} cm<br>
+            <strong>Diâmetro Médio:</strong> ${fNum(item.diametroMedio_cm, 1)} cm<br>
+            <strong>Comprimento:</strong> ${fNum(item.comprimento, 2)} m
+          </div>
+        </div>
+      `;
+    }
 
-    document.getElementById('detalheModalConteudo').innerHTML = html;
+    if (item.observacoes) {
+      detalheHtml += `<div style="background: var(--surface-2); padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px;"><strong>Observações:</strong> ${item.observacoes}</div>`;
+    }
+
+    document.getElementById('detalheModalConteudo').innerHTML = detalheHtml;
     this.abrirModal('modalDetalhes');
   }
 
-  abrirEditarPeloDetalhe() {
-    if (this.currentDetailItem) {
-      this.fecharModal('modalDetalhes');
-      this.abrirEditar(this.currentDetailItem.id);
-    }
-  }
-
-  /**
-   * Modal de Edição
-   */
-  async abrirEditar(id) {
-    const item = await window.cubagemDB.get(id);
-    if (!item) return;
-
-    document.getElementById('editId').value = item.id;
-    document.getElementById('editData').value = item.data;
-    document.getElementById('editHorario').value = item.horario;
-    document.getElementById('editRodovia').value = item.rodovia;
-    document.getElementById('editKm').value = item.km;
-    document.getElementById('editResponsavel').value = item.responsavel;
-    document.getElementById('editPlaca').value = item.placa !== 'NÃO INFORMADA' ? item.placa : '';
-    document.getElementById('editObservacoes').value = item.observacoes || '';
-
-    document.getElementById('editLE1').value = item.le1;
-    document.getElementById('editLE2').value = item.le2;
-    document.getElementById('editLE3').value = item.le3;
-    document.getElementById('editLD1').value = item.ld1;
-    document.getElementById('editLD2').value = item.ld2;
-    document.getElementById('editLD3').value = item.ld3;
-    document.getElementById('editComprimento').value = item.comprimento;
-    document.getElementById('editLargura').value = item.largura;
-
-    this.abrirModal('modalEditar');
-  }
-
-  async salvarEdicao() {
-    const id = document.getElementById('editId').value;
-    const existing = await window.cubagemDB.get(id);
-    if (!existing) return;
-
-    const data = document.getElementById('editData').value;
-    const horario = document.getElementById('editHorario').value;
-    const rodovia = document.getElementById('editRodovia').value.trim();
-    const kmStr = document.getElementById('editKm').value.trim();
-    const responsavel = document.getElementById('editResponsavel').value.trim();
-    const placa = document.getElementById('editPlaca').value.trim().toUpperCase();
-    const observacoes = document.getElementById('editObservacoes').value.trim();
-
-    const km = window.CubagemCalculator.parseNumber(kmStr);
-
-    const measures = {
-      le1: document.getElementById('editLE1').value,
-      le2: document.getElementById('editLE2').value,
-      le3: document.getElementById('editLE3').value,
-      ld1: document.getElementById('editLD1').value,
-      ld2: document.getElementById('editLD2').value,
-      ld3: document.getElementById('editLD3').value,
-      comprimento: document.getElementById('editComprimento').value,
-      largura: document.getElementById('editLargura').value
-    };
-
-    const calc = window.CubagemCalculator.calculate(measures);
-    if (!calc.isValid) {
-      this.showToast(calc.errors[0] || 'Medidas inválidas.', 'danger');
-      return;
-    }
-
-    const updated = {
-      ...existing,
-      data,
-      horario,
-      rodovia,
-      km,
-      responsavel,
-      placa: placa || 'NÃO INFORMADA',
-      observacoes,
-      le1: calc.measures.le1,
-      le2: calc.measures.le2,
-      le3: calc.measures.le3,
-      ld1: calc.measures.ld1,
-      ld2: calc.measures.ld2,
-      ld3: calc.measures.ld3,
-      somaAlturas: calc.somaAlturas,
-      alturaMedia: calc.alturaMedia,
-      comprimento: calc.measures.comprimento,
-      largura: calc.measures.largura,
-      volumeGeometrico: calc.volumeGeometrico,
-      memoriaCalculo: calc.memoriaCalculo
-    };
-
-    try {
-      await window.cubagemDB.update(updated);
-      this.fecharModal('modalEditar');
-      this.showToast('Registro atualizado com sucesso!', 'success');
-      await this.carregarHistorico();
-      await this.atualizarDashboard();
-    } catch (err) {
-      console.error('Erro ao atualizar:', err);
-      this.showToast('Erro ao atualizar registro.', 'danger');
-    }
-  }
-
-  /**
-   * Modal de Exclusão
-   */
   async abrirModalExcluir(id) {
     const item = await window.cubagemDB.get(id);
     if (!item) return;
 
     this.itemToDeleteId = id;
-    const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
-    const vol = window.CubagemCalculator.formatNumber(item.volumeGeometrico, 2);
-
+    const vol = window.CubagemCalculator.formatNumber(item.volumeGeometrico, item.tipo === 'tora' ? 3 : 2);
     document.getElementById('excluirItemInfo').innerHTML = `
-      Caminhão Placa: <strong>${item.placa || 'Sem Placa'}</strong><br>
-      Data: ${dataBR} (${item.rodovia} km ${item.km})<br>
+      Modalidade: <strong>${(item.tipo || 'caminhao').toUpperCase()}</strong><br>
+      Identificação: <strong>${item.plaqueta || item.identificacao || item.placa || item.id}</strong><br>
       Volume: <strong>${vol} m³</strong>
     `;
-
     this.abrirModal('modalExcluir');
   }
 
   async confirmarExclusao() {
     if (!this.itemToDeleteId) return;
-
     try {
       await window.cubagemDB.delete(this.itemToDeleteId);
       this.fecharModal('modalExcluir');
@@ -735,9 +822,9 @@ class CubagemApp {
     }
   }
 
-  /**
-   * Seção de Relatórios e Exportação Excel
-   */
+  // =========================================================================
+  // RELATÓRIOS E EXPORTAÇÃO EXCEL (.XLSX)
+  // =========================================================================
   setReportPeriod(tipo, triggerUpdate = true) {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
@@ -754,43 +841,40 @@ class CubagemApp {
       const lastDay = new Date(prev.getFullYear(), prev.getMonth() + 1, 0).getDate();
       end = `${prev.getFullYear()}-${pad(prev.getMonth() + 1)}-${pad(lastDay)}`;
     } else if (tipo === 'ultimos-30') {
-      const past30 = new Date();
-      past30.setDate(past30.getDate() - 30);
-      start = `${past30.getFullYear()}-${pad(past30.getMonth() + 1)}-${pad(past30.getDate())}`;
+      const p30 = new Date();
+      p30.setDate(p30.getDate() - 30);
+      start = `${p30.getFullYear()}-${pad(p30.getMonth() + 1)}-${pad(p30.getDate())}`;
       end = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     } else if (tipo === 'todos') {
       start = '2000-01-01';
       end = '2099-12-31';
     }
 
-    const startInput = document.getElementById('reportDataInicio');
-    const endInput = document.getElementById('reportDataFim');
-    if (startInput) startInput.value = start;
-    if (endInput) endInput.value = end;
+    const sIn = document.getElementById('reportDataInicio');
+    const eIn = document.getElementById('reportDataFim');
+    const fIn = document.getElementById('reportFileName');
+    if (sIn) sIn.value = start;
+    if (eIn) eIn.value = end;
+    if (fIn) fIn.value = `Cubagem_Florestal_${start}_a_${end}.xlsx`;
 
-    // Atualiza nome padrão do arquivo
-    const fileInput = document.getElementById('reportFileName');
-    if (fileInput) {
-      fileInput.value = `Cubagem_Florestal_${start}_a_${end}.xlsx`;
-    }
-
-    if (triggerUpdate) {
-      this.atualizarRelatorioPeriodo();
-    }
+    if (triggerUpdate) this.atualizarRelatorioPeriodo();
   }
 
   async atualizarRelatorioPeriodo() {
     const start = document.getElementById('reportDataInicio').value;
     const end = document.getElementById('reportDataFim').value;
+    const tipoSelect = document.getElementById('reportTipoSelect') ? document.getElementById('reportTipoSelect').value : 'todos';
 
     let records = [];
     if (start && end) {
-      records = await window.cubagemDB.getByDateRange(start, end);
+      records = await window.cubagemDB.getByDateRange(start, end, tipoSelect);
     } else {
       records = await window.cubagemDB.getAll(false);
+      if (tipoSelect !== 'todos') {
+        records = records.filter(r => (r.tipo || 'caminhao') === tipoSelect);
+      }
     }
 
-    // Calcula indicadores do período
     const count = records.length;
     const totalVol = records.reduce((acc, r) => acc + (Number(r.volumeGeometrico) || 0), 0);
     const mediaVol = count > 0 ? totalVol / count : 0;
@@ -798,17 +882,16 @@ class CubagemApp {
     document.getElementById('repKpiVolume').innerHTML = `${window.CubagemCalculator.formatNumber(totalVol, 2)} <span class="kpi-unit">m³</span>`;
     document.getElementById('repKpiCaminhoes').textContent = count;
     document.getElementById('repKpiMedia').innerHTML = `${window.CubagemCalculator.formatNumber(mediaVol, 2)} <span class="kpi-unit">m³</span>`;
-    document.getElementById('repPreviewCountBadge').textContent = `${count} caminhões`;
+    document.getElementById('repPreviewCountBadge').textContent = `${count} registros`;
 
-    // Atualiza lista prévia
     const previewContainer = document.getElementById('reportPreviewList');
     if (!previewContainer) return;
 
     if (records.length === 0) {
       previewContainer.innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-title">Nenhum registro no período selecionado</div>
-          <div class="empty-state-desc">Ajuste as datas para visualizar as cubagens correspondentes.</div>
+          <div class="empty-state-title">Nenhum registro no período</div>
+          <div class="empty-state-desc">Ajuste as datas para visualizar as medições correspondentes.</div>
         </div>
       `;
       return;
@@ -817,20 +900,21 @@ class CubagemApp {
     previewContainer.innerHTML = records.map((item) => this.gerarCardItemHTML(item)).join('');
   }
 
-  /**
-   * Exporta a planilha Excel usando o gerador profissional
-   */
   async exportarPlanilhaExcel() {
     const start = document.getElementById('reportDataInicio').value;
     const end = document.getElementById('reportDataFim').value;
     const fileName = document.getElementById('reportFileName').value;
+    const tipoSelect = document.getElementById('reportTipoSelect') ? document.getElementById('reportTipoSelect').value : 'todos';
     const btn = document.getElementById('btnExportarExcel');
 
     let records = [];
     if (start && end) {
-      records = await window.cubagemDB.getByDateRange(start, end);
+      records = await window.cubagemDB.getByDateRange(start, end, tipoSelect);
     } else {
       records = await window.cubagemDB.getAll(false);
+      if (tipoSelect !== 'todos') {
+        records = records.filter(r => (r.tipo || 'caminhao') === tipoSelect);
+      }
     }
 
     if (records.length === 0) {
@@ -840,10 +924,10 @@ class CubagemApp {
 
     btn.disabled = true;
     const originalText = btn.innerHTML;
-    btn.innerHTML = 'Gerando Planilha Excel...';
+    btn.innerHTML = 'Gerando Planilha Multipasta Excel...';
 
     try {
-      const respPadrao = await window.cubagemDB.getSetting('defaultResponsavel', '');
+      const respPadrao = await window.cubagemDB.getSetting('defaultResponsavel', 'Lucas Aøsf');
       const res = await window.CubagemExcelExport.exportWorkbook(records, {
         startDate: start,
         endDate: end,
@@ -851,7 +935,7 @@ class CubagemApp {
         responsavel: respPadrao
       });
 
-      this.showToast(`Planilha ${res.fileName} exportada com sucesso! (${res.recordsCount} caminhões)`, 'success');
+      this.showToast(`Planilha ${res.fileName} exportada com sucesso! (${res.recordsCount} registros)`, 'success');
     } catch (err) {
       console.error('Erro ao gerar Excel:', err);
       this.showToast(`Erro ao gerar Excel: ${err.message}`, 'danger');
@@ -861,13 +945,12 @@ class CubagemApp {
     }
   }
 
-  /**
-   * Backup e Configurações
-   */
+  // =========================================================================
+  // CONFIGURAÇÕES E BACKUP
+  // =========================================================================
   async carregarCamposConfiguracoes() {
-    const resp = await window.cubagemDB.getSetting('defaultResponsavel', '');
+    const resp = await window.cubagemDB.getSetting('defaultResponsavel', 'Lucas Aøsf');
     const rod = await window.cubagemDB.getSetting('defaultRodovia', '');
-
     const rInput = document.getElementById('cfgResponsavel');
     const rodInput = document.getElementById('cfgRodovia');
     if (rInput) rInput.value = resp;
@@ -877,20 +960,15 @@ class CubagemApp {
   async salvarPreferencias() {
     const resp = document.getElementById('cfgResponsavel').value.trim();
     const rod = document.getElementById('cfgRodovia').value.trim();
-
     await window.cubagemDB.setSetting('defaultResponsavel', resp);
     await window.cubagemDB.setSetting('defaultRodovia', rod);
-
     this.showToast('Preferências salvas com sucesso!', 'success');
   }
 
   async exportarBackupJSON() {
     try {
       const backup = await window.cubagemDB.exportBackup();
-      const blob = new Blob([JSON.stringify(backup, null, 2)], {
-        type: 'application/json'
-      });
-
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
       const now = new Date().toISOString().slice(0, 10);
       const fileName = `Backup_Cubagem_Florestal_${now}.json`;
 
@@ -905,7 +983,7 @@ class CubagemApp {
 
       this.showToast(`Backup JSON baixado (${backup.totalRecords} registros).`, 'success');
     } catch (err) {
-      console.error('Erro ao exportar backup:', err);
+      console.error('Erro no backup:', err);
       this.showToast('Erro ao criar backup.', 'danger');
     }
   }
@@ -919,16 +997,15 @@ class CubagemApp {
       try {
         const json = JSON.parse(e.target.result);
         const confirmMerge = confirm(
-          `Arquivo de backup detectado com ${json.totalRecords || (json.data && json.data.cubagens.length) || 0} registros.\n\nDeseja MESCLAR os registros com os atuais?\n(Clique em 'Cancelar' para cancelar)`
+          `Arquivo de backup detectado com ${json.totalRecords || (json.data && json.data.cubagens.length) || 0} registros.\n\nDeseja MESCLAR os registros com os atuais?`
         );
-
         if (confirmMerge) {
           const res = await window.cubagemDB.importBackup(json, 'merge');
           this.showToast(`Backup importado com sucesso: ${res.importedCount} registros!`, 'success');
           await this.atualizarDashboard();
         }
       } catch (err) {
-        console.error('Erro ao importar backup:', err);
+        console.error('Erro na importação:', err);
         this.showToast(`Falha na importação: ${err.message}`, 'danger');
       } finally {
         event.target.value = '';
@@ -937,9 +1014,6 @@ class CubagemApp {
     reader.readAsText(file);
   }
 
-  /**
-   * Auxiliares de Modal
-   */
   abrirModal(id) {
     const modal = document.getElementById(id);
     if (modal) modal.classList.add('open');
@@ -950,9 +1024,6 @@ class CubagemApp {
     if (modal) modal.classList.remove('open');
   }
 
-  /**
-   * Sistema de Toasts
-   */
   showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -970,7 +1041,6 @@ class CubagemApp {
   }
 }
 
-// Inicializa a aplicação quando a página carregar
 window.app = new CubagemApp();
 document.addEventListener('DOMContentLoaded', () => {
   window.app.init();
