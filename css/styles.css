@@ -1140,11 +1140,83 @@ textarea.form-control {
   background: #000;
 }
 
-.camera-gps-overlay {
+.camera-top-controls {
   position: absolute;
   top: 10px;
   left: 10px;
   right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.camera-top-controls > * {
+  pointer-events: auto;
+}
+
+.camera-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.camera-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(14, 37, 21, 0.85);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.camera-status-active {
+  background: rgba(30, 80, 45, 0.9);
+  color: #bbf7d0;
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.camera-status-warning {
+  background: rgba(120, 85, 20, 0.9);
+  color: #fef08a;
+  border-color: rgba(250, 204, 21, 0.4);
+}
+
+.camera-status-danger {
+  background: rgba(153, 27, 27, 0.9);
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.camera-flip-btn {
+  background: rgba(14, 37, 21, 0.85);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.camera-flip-btn:hover {
+  background: var(--gold);
+  color: #fff;
+}
+
+.camera-gps-overlay {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1158,6 +1230,22 @@ textarea.form-control {
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.15);
   pointer-events: auto;
+}
+
+.camera-stream-error-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 37, 21, 0.97);
+  color: #fff;
+  padding: 16px;
+  text-align: center;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 20;
+  backdrop-filter: blur(8px);
 }
 
 .camera-settings-panel {

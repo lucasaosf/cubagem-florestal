@@ -1382,7 +1382,7 @@ class CubagemApp {
   // =========================================================================
   abrirCameraTora() {
     if (this.camera) {
-      this.camera.abrirCameraModal();
+      this.camera.abrirCameraModal('live');
     }
   }
 

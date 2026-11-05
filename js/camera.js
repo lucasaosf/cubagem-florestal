@@ -10,6 +10,8 @@ class CubagemCamera {
     this.currentCapturedImage = null; // HTMLImageElement ou ImageBitmap temporário
     this.tempRawDataUrl = null;
     this.liveGpsWatcher = null;
+    this.currentFacingMode = 'environment'; // 'environment' (traseira) | 'user' (frontal)
+    this.statusPermissao = 'desconhecido';
 
     // Coordenadas e UTM atuais
     this.currentLat = null;
@@ -35,6 +37,27 @@ class CubagemCamera {
     };
 
     this.carregarPreferencias();
+    this.monitorarPermissoesNavegador();
+  }
+
+  async monitorarPermissoesNavegador() {
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const pCam = await navigator.permissions.query({ name: 'camera' });
+        this.statusPermissao = pCam.state;
+        pCam.onchange = () => {
+          this.statusPermissao = pCam.state;
+          if (pCam.state === 'granted') {
+            const errEl = document.getElementById('cameraStreamError');
+            if (errEl && errEl.style.display === 'flex') {
+              this.iniciarCameraStream();
+            }
+          }
+        };
+      } catch (e) {
+        // Ignora navegadores que não suportam 'camera' na Permissions API
+      }
+    }
   }
 
   // =========================================================================
@@ -234,7 +257,7 @@ class CubagemCamera {
   // =========================================================================
   // GESTÃO DO MODAL DE CÂMERA
   // =========================================================================
-  abrirCameraModal() {
+  abrirCameraModal(modo = 'live') {
     const modal = document.getElementById('modalCamera');
     if (!modal) return;
 
@@ -262,17 +285,39 @@ class CubagemCamera {
     const selTxtPos = document.getElementById('cameraTextPosition');
     if (selTxtPos) selTxtPos.value = this.config.textPos;
 
-    // Reseta visualização para modo Live ou Prévia
-    document.getElementById('cameraLiveContainer').style.display = 'block';
-    document.getElementById('cameraPreviewContainer').style.display = 'none';
-    document.getElementById('btnDispararFoto').style.display = 'inline-flex';
-    document.getElementById('btnConfirmarFoto').style.display = 'none';
-    document.getElementById('btnRepetirFoto').style.display = 'none';
+    // Reseta visualização de erro
+    const alertEl = document.getElementById('cameraStreamError');
+    if (alertEl) {
+      alertEl.style.display = 'none';
+      alertEl.innerHTML = '';
+    }
 
     modal.classList.add('open');
 
-    this.iniciarMonitoramentoGPS();
-    this.iniciarCameraStream();
+    if (modo === 'live') {
+      document.getElementById('cameraLiveContainer').style.display = 'block';
+      document.getElementById('cameraPreviewContainer').style.display = 'none';
+      document.getElementById('btnDispararFoto').style.display = 'inline-flex';
+      document.getElementById('btnConfirmarFoto').style.display = 'none';
+      document.getElementById('btnRepetirFoto').style.display = 'none';
+
+      // 1. Prioriza o acesso à câmera direto no toque do usuário
+      this.iniciarCameraStream();
+
+      // 2. Inicia monitoramento GPS com delay para não sobrepor o popup de permissão da câmera
+      setTimeout(() => {
+        this.iniciarMonitoramentoGPS();
+      }, 350);
+    } else {
+      // Modo Prévia (quando foto vem da Câmera Nativa ou Galeria)
+      document.getElementById('cameraLiveContainer').style.display = 'none';
+      document.getElementById('cameraPreviewContainer').style.display = 'block';
+      document.getElementById('btnDispararFoto').style.display = 'none';
+      document.getElementById('btnConfirmarFoto').style.display = 'inline-flex';
+      document.getElementById('btnRepetirFoto').style.display = 'inline-flex';
+
+      this.iniciarMonitoramentoGPS();
+    }
   }
 
   fecharCameraModal() {
@@ -281,31 +326,209 @@ class CubagemCamera {
     if (modal) modal.classList.remove('open');
   }
 
-  async iniciarCameraStream() {
-    const video = document.getElementById('cameraVideoFeed');
-    if (!video) return;
+  async obterStreamCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const err = new Error('Navegador ou contexto inseguro (sem HTTPS) não suporta WebRTC getUserMedia');
+      err.name = 'NotSupportedError';
+      throw err;
+    }
 
-    try {
-      if (this.stream) {
-        this.stream.getTracks().forEach((t) => t.stop());
-      }
-
-      this.stream = await navigator.mediaDevices.getUserMedia({
+    const tentativasConstraints = [
+      // 1. Câmera traseira com alta resolução
+      {
         video: {
-          facingMode: { ideal: 'environment' },
+          facingMode: { ideal: this.currentFacingMode },
           width: { ideal: 1920 },
           height: { ideal: 1080 }
         },
         audio: false
-      });
+      },
+      // 2. Câmera traseira sem resolução fixa
+      {
+        video: {
+          facingMode: { ideal: this.currentFacingMode }
+        },
+        audio: false
+      },
+      // 3. Câmera com facingMode exato se disponível
+      {
+        video: {
+          facingMode: this.currentFacingMode
+        },
+        audio: false
+      },
+      // 4. Qualquer câmera de vídeo disponível no aparelho/computador
+      {
+        video: true,
+        audio: false
+      }
+    ];
+
+    let lastError = null;
+    for (const constraints of tentativasConstraints) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        return stream;
+      } catch (err) {
+        lastError = err;
+        // Se a permissão foi recusada ativamente pelo usuário ou bloqueada pelo site, aborta cascata
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          throw err;
+        }
+      }
+    }
+
+    throw lastError || new Error('Não foi possível obter stream de vídeo de nenhuma câmera');
+  }
+
+  async iniciarCameraStream() {
+    const video = document.getElementById('cameraVideoFeed');
+    const alertEl = document.getElementById('cameraStreamError');
+    const statusBadge = document.getElementById('cameraStatusBadge');
+    const btnFlip = document.getElementById('btnFlipCamera');
+
+    if (!video) return;
+
+    if (alertEl) {
+      alertEl.style.display = 'none';
+      alertEl.innerHTML = '';
+    }
+
+    if (statusBadge) {
+      statusBadge.textContent = '🟡 Solicitando Câmera...';
+      statusBadge.className = 'camera-status-pill camera-status-warning';
+    }
+
+    if (btnFlip) btnFlip.style.display = 'none';
+
+    try {
+      if (this.stream) {
+        this.stream.getTracks().forEach((t) => t.stop());
+        this.stream = null;
+      }
+
+      this.stream = await this.obterStreamCamera();
 
       video.srcObject = this.stream;
-      await video.play();
+      try {
+        await video.play();
+      } catch (playErr) {
+        console.warn('Aviso ao iniciar reprodução de vídeo:', playErr);
+      }
+
+      if (statusBadge) {
+        statusBadge.textContent = this.currentFacingMode === 'environment' ? '🟢 Câmera Traseira' : '🟢 Câmera Frontal';
+        statusBadge.className = 'camera-status-pill camera-status-active';
+      }
+
+      if (btnFlip) {
+        btnFlip.style.display = 'inline-flex';
+      }
+
+      const btnShutter = document.getElementById('btnDispararFoto');
+      if (btnShutter) btnShutter.disabled = false;
+
     } catch (err) {
-      console.warn('Acesso direto à câmera indisponível ou recusado:', err);
-      // Se a câmera direta falhar, alterna automaticamente para upload de arquivo
-      const alertEl = document.getElementById('cameraStreamError');
-      if (alertEl) alertEl.style.display = 'block';
+      console.warn('Erro ao acessar câmera WebRTC:', err);
+      this.exibirErroCamera(err);
+    }
+  }
+
+  async alternarCamera() {
+    this.currentFacingMode = this.currentFacingMode === 'environment' ? 'user' : 'environment';
+    await this.iniciarCameraStream();
+  }
+
+  exibirErroCamera(err) {
+    const alertEl = document.getElementById('cameraStreamError');
+    const statusBadge = document.getElementById('cameraStatusBadge');
+    if (!alertEl) return;
+
+    let titulo = 'Câmera Direta Indisponível';
+    let mensagem = 'Não foi possível carregar o vídeo da câmera no navegador.';
+    let detalhe = '';
+    let ehBloqueio = false;
+
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      ehBloqueio = true;
+      titulo = '🔒 Permissão de Câmera Bloqueada';
+      mensagem = 'O navegador bloqueou o pedido de permissão da câmera para este site.';
+      detalhe = `
+        <div style="background: rgba(0,0,0,0.45); border-radius: 8px; padding: 12px; margin: 10px 0; text-align: left; font-size: 0.8rem; line-height: 1.5; border: 1px solid rgba(255,255,255,0.15);">
+          <strong style="color: var(--gold);">👉 Como liberar a câmera no navegador:</strong><br>
+          1. Toque no ícone de <strong>cadeado 🔒</strong> ou <strong>configurações ⚙️</strong> na barra de endereço (onde fica o link do site no topo).<br>
+          2. Em <strong>Permissões</strong>, selecione <strong>Câmera</strong> e marque <strong>Permitir</strong>.<br>
+          3. Em seguida, clique no botão <strong>"Tentar Novamente"</strong> abaixo.<br>
+          <em>Dica: Você também pode usar a <strong>Câmera Nativa do Celular</strong> diretamente abaixo sem precisar configurar nada!</em>
+        </div>
+      `;
+      if (statusBadge) {
+        statusBadge.textContent = '🔒 Permissão Bloqueada';
+        statusBadge.className = 'camera-status-pill camera-status-danger';
+      }
+    } else if (err.name === 'NotSupportedError' || !window.isSecureContext) {
+      titulo = '🌐 Conexão Sem Suporte WebRTC';
+      mensagem = 'A transmissão ao vivo requer conexão segura HTTPS ou navegador padrão (Chrome/Safari/Edge).';
+      detalhe = `
+        <div style="background: rgba(0,0,0,0.45); border-radius: 8px; padding: 10px; margin: 8px 0; text-align: left; font-size: 0.8rem; line-height: 1.45;">
+          💡 <strong>Solução rápida:</strong> Toque no botão <strong>Câmera Nativa do Celular</strong> abaixo. O app abrirá a câmera do próprio aparelho e aplicará o carimbo com coordenadas UTM e data/hora normalmente!
+        </div>
+      `;
+      if (statusBadge) {
+        statusBadge.textContent = '⚠️ Modo Câmera Nativa';
+        statusBadge.className = 'camera-status-pill camera-status-warning';
+      }
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      titulo = '📷 Câmera Não Encontrada';
+      mensagem = 'Nenhum sensor de câmera foi detectado no aparelho.';
+      if (statusBadge) {
+        statusBadge.textContent = '❌ Câmera Não Detectada';
+        statusBadge.className = 'camera-status-pill camera-status-danger';
+      }
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      titulo = '⚠️ Câmera em Uso';
+      mensagem = 'A câmera está sendo utilizada por outro aplicativo ou aba do navegador. Feche outros apps e tente novamente.';
+      if (statusBadge) {
+        statusBadge.textContent = '⚠️ Câmera em Uso';
+        statusBadge.className = 'camera-status-pill camera-status-warning';
+      }
+    } else {
+      titulo = '⚠️ Aviso da Câmera';
+      mensagem = `Mensagem do sistema: ${err.message || err.name || 'Falha ao iniciar vídeo'}.`;
+      if (statusBadge) {
+        statusBadge.textContent = '⚠️ Câmera Indisponível';
+        statusBadge.className = 'camera-status-pill camera-status-warning';
+      }
+    }
+
+    alertEl.innerHTML = `
+      <div style="max-width: 92%; display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div style="font-size: 1.8rem; margin-bottom: 4px;">${ehBloqueio ? '🔒' : '📸'}</div>
+        <div style="font-weight: 700; font-size: 1.05rem; color: #FFF; margin-bottom: 4px;">${titulo}</div>
+        <p style="font-size: 0.84rem; color: rgba(255,255,255,0.9); margin-bottom: 6px;">${mensagem}</p>
+        ${detalhe}
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px; width: 100%;">
+          <button type="button" class="btn btn-primary btn-lg" onclick="app.camera.abrirCameraNativaDispositivo()">
+            📸 Câmera Nativa do Celular (Qualidade Total)
+          </button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="app.camera.iniciarCameraStream()">
+              🔄 Tentar Novamente
+            </button>
+            <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('inputFotoGaleria').click()">
+              📁 Galeria
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    alertEl.style.display = 'flex';
+  }
+
+  abrirCameraNativaDispositivo() {
+    const input = document.getElementById('cameraFileInput');
+    if (input) {
+      input.click();
     }
   }
 
@@ -324,8 +547,8 @@ class CubagemCamera {
   dispararCaptura() {
     const video = document.getElementById('cameraVideoFeed');
     if (!video || !video.videoWidth) {
-      // Se vídeo não estiver ativo, aciona o seletor de arquivo nativo
-      document.getElementById('cameraFileInput').click();
+      // Se vídeo não estiver ativo, aciona a câmera nativa do sistema
+      this.abrirCameraNativaDispositivo();
       return;
     }
 
@@ -344,6 +567,9 @@ class CubagemCamera {
   processarArquivoSelecionado(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
+
+    // Abre o modal em modo preview para o usuário conferir a foto carimbada
+    this.abrirCameraModal('preview');
 
     const reader = new FileReader();
     reader.onload = (e) => {
