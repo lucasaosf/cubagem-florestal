@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v1.0.0';
+const CACHE_NAME = 'cubagem-florestal-v1.1.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -12,14 +12,16 @@ const ASSETS_TO_CACHE = [
   './icons/favicon.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/logo.svg'
+  './icons/logo-creme.png',
+  './icons/logo-verde.png',
+  './icons/logo-planilha.png'
 ];
 
 // Install: Cache all static resources
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching application shell');
+      console.log('[Service Worker] Caching application shell with official assets');
       return cache.addAll(ASSETS_TO_CACHE);
     }).then(() => self.skipWaiting())
   );
@@ -43,17 +45,14 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: Cache First, Network Fallback
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Return cached version
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        // If response is valid, put in cache for future offline use
         if (
           !networkResponse ||
           networkResponse.status !== 200 ||
@@ -69,7 +68,6 @@ self.addEventListener('fetch', (event) => {
 
         return networkResponse;
       }).catch(() => {
-        // Fallback to index if navigating offline
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }

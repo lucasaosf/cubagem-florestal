@@ -1,44 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#1B4D3E">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cubagem Florestal — Pesquisa & Soluções Ambientais</title>
+  <meta name="theme-color" content="#0E2515">
+  <meta name="description" content="Aplicativo de cubagem florestal para medição, registro e exportação Excel de caminhões de madeira. Desenvolvido por Lucas Aøsf.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Cubagem Florestal">
+  <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
-  <meta name="description" content="Aplicativo offline para cálculo, registro e exportação de cubagem de madeira.">
 
-  <title>Cubagem Florestal - Gestão e Medição de Cargas</title>
+  <!-- Script inline para aplicar tema instantâneo antes da renderização -->
+  <script>
+    (function(){
+      try {
+        var t = localStorage.getItem("cubagem.v1.theme");
+        t = t ? JSON.parse(t) : "dark";
+        if (t !== "light") t = "dark";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch(e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
 
-  <!-- PWA Manifest & Favicon -->
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" type="image/png" href="./icons/favicon.png">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <!-- Google Fonts: Cormorant Garamond + Jost -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <!-- Estilos -->
-  <link rel="stylesheet" href="./css/styles.css">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="app-container">
-    <!-- Header Fixo Superior -->
+    <!-- Header Oficial com Identidade Visual & Alternância de Tema -->
     <header class="app-header">
       <div class="brand-wrapper">
-        <div class="brand-icon">
-          <img src="./icons/favicon.png" alt="Logo">
-        </div>
-        <div>
-          <h1 class="brand-title">CUBAGEM FLORESTAL</h1>
-          <p class="brand-subtitle">Gestão de Cargas de Madeira</p>
+        <button class="brand-logo-btn" onclick="app.navigate('inicio')" aria-label="Início">
+          <img src="icons/logo-creme.png" alt="Logo" class="brand-logo-img logo-dark">
+          <img src="icons/logo-verde.png" alt="Logo" class="brand-logo-img logo-light">
+        </button>
+        <div class="brand-text">
+          <span class="brand-eyebrow">Cubagem Florestal</span>
+          <h1 class="brand-title">Medição de Cargas</h1>
         </div>
       </div>
-      <div class="header-status-badge" id="offlineStatusBadge" title="Status de Conexão">
-        <span class="status-dot" id="statusDot"></span>
-        <span id="statusText">Offline Ready</span>
+
+      <div class="header-tools">
+        <!-- Botão de Trocar Tema (Modo Claro / Modo Escuro) -->
+        <button class="theme-btn" id="themeToggleBtn" onclick="app.toggleTheme()" aria-label="Trocar modo claro ou escuro" title="Alternar Modo Claro / Escuro">
+          <span class="t-sun" aria-hidden="true">☀️</span>
+          <span class="t-moon" aria-hidden="true">🌙</span>
+        </button>
+
+        <!-- Status de Conexão -->
+        <div class="header-chip" id="offlineChip" title="Status de Rede">
+          <span class="dot-status" id="statusDot"></span>
+          <span id="statusText">Offline</span>
+        </div>
       </div>
     </header>
 
-    <!-- Conteúdo Principal Dinâmico -->
+    <!-- Conteúdo Dinâmico -->
     <main class="app-content">
 
       <!-- ========================================== -->
@@ -47,7 +75,7 @@
       <section id="view-inicio" class="view-section active">
         <div class="section-header">
           <h2 class="section-title">Painel Operacional</h2>
-          <p class="section-desc">Visão geral dos registros e volumes acumulados no dispositivo.</p>
+          <p class="section-desc">Visão consolidada de cubagens e volumes geométricos registrados no aparelho.</p>
         </div>
 
         <!-- Grade de Indicadores (KPIs) -->
@@ -61,13 +89,13 @@
           <div class="kpi-card">
             <span class="kpi-label">Caminhões</span>
             <div class="kpi-value" id="kpiTotalCaminhoes">0</div>
-            <span class="kpi-sub">Cargas cadastradas</span>
+            <span class="kpi-sub">Cargas cubadas</span>
           </div>
 
           <div class="kpi-card">
             <span class="kpi-label">Cubagens Hoje</span>
             <div class="kpi-value" id="kpiHojeCaminhoes">0</div>
-            <span class="kpi-sub" id="kpiHojeVolume">0,00 m³</span>
+            <span class="kpi-sub" id="kpiHojeVolume">0,00 m³ hoje</span>
           </div>
 
           <div class="kpi-card">
@@ -79,23 +107,22 @@
 
         <!-- Ações Rápidas -->
         <div class="quick-actions">
-          <button class="action-card-btn" onclick="app.navigate('nova')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="action-card-btn primary" onclick="app.navigate('nova')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M12 5v14M5 12h14"/>
             </svg>
             <span class="action-card-title">Nova Cubagem</span>
-            <span class="action-card-desc">Registrar medição de caminhão</span>
+            <span class="action-card-desc">Registrar medição de campo</span>
           </button>
 
-          <button class="action-card-btn secondary" onclick="app.navigate('relatorios')">
+          <button class="action-card-btn" onclick="app.navigate('relatorios')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
               <line x1="16" y1="13" x2="8" y2="13"/>
               <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
             </svg>
-            <span class="action-card-title">Gerar Excel</span>
+            <span class="action-card-title">Gerar Excel (.xlsx)</span>
             <span class="action-card-desc">Exportar relatório por período</span>
           </button>
         </div>
@@ -107,8 +134,14 @@
             <button class="btn-action-small" onclick="app.navigate('historico')">Ver Todas</button>
           </div>
           <div id="dashboardRecentList">
-            <!-- Populado via JS -->
+            <!-- Populado dinamicamente via app.js -->
           </div>
+        </div>
+
+        <!-- Rodapé do Desenvolvedor -->
+        <div class="author-credit-footer">
+          Desenvolvido por <b>Lucas Aøsf</b><br>
+          Pesquisa &amp; Soluções Ambientais • CRBio 127233/01-D
         </div>
       </section>
 
@@ -118,7 +151,7 @@
       <section id="view-nova" class="view-section">
         <div class="section-header">
           <h2 class="section-title">Nova Medição de Cubagem</h2>
-          <p class="section-desc">Insira as medidas do caminhão para cálculo imediato de volume geométrico.</p>
+          <p class="section-desc">Insira as medidas do caminhão para cálculo em tempo real.</p>
         </div>
 
         <form id="formNovaCubagem" onsubmit="event.preventDefault(); app.salvarCubagem();">
@@ -150,35 +183,31 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="cubResponsavel">Responsável pela Cubagem <span class="required">*</span></label>
-                <input type="text" id="cubResponsavel" class="form-control" placeholder="Nome do profissional" required>
+                <label class="form-label" for="cubResponsavel">Responsável <span class="required">*</span></label>
+                <input type="text" id="cubResponsavel" class="form-control" placeholder="Nome do responsável" required>
               </div>
               <div class="form-group">
-                <label class="form-label" for="cubPlaca">Placa do Caminhão <span class="helper">(Opcional)</span></label>
-                <input type="text" id="cubPlaca" class="form-control" placeholder="Ex: ABC-1234 / BRA2E19" style="text-transform: uppercase;">
+                <label class="form-label" for="cubPlaca">Placa <span class="helper">(Opcional)</span></label>
+                <input type="text" id="cubPlaca" class="form-control" placeholder="ABC-1234" style="text-transform: uppercase;">
               </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" for="cubObservacoes">Observações de Campo <span class="helper">(Opcional)</span></label>
-              <textarea id="cubObservacoes" class="form-control" placeholder="Tipo de carga, espécie, observações sobre o empilhamento..."></textarea>
+              <textarea id="cubObservacoes" class="form-control" placeholder="Espécie vegetal, condições do empilhamento, notas de campo..."></textarea>
             </div>
           </div>
 
           <!-- 2. Medições de Alturas -->
           <div class="card">
             <h3 class="card-title">2. Medições de Alturas (m)</h3>
-            <p class="section-desc" style="margin-bottom: 12px;">Preencha as 3 medidas do lado esquerdo e as 3 medidas do lado direito.</p>
+            <p class="section-desc" style="margin-bottom: 12px;">Informe as 3 alturas do lado esquerdo e 3 alturas do lado direito.</p>
 
             <!-- Lado Esquerdo -->
             <div class="measure-box-container">
               <div class="measure-box-header">
                 <span class="measure-box-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                  LADO ESQUERDO
+                  <span style="color: var(--sage);">✦</span> LADO ESQUERDO
                 </span>
                 <span class="helper">LE1, LE2, LE3</span>
               </div>
@@ -199,14 +228,10 @@
             </div>
 
             <!-- Lado Direito -->
-            <div class="measure-box-container" style="background: #FDFBF7; border-color: #EAD7C3;">
+            <div class="measure-box-container">
               <div class="measure-box-header">
-                <span class="measure-box-title" style="color: #8C4A15;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                  LADO DIREITO
+                <span class="measure-box-title">
+                  <span style="color: var(--gold);">✦</span> LADO DIREITO
                 </span>
                 <span class="helper">LD1, LD2, LD3</span>
               </div>
@@ -245,7 +270,7 @@
           <!-- 4. Card de Cálculo em Tempo Real & Memória -->
           <div class="calc-result-card" id="liveCalcCard">
             <div class="calc-result-header">
-              <span class="calc-result-tag">Cálculo Automático em Tempo Real</span>
+              <span class="calc-result-tag">Cálculo Automático de Campo</span>
               <span class="calc-result-type-badge">Volume Geométrico</span>
             </div>
 
@@ -275,12 +300,12 @@
           </div>
 
           <!-- Botões de Ação -->
-          <div style="display: flex; gap: 10px; margin-bottom: 30px;">
+          <div style="display: flex; gap: 10px; margin-bottom: 24px;">
             <button type="button" class="btn btn-secondary" onclick="app.limparFormularioNova()">
               Limpar
             </button>
             <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnSalvarCubagem">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                 <polyline points="17 21 17 13 7 13 7 21"/>
                 <polyline points="7 3 7 8 15 8"/>
@@ -297,19 +322,19 @@
       <section id="view-historico" class="view-section">
         <div class="section-header">
           <h2 class="section-title">Histórico de Cubagens</h2>
-          <p class="section-desc">Consulte, pesquise, edite ou exclua medições realizadas.</p>
+          <p class="section-desc">Consulte, pesquise, edite ou exclua registros salvos no dispositivo.</p>
         </div>
 
         <div class="history-controls">
           <div class="search-input-wrapper">
-            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
               <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" id="historySearchInput" class="form-control search-input" placeholder="Pesquisar por BR, Km, Placa, Responsável, Data...">
+            <input type="text" id="historySearchInput" class="form-control search-input" placeholder="Buscar por BR, Km, Placa, Responsável, Data...">
           </div>
 
-          <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px;">
+          <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;">
             <button class="btn-action-small active-filter" onclick="app.filtrarHistorico('todos')">Todos</button>
             <button class="btn-action-small" onclick="app.filtrarHistorico('hoje')">Hoje</button>
             <button class="btn-action-small" onclick="app.filtrarHistorico('mes')">Este Mês</button>
@@ -317,7 +342,7 @@
         </div>
 
         <div id="historyListContainer">
-          <!-- Populado via JS -->
+          <!-- Populado via app.js -->
         </div>
       </section>
 
@@ -326,8 +351,8 @@
       <!-- ========================================== -->
       <section id="view-relatorios" class="view-section">
         <div class="section-header">
-          <h2 class="section-title">Relatórios e Exportação Excel</h2>
-          <p class="section-desc">Gere planilhas oficiais .xlsx por período com a identidade visual preservada.</p>
+          <h2 class="section-title">Relatórios &amp; Exportação Excel</h2>
+          <p class="section-desc">Gere a planilha oficial .xlsx por período, estilizada com a identidade visual.</p>
         </div>
 
         <div class="card">
@@ -344,7 +369,7 @@
             </div>
           </div>
 
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
             <button type="button" class="btn-action-small" onclick="app.setReportPeriod('mes-atual')">Mês Atual</button>
             <button type="button" class="btn-action-small" onclick="app.setReportPeriod('mes-anterior')">Mês Anterior</button>
             <button type="button" class="btn-action-small" onclick="app.setReportPeriod('ultimos-30')">Últimos 30 Dias</button>
@@ -357,7 +382,7 @@
           </div>
         </div>
 
-        <!-- Indicadores do Período Selecionado -->
+        <!-- Indicadores do Período -->
         <div class="kpi-grid">
           <div class="kpi-card highlight">
             <span class="kpi-label">Volume do Período</span>
@@ -379,14 +404,14 @@
 
           <div class="kpi-card">
             <span class="kpi-label">Status</span>
-            <div class="kpi-value" style="font-size: 1.1rem; color: var(--primary-medium);" id="repKpiStatus">Pronto</div>
-            <span class="kpi-sub">Geração 100% offline</span>
+            <div class="kpi-value" style="font-size: 1.15rem; color: var(--gold);" id="repKpiStatus">100% Offline</div>
+            <span class="kpi-sub">Geração no dispositivo</span>
           </div>
         </div>
 
         <!-- Botão de Exportação -->
         <button type="button" class="btn btn-primary btn-block btn-lg" id="btnExportarExcel" onclick="app.exportarPlanilhaExcel()">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
@@ -394,14 +419,14 @@
           Exportar Planilha Excel (.xlsx)
         </button>
 
-        <!-- Pré-visualização dos Registros Filtrados -->
-        <div class="card" style="margin-top: 20px;">
+        <!-- Prévia dos Registros -->
+        <div class="card" style="margin-top: 16px;">
           <div class="card-title">
             <span>Pré-visualização dos Registros</span>
             <span id="repPreviewCountBadge" class="btn-action-small">0 registros</span>
           </div>
           <div id="reportPreviewList">
-            <!-- Populado via JS -->
+            <!-- Populado via app.js -->
           </div>
         </div>
       </section>
@@ -411,29 +436,29 @@
       <!-- ========================================== -->
       <section id="view-configuracoes" class="view-section">
         <div class="section-header">
-          <h2 class="section-title">Configurações & Backup</h2>
-          <p class="section-desc">Segurança dos dados offline, backup JSON e preferências de campo.</p>
+          <h2 class="section-title">Configurações &amp; Backup</h2>
+          <p class="section-desc">Segurança dos dados offline, backup JSON e informações do desenvolvedor.</p>
         </div>
 
         <!-- Backup e Segurança -->
         <div class="card">
-          <h3 class="card-title">Backup & Segurança dos Dados</h3>
-          <p class="section-desc" style="margin-bottom: 14px;">
-            Seus dados são armazenados localmente e de forma permanente no celular. Faça backups regulares para maior tranquilidade.
+          <h3 class="card-title">Backup &amp; Segurança dos Dados</h3>
+          <p class="section-desc" style="margin-bottom: 12px;">
+            Todos os seus dados são guardados de forma privada na memória local do celular (IndexedDB).
           </p>
 
-          <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn btn-secondary btn-block" onclick="app.exportarBackupJSON()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              Fazer Download do Backup Completo (JSON)
+              Fazer Download de Backup Completo (JSON)
             </button>
 
             <button class="btn btn-secondary btn-block" onclick="document.getElementById('fileInputBackup').click()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="17 8 12 3 7 8"/>
                 <line x1="12" y1="3" x2="12" y2="15"/>
@@ -444,11 +469,11 @@
           </div>
         </div>
 
-        <!-- Preferências do Operador em Campo -->
+        <!-- Preferências do Operador -->
         <div class="card">
           <h3 class="card-title">Agilidade em Campo (Valores Padrão)</h3>
-          <p class="section-desc" style="margin-bottom: 12px;">
-            Defina seu nome e rodovia usual para pré-preencher novas cubagens automaticamente.
+          <p class="section-desc" style="margin-bottom: 10px;">
+            Preencha seu nome e rodovia usual para pré-preenchimento automático.
           </p>
 
           <div class="form-group">
@@ -457,7 +482,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="cfgRodovia">Rodovia Usual / Padrão</label>
+            <label class="form-label" for="cfgRodovia">Rodovia Padrão</label>
             <input type="text" id="cfgRodovia" class="form-control" placeholder="Ex: BR-116">
           </div>
 
@@ -466,26 +491,24 @@
           </button>
         </div>
 
-        <!-- Instalação PWA e Sobre -->
+        <!-- Instalação e Créditos -->
         <div class="card">
-          <h3 class="card-title">Aplicativo & Instalação Android</h3>
-          <p class="section-desc" style="margin-bottom: 14px;">
-            Este aplicativo funciona 100% offline via Progressive Web App (PWA).
-          </p>
-
-          <button class="btn btn-primary btn-block" id="btnInstallPwa" style="display: none;" onclick="app.instalarPwa()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <h3 class="card-title">Sobre o Aplicativo</h3>
+          <button class="btn btn-primary btn-block" id="btnInstallPwa" style="display: none; margin-bottom: 12px;" onclick="app.instalarPwa()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
               <line x1="12" y1="18" x2="12.01" y2="18"/>
             </svg>
             Instalar Aplicativo no Celular
           </button>
 
-          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; line-height: 1.6;">
-            <strong>Versão:</strong> 1.0.0 Oficial<br>
-            <strong>Repositório:</strong> <a href="https://github.com/lucasaosf/cubagem-florestal" target="_blank" style="color: var(--primary-medium);">github.com/lucasaosf/cubagem-florestal</a><br>
-            <strong>Armazenamento:</strong> IndexedDB Local (Totalmente privado no aparelho)<br>
-            <strong>Cálculo:</strong> $H_m \times \text{Comprimento} \times \text{Largura}$
+          <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
+            <strong>Aplicação:</strong> Cubagem Florestal (PWA Offline)<br>
+            <strong>Identidade Visual:</strong> Pesquisa &amp; Soluções Ambientais<br>
+            <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
+            <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
+            <strong>Contato:</strong> lucasaosf@gmail.com • (12) 99182-1729<br>
+            <strong>Repositório:</strong> <a href="https://github.com/lucasaosf/cubagem-florestal" target="_blank" style="color: var(--gold); text-decoration: underline;">github.com/lucasaosf/cubagem-florestal</a>
           </div>
         </div>
       </section>
@@ -508,7 +531,7 @@
           <line x1="12" y1="8" x2="12" y2="16"/>
           <line x1="8" y1="12" x2="16" y2="12"/>
         </svg>
-        <span>Nova Cubagem</span>
+        <span>Nova</span>
       </button>
 
       <button class="nav-item" data-target="historico" onclick="app.navigate('historico')">
@@ -543,28 +566,22 @@
     </nav>
   </div>
 
-  <!-- ========================================== -->
-  <!-- MODAL: DETALHES COMPLETOS DA CUBAGEM      -->
-  <!-- ========================================== -->
+  <!-- MODAL: DETALHES -->
   <div id="modalDetalhes" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalDetalhes')">
     <div class="modal-dialog">
       <div class="modal-header">
         <h3 class="modal-title" id="detalheModalTitulo">Detalhes da Cubagem</h3>
         <button class="modal-close-btn" onclick="app.fecharModal('modalDetalhes')">&times;</button>
       </div>
-      <div class="modal-body" id="detalheModalConteudo">
-        <!-- Conteúdo preenchido dinamicamente via JS -->
-      </div>
+      <div class="modal-body" id="detalheModalConteudo"></div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="app.fecharModal('modalDetalhes')">Fechar</button>
-        <button class="btn btn-primary" id="btnEditarNoDetalhe" onclick="app.abrirEditarPeloDetalhe()">Editar Registro</button>
+        <button class="btn btn-primary" onclick="app.abrirEditarPeloDetalhe()">Editar Registro</button>
       </div>
     </div>
   </div>
 
-  <!-- ========================================== -->
-  <!-- MODAL: EDITAR CUBAGEM EXISTENTE           -->
-  <!-- ========================================== -->
+  <!-- MODAL: EDITAR -->
   <div id="modalEditar" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalEditar')">
     <div class="modal-dialog">
       <div class="modal-header">
@@ -619,9 +636,9 @@
             </div>
           </div>
 
-          <div class="measure-box-container" style="background: #FDFBF7;">
+          <div class="measure-box-container">
             <div class="measure-box-header">
-              <span class="measure-box-title" style="color: #8C4A15;">Alturas Lado Direito (m)</span>
+              <span class="measure-box-title">Alturas Lado Direito (m)</span>
             </div>
             <div class="form-row-3">
               <input type="text" inputmode="decimal" id="editLD1" class="measure-input-field" placeholder="LD1" required>
@@ -654,41 +671,36 @@
     </div>
   </div>
 
-  <!-- ========================================== -->
-  <!-- MODAL: CONFIRMAÇÃO DE EXCLUSÃO            -->
-  <!-- ========================================== -->
+  <!-- MODAL: EXCLUSÃO -->
   <div id="modalExcluir" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalExcluir')">
     <div class="modal-dialog" style="max-width: 440px;">
       <div class="modal-header">
-        <h3 class="modal-title" style="color: var(--danger);">Excluir Registro</h3>
+        <h3 class="modal-title" style="color: var(--rec);">Excluir Registro</h3>
         <button class="modal-close-btn" onclick="app.fecharModal('modalExcluir')">&times;</button>
       </div>
       <div class="modal-body">
         <p style="font-size: 0.95rem; margin-bottom: 8px;">
           Tem certeza de que deseja excluir permanentemente o registro:
         </p>
-        <div id="excluirItemInfo" style="font-weight: 700; color: var(--text-main); background: var(--bg-elevated); padding: 10px; border-radius: var(--radius-sm);">
-          <!-- Info do item -->
-        </div>
-        <p style="font-size: 0.8rem; color: var(--danger); margin-top: 10px;">
+        <div id="excluirItemInfo" style="font-weight: 700; color: var(--ink); background: var(--surface-2); padding: 10px; border-radius: 8px; border: 1px solid var(--line);"></div>
+        <p style="font-size: 0.8rem; color: var(--rec); margin-top: 10px;">
           Esta ação não poderá ser desfeita.
         </p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="app.fecharModal('modalExcluir')">Cancelar</button>
-        <button class="btn btn-danger" id="btnConfirmarExclusao" onclick="app.confirmarExclusao()">Sim, Excluir</button>
+        <button class="btn btn-danger" onclick="app.confirmarExclusao()">Sim, Excluir</button>
       </div>
     </div>
   </div>
 
-  <!-- Container de Toasts -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Scripts da Aplicação (100% Locais e Offline) -->
-  <script src="./vendor/exceljs.min.js"></script>
-  <script src="./js/db.js"></script>
-  <script src="./js/calculator.js"></script>
-  <script src="./js/excel-export.js"></script>
-  <script src="./js/app.js"></script>
+  <!-- Bibliotecas e Scripts Locais -->
+  <script src="vendor/exceljs.min.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/calculator.js"></script>
+  <script src="js/excel-export.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

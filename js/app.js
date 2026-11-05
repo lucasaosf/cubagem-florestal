@@ -75,6 +75,19 @@ class CubagemApp {
   }
 
   /**
+   * Alternância de Tema (Modo Claro / Modo Escuro)
+   */
+  toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = cur === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try {
+      localStorage.setItem('cubagem.v1.theme', JSON.stringify(next));
+    } catch (e) {}
+    this.showToast(`Modo ${next === 'light' ? 'Claro' : 'Escuro'} ativado.`, 'info');
+  }
+
+  /**
    * Monitoramento de conectividade (Online / Offline)
    */
   configurarMonitorRede() {

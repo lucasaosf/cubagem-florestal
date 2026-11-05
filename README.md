@@ -1,145 +1,81 @@
-# 🌲 Cubagem Florestal — Aplicativo Android & PWA Offline
+# 🌲 Cubagem Florestal — Pesquisa & Soluções Ambientais
 
-> Aplicativo de código aberto para registro, cálculo automático de volume geométrico, gerenciamento e exportação de relatórios em Excel (.xlsx) de caminhões carregados com madeira. Funciona **100% offline em atividades de campo**.
+> Aplicativo Android & PWA de código aberto para registro, cálculo de volume geométrico, gerenciamento de dados de campo e exportação de planilhas Excel (.xlsx) de cargas de caminhões de madeira. Funciona **100% offline** com suporte a **Modo Claro** e **Modo Escuro**.
+> 
+> **Desenvolvido por Lucas Aøsf** (CRBio 127233/01-D).
 
-[![PWA Ready](https://img.shields.io/badge/PWA-Ready-1B4D3E?style=flat&logo=pwa)](https://lucasaosf.github.io/cubagem-florestal/)
-[![GitHub Pages](https://img.shields.io/badge/Deploy-GitHub%20Pages-2D6A4F?style=flat&logo=github)](https://lucasaosf.github.io/cubagem-florestal/)
-[![Licença](https://img.shields.io/badge/Licen%C3%A7a-MIT-informational)](./LICENSE)
+[![PWA Ready](https://img.shields.io/badge/PWA-100%25%20Offline-13301A?style=flat&logo=pwa)](https://lucasaosf.github.io/cubagem-florestal/)
+[![GitHub Pages](https://img.shields.io/badge/Deploy-GitHub%20Pages-A88552?style=flat&logo=github)](https://lucasaosf.github.io/cubagem-florestal/)
+[![Tema Claro & Escuro](https://img.shields.io/badge/Tema-Claro%20%26%20Escuro-8FA37F?style=flat)](https://lucasaosf.github.io/cubagem-florestal/)
+[![Licença MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-B08854)](./LICENSE)
 
 ---
 
-## 📱 Acesso Rápido & Instalação
+## 📱 Acesso Rápido & Instalação no Celular
 
 - **Link do Aplicativo Online:** [https://lucasaosf.github.io/cubagem-florestal/](https://lucasaosf.github.io/cubagem-florestal/)
 - **Repositório GitHub:** [https://github.com/lucasaosf/cubagem-florestal](https://github.com/lucasaosf/cubagem-florestal)
 
-### 📲 Como instalar no celular Android:
-1. Abra o link acima no navegador **Google Chrome** do celular.
-2. Toque no ícone de três pontos no canto superior direito do Chrome.
+### 📲 Passo a passo de instalação no Android:
+1. Abra o link [https://lucasaosf.github.io/cubagem-florestal/](https://lucasaosf.github.io/cubagem-florestal/) no **Google Chrome** do celular.
+2. Toque nos três pontinhos no canto superior direito do navegador.
 3. Selecione **"Instalar aplicativo"** ou **"Adicionar à tela inicial"**.
-4. O ícone do **Cubagem Florestal** será adicionado à sua tela de aplicativos.
-5. Uma vez instalado, o aplicativo funciona **100% sem conexão com a internet** em frentes de trabalho ou áreas remotas.
+4. O ícone oficial será adicionado à sua tela de aplicativos.
+5. Uma vez instalado, o aplicativo abre instantaneamente e opera **100% sem conexão com a internet** em frentes de serviço e áreas florestais remotas.
 
 ---
 
-## 📐 Fórmulas Matemáticas e Regras de Cubagem
+## 🎨 Identidade Visual & Padrão de Cores
 
-O sistema calcula com precisão interna total (sem arredondamento preliminar):
+O aplicativo segue rigorosamente a identidade visual institucional de **Pesquisa & Soluções Ambientais** (mesmo padrão da [Caderneta de Campo](https://github.com/lucasaosf/caderneta-de-campo)):
 
-### A) Soma das Alturas
+- **Tipografia:** `Cormorant Garamond` (Títulos e display) + `Jost` (Interface e números) + `Century Gothic` (Planilha Excel).
+- **Logotipos Oficiais:**
+  - `logo-creme.png`: exibido no Modo Escuro.
+  - `logo-verde.png`: exibido no Modo Claro.
+  - `logo-planilha.png`: incorporado no cabeçalho dos relatórios Excel gerados.
+- **Paleta de Cores:**
+  - Verde-Floresta: `#13301A` e `#173A1E`
+  - Creme Suave: `#F3EEE3`, `#FBF8F1` e `#EEE8DA`
+  - Sálvia: `#8FA37F` e `#B2C2A5`
+  - Bronze & Ouro: `#A88552`, `#86602E` e `#B08854`
+- **Alternância de Tema:** Botão dedicado no cabeçalho (☀️ Sol / 🌙 Lua) para alternar entre Modo Claro e Modo Escuro com persistência local no dispositivo.
+
+---
+
+## 📐 Fórmulas Matemáticas de Cubagem
+
+O sistema calcula com precisão de ponto flutuante total (sem perdas por arredondamento prévio):
+
+### 1. Soma das 6 Alturas
 $$\text{Soma} = \text{LE1} + \text{LE2} + \text{LE3} + \text{LD1} + \text{LD2} + \text{LD3}$$
 
-### B) Altura Média ($H_m$)
+### 2. Altura Média ($H_m$)
 $$H_m = \frac{\text{LE1} + \text{LE2} + \text{LE3} + \text{LD1} + \text{LD2} + \text{LD3}}{6}$$
 
-### C) Volume Geométrico da Carga ($m^3$)
+### 3. Volume Geométrico da Carga ($m^3$)
 $$\text{Volume Geométrico} = H_m \times \text{Comprimento} \times \text{Largura}$$
 
-> ⚠️ **Importante:** O resultado é rigorosamente identificado como **Volume Geométrico da Carga**, não como volume sólido de madeira.
-
-### Exemplo de Teste Padrão Homologado:
-- **LE1:** $1,40\text{ m}$ | **LE2:** $1,40\text{ m}$ | **LE3:** $1,00\text{ m}$
-- **LD1:** $1,20\text{ m}$ | **LD2:** $1,10\text{ m}$ | **LD3:** $1,00\text{ m}$
-- **Comprimento:** $6,35\text{ m}$ | **Largura:** $2,55\text{ m}$
-
-**Resultados calculados:**
-- **Soma das alturas:** $7,10\text{ m}$
-- **Altura média ($H_m$):** $1,183333\text{ m}$
-- **Volume Geométrico:** $19,16\text{ m}^3$ a $19,17\text{ m}^3$
+> ⚠️ **Nota Técnica:** O resultado obtido corresponde rigorosamente ao **Volume Geométrico da Carga** (Hm × C × L), não se confundindo com o volume sólido de madeira estéreo sem casca.
 
 ---
 
-## 🌟 Principais Funcionalidades
+## 📊 Planilha Excel (.xlsx)
 
-### 1. Início (Dashboard Operacional)
-- Contadores em tempo real: **Volume total acumulado ($m^3$)**, **Total de caminhões**, **Cubagens registradas hoje** e **Volume médio por carga**.
-- Acesso rápido para nova medição e exportação.
-- Lista rápida com as últimas cubagens cadastradas.
-
-### 2. Nova Cubagem (Medição de Campo)
-- **Preenchimento automático** da data e horário atuais (com possibilidade de correção manual).
-- Registro de **Rodovia (BR)**, **Quilômetro (Km)**, **Responsável**, **Placa** e **Observações**.
-- Inserção das 6 alturas (LE1, LE2, LE3, LD1, LD2, LD3), comprimento e largura.
-- Aceitação flexível de números decimais com vírgula ou ponto (ex: `1,40` ou `1.40`).
-- **Memória de cálculo interativa em tempo real** exibida antes de salvar.
-- Validação automática contra valores nulos, zerados ou negativos.
-
-### 3. Histórico Completo
-- Busca dinâmica instantânea por Rodovia (BR), Km, Responsável, Placa ou Data.
-- Filtros rápidos por período (Todos, Hoje, Este Mês).
-- Visualização de detalhes completos de cada caminhão.
-- Edição de cubagens já cadastradas com recálculo automático.
-- Exclusão com confirmação de segurança.
-
-### 4. Relatórios & Exportação Excel (.xlsx)
-- Seleção livre de período por intervalo de datas (Data Inicial e Data Final).
-- Atalhos rápidos: *Mês Atual*, *Mês Anterior*, *Últimos 30 Dias* e *Todos*.
-- Totalizadores do período: caminhões filtrados, volume acumulado e média por caminhão.
-- Pré-visualização dos registros selecionados.
-- Geração local e offline de planilha Excel (.xlsx) profissional com **identidade visual corporativa**:
-  - Cabeçalho padronizado;
-  - Resumo de indicadores no topo (Cards com Total de Caminhões, Volume Total e Médias);
-  - Agrupamento em dois níveis de colunas (Operação, Alturas LE, Alturas LD, Estatísticas, Dimensões e Volume);
-  - Fórmulas dinâmicas integradas (`=SUM(...)`, `=AVERAGE(...)`);
-  - Destaque visual na coluna de resultado de Volume Geométrico;
-  - Formato adaptado para impressão e documentação técnica.
-
-### 5. Configurações & Backup
-- **Exportação de backup completo em JSON** com todos os registros e configurações.
-- **Restauração de backup JSON** com validação de dados e opção de mesclagem.
-- Definição de **Responsável Padrão** e **Rodovia Usual** para agilizar novas medições.
-- Monitor de conexão online / offline.
+- Geração 100% offline via biblioteca **ExcelJS**.
+- Logotipo oficial `logo-planilha.png` inserido diretamente no cabeçalho.
+- Cards superiores com resumo: **Total de Caminhões**, **Volume Total Geométrico (m³)**, **Volume Médio por Carga (m³)** e **Responsável Técnico**.
+- Cabeçalho hierárquico em 2 níveis (Operação, Alturas LE, Alturas LD, Estatísticas, Dimensões, Resultado e Observações).
+- Fórmulas automáticas do Excel (`=AVERAGE` e `=SUM`) na linha de totais gerais.
+- Rodapé técnico com assinatura profissional e dados de contato.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 👤 Desenvolvedor & Contato
 
-- **HTML5 & CSS3** moderno com design system florestal (Mobile First, botões grandes para campo).
-- **JavaScript Moderno (ES6+)** modular e puro (sem dependência de frameworks pesados).
-- **Progressive Web App (PWA)** com Web App Manifest e Service Worker para cache 100% offline.
-- **IndexedDB** nativo para persistência robusta dos dados no próprio aparelho celular.
-- **ExcelJS** local (`vendor/exceljs.min.js`) para geração de arquivos `.xlsx` nativos e estilizados sem internet.
-
----
-
-## 📁 Estrutura do Projeto
-
-```text
-cubagem-florestal/
-│
-├── index.html               # Aplicação SPA (Single Page Application)
-├── manifest.webmanifest     # Manifesto PWA para Android
-├── sw.js                    # Service Worker (Cache Offline)
-├── README.md                # Documentação técnica e manual
-├── LICENSE                  # Licença de código aberto MIT
-│
-├── css/
-│   └── styles.css           # Estilos responsivos e identidade visual
-│
-├── js/
-│   ├── app.js               # Controlador de interface e navegação
-│   ├── db.js                # Camada IndexedDB (CRUD, busca e backup)
-│   ├── calculator.js        # Motor matemático de validação e cálculos
-│   └── excel-export.js      # Gerador de planilhas Excel formatadas
-│
-├── icons/
-│   ├── favicon.png          # Ícone navegador (48x48)
-│   ├── icon-192.png         # Ícone Android PWA (192x192)
-│   ├── icon-512.png         # Ícone Splash Screen PWA (512x512)
-│   └── logo.svg             # Logotipo vetorial da marca
-│
-└── vendor/
-    └── exceljs.min.js       # Biblioteca local ExcelJS (offline)
-```
-
----
-
-## 🔒 Privacidade e Segurança
-
-Todos os dados coletados em campo ficam armazenados **estritamente na memória local do seu dispositivo (IndexedDB)**. Nenhuma informação de campo, placa ou medição é enviada para servidores externos.
-
----
-
-## 📄 Licença
-
-Distribuído sob a licença MIT. Consulte o arquivo [LICENSE](./LICENSE) para mais detalhes.
+- **Desenvolvido por:** Lucas Aøsf
+- **Registro Profissional:** CRBio 127233/01-D
+- **E-mail:** lucasaosf@gmail.com
+- **WhatsApp/Telefone:** (12) 99182-1729
+- **Instagram:** [@lucas_aosf](https://instagram.com/lucas_aosf)
+- **GitHub:** [github.com/lucasaosf](https://github.com/lucasaosf)
