@@ -1108,3 +1108,112 @@ textarea.form-control {
   color: var(--gold);
   font-weight: 700;
 }
+
+/* ========================================================================= */
+/* ESTILOS DA CÂMERA, CARIMBO DE FOTO E MARCA D'ÁGUA (TIMESTAMP FLORESTAL)   */
+/* ========================================================================= */
+.camera-viewfinder-wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid var(--line);
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #000;
+}
+
+.camera-gps-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(14, 37, 21, 0.85);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  pointer-events: auto;
+}
+
+.camera-settings-panel {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.camera-settings-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.range-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.range-slider-wrapper input[type="range"] {
+  flex: 1;
+  accent-color: var(--gold);
+}
+
+.tora-photo-preview-card {
+  margin-top: 10px;
+  background: var(--surface-2);
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tora-photo-thumbnail {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.tora-photo-thumbnail:active {
+  transform: scale(0.96);
+}

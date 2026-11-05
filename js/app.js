@@ -25,6 +25,11 @@ class CubagemApp {
 
     // Sistema de Autenticação e Nuvem
     this.auth = window.CubagemAuth ? new window.CubagemAuth() : null;
+
+    // Sistema de Câmera, Timestamp e Fotos de Toras
+    this.camera = window.CubagemCamera ? new window.CubagemCamera() : null;
+    this.currentToraPhoto = null;
+    this.activeZoomPhoto = null;
   }
 
   async init() {
@@ -531,6 +536,10 @@ class CubagemApp {
         return;
       }
 
+      const nomeFoto = this.currentToraPhoto
+        ? (calc.plaqueta ? `Plaqueta_${calc.plaqueta}_${data}.jpg` : `Tora_${Date.now()}.jpg`)
+        : null;
+
       record = {
         id: window.cubagemDB.generateId('TORA'),
         tipo: 'tora',
@@ -547,6 +556,11 @@ class CubagemApp {
         volumeGeometrico: calc.volumeGeometrico,
         tipoVolume: calc.tipoVolume,
         memoriaCalculo: calc.memoriaCalculo,
+        foto: this.currentToraPhoto ? this.currentToraPhoto.dataUrl : null,
+        fotoUtm: this.currentToraPhoto ? this.currentToraPhoto.utm : null,
+        fotoDataHora: this.currentToraPhoto ? this.currentToraPhoto.dataHora : null,
+        fotoLegenda: this.currentToraPhoto ? this.currentToraPhoto.legenda : null,
+        fotoNome: nomeFoto,
         timestamp: Date.now()
       };
     }
@@ -589,6 +603,7 @@ class CubagemApp {
       document.getElementById('cubDiametroPonta2').value = '';
       document.getElementById('cubComprimentoTora').value = '';
       document.getElementById('cubPlaqueta').value = '';
+      this.removerFotoToraAtiva();
     }
     document.getElementById('cubObservacoes').value = '';
     this.executarCalculoTempoReal();
@@ -600,6 +615,7 @@ class CubagemApp {
     this.alturasLD = ['', '', ''];
     this.alturasPilha = ['', '', '', ''];
     this.renderizarGridsAlturas();
+    this.removerFotoToraAtiva();
     this.carregarPreferenciasIniciais();
     this.executarCalculoTempoReal();
     this.showToast('Formulário limpo.', 'warning');
@@ -691,7 +707,7 @@ class CubagemApp {
       const nAlt = Array.isArray(item.alturas) ? item.alturas.length : (item.totalAlturas || '-');
       subItem = `${item.rodovia} • ${nAlt} alturas`;
     } else if (tipo === 'tora') {
-      tagTipo = '🌲 Tora (Smalian)';
+      tagTipo = item.foto ? '🌲 Tora • 📷 Foto' : '🌲 Tora (Smalian)';
       tituloItem = `Plaqueta: ${item.plaqueta || 'S/P'}`;
       subItem = `D: ${item.diametroMedio_cm ? Number(item.diametroMedio_cm).toFixed(1) + ' cm' : '-'} • L: ${item.comprimento || '-'} m`;
     }
@@ -799,6 +815,22 @@ class CubagemApp {
           </div>
         </div>
       `;
+
+      if (item.foto) {
+        detalheHtml += `
+          <div style="margin-top: 12px; background: var(--surface-2); padding: 12px; border-radius: 10px; border: 1px solid var(--line);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <strong style="font-size: 0.85rem; color: var(--gold);">📷 Foto da Plaqueta &amp; Timestamp</strong>
+              <button type="button" class="btn-action-small" onclick="app.baixarFotoDireta('${item.id}')">💾 Baixar Foto</button>
+            </div>
+            <img src="${item.foto}" style="width: 100%; max-height: 240px; object-fit: contain; border-radius: 8px; background: #000; cursor: pointer;" onclick="app.visualizarFotoToraAmpliada('${item.foto}', 'Plaqueta #${item.plaqueta || item.id}', '${item.fotoLegenda || ''}')" title="Toque para ampliar">
+            <div style="margin-top: 6px; font-size: 0.74rem; color: var(--muted); line-height: 1.4;">
+              <strong>Coordenadas:</strong> ${item.fotoUtm || 'N/A'}<br>
+              ${item.fotoLegenda ? `<strong>Legenda:</strong> ${item.fotoLegenda}` : ''}
+            </div>
+          </div>
+        `;
+      }
     }
 
     if (item.observacoes) {
@@ -1034,6 +1066,152 @@ class CubagemApp {
       }
     };
     reader.readAsText(file);
+  }
+
+  // =========================================================================
+  // GESTÃO DE FOTOS DE TORAS E TIMESTAMP CAMERA
+  // =========================================================================
+  abrirCameraTora() {
+    if (this.camera) {
+      this.camera.abrirCameraModal();
+    }
+  }
+
+  definirFotoToraAtiva(photoObj) {
+    this.currentToraPhoto = photoObj;
+    const badge = document.getElementById('toraPhotoAttachedBadge');
+    const box = document.getElementById('toraFotoPreviewBox');
+    const thumb = document.getElementById('toraFotoThumbnail');
+    const txtPlac = document.getElementById('toraFotoInfoPlaqueta');
+    const txtUtm = document.getElementById('toraFotoInfoUtm');
+    const txtData = document.getElementById('toraFotoInfoData');
+
+    if (badge) badge.style.display = 'inline-block';
+    if (box) box.style.display = 'flex';
+    if (thumb) thumb.src = photoObj.dataUrl;
+    if (txtPlac) txtPlac.textContent = photoObj.plaqueta ? `Plaqueta #${photoObj.plaqueta}` : 'Foto Anexada';
+    if (txtUtm) txtUtm.textContent = photoObj.utm || 'UTM: Não registrado';
+    if (txtData) txtData.textContent = photoObj.dataHora || '';
+  }
+
+  removerFotoToraAtiva() {
+    this.currentToraPhoto = null;
+    const badge = document.getElementById('toraPhotoAttachedBadge');
+    const box = document.getElementById('toraFotoPreviewBox');
+    const thumb = document.getElementById('toraFotoThumbnail');
+    if (badge) badge.style.display = 'none';
+    if (box) box.style.display = 'none';
+    if (thumb) thumb.src = '';
+  }
+
+  visualizarFotoToraAmpliada(url, titulo, legenda) {
+    const finalUrl = url || (this.currentToraPhoto ? this.currentToraPhoto.dataUrl : '');
+    if (!finalUrl) return;
+
+    this.activeZoomPhoto = {
+      url: finalUrl,
+      titulo: titulo || (this.currentToraPhoto && this.currentToraPhoto.plaqueta ? `Plaqueta #${this.currentToraPhoto.plaqueta}` : 'Foto da Tora')
+    };
+
+    const img = document.getElementById('fotoZoomImg');
+    const tit = document.getElementById('fotoZoomTitulo');
+    const leg = document.getElementById('fotoZoomLegenda');
+
+    if (img) img.src = finalUrl;
+    if (tit) tit.textContent = this.activeZoomPhoto.titulo;
+    if (leg) leg.textContent = legenda || (this.currentToraPhoto ? this.currentToraPhoto.legenda : '');
+
+    this.abrirModal('modalFotoZoom');
+  }
+
+  baixarFotoAtualZoom() {
+    if (!this.activeZoomPhoto || !this.activeZoomPhoto.url) return;
+    const link = document.createElement('a');
+    link.href = this.activeZoomPhoto.url;
+    const cleanName = (this.activeZoomPhoto.titulo || 'Foto_Tora').replace(/[^a-zA-Z0-9_-]/g, '_');
+    link.download = `${cleanName}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    this.showToast('Download da foto iniciado!', 'info');
+  }
+
+  async baixarFotoDireta(id) {
+    const item = await window.cubagemDB.get(id);
+    if (!item || !item.foto) return;
+    const link = document.createElement('a');
+    link.href = item.foto;
+    link.download = item.fotoNome || `Plaqueta_${item.plaqueta || item.id}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    this.showToast('Download da foto iniciado!', 'info');
+  }
+
+  async exportarFotosTorasZip() {
+    const start = document.getElementById('reportDataInicio').value;
+    const end = document.getElementById('reportDataFim').value;
+
+    if (!start || !end) {
+      this.showToast('Selecione o período de datas no relatório primeiro.', 'warning');
+      return;
+    }
+
+    try {
+      this.showToast('Localizando toras com fotos no período...', 'info');
+      const records = await window.cubagemDB.getByDateRange(start, end);
+      const torasComFoto = records.filter((r) => r.tipo === 'tora' && r.foto);
+
+      if (torasComFoto.length === 0) {
+        this.showToast('Nenhuma tora com foto registrada no período selecionado.', 'warning');
+        return;
+      }
+
+      if (typeof window.JSZip === 'undefined') {
+        this.showToast('Carregando biblioteca ZIP... Tente novamente em instantes.', 'warning');
+        return;
+      }
+
+      this.showToast(`Compactando ${torasComFoto.length} fotos em arquivo ZIP...`, 'info');
+      const zip = new window.JSZip();
+      const folder = zip.folder(`Toras_${start}_a_${end}`);
+
+      let manifesto = `CUBAGEM FLORESTAL — REGISTRO FOTOGRÁFICO DE TORAS\n`;
+      manifesto += `Período: ${start} a ${end}\n`;
+      manifesto += `Total de Fotos: ${torasComFoto.length}\n`;
+      manifesto += `Desenvolvido por Lucas Aøsf - CRBio 127233/01-D\n`;
+      manifesto += `Exportado em: ${new Date().toLocaleString('pt-BR')}\n`;
+      manifesto += `============================================================\n\n`;
+      manifesto += `# | Plaqueta | Data | Horário | UTM | Volume (m³) | Arquivo\n`;
+
+      torasComFoto.forEach((item, idx) => {
+        const rawBase64 = item.foto.replace(/^data:image\/[a-z]+;base64,/, '');
+        const fileName = item.fotoNome || `Plaqueta_${item.plaqueta || item.id}_${item.data}.jpg`;
+        folder.file(fileName, rawBase64, { base64: true });
+
+        const vol = window.CubagemCalculator.formatNumber(item.volumeGeometrico, 3);
+        manifesto += `${idx + 1} | ${item.plaqueta || 'S/P'} | ${item.data} | ${item.horario || ''} | ${item.fotoUtm || 'N/A'} | ${vol} m³ | ${fileName}\n`;
+      });
+
+      folder.file('Manifesto_Toras_Fotos.txt', manifesto);
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipFileName = `Fotos_Toras_${start}_a_${end}.zip`;
+
+      const downloadUrl = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = zipFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      this.showToast(`Pacote com ${torasComFoto.length} fotos baixado com sucesso!`, 'success');
+    } catch (err) {
+      console.error('Erro ao gerar ZIP de fotos:', err);
+      this.showToast('Erro ao exportar arquivo ZIP.', 'danger');
+    }
   }
 
   abrirModal(id) {

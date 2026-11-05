@@ -342,17 +342,19 @@ class CubagemExcelExport {
         { key: 'data', width: 12 },
         { key: 'horario', width: 9 },
         { key: 'plaqueta', width: 16 },
+        { key: 'foto', width: 28 },
+        { key: 'utm', width: 30 },
         { key: 'local', width: 16 },
         { key: 'responsavel', width: 20 },
-        { key: 'd1_cm', width: 14 },
-        { key: 'd2_cm', width: 14 },
-        { key: 'dm_cm', width: 14 },
-        { key: 'comp', width: 14 },
+        { key: 'd1_cm', width: 15 },
+        { key: 'd2_cm', width: 15 },
+        { key: 'dm_cm', width: 15 },
+        { key: 'comp', width: 15 },
         { key: 'vol_smalian', width: 20 },
-        { key: 'obs', width: 26 }
+        { key: 'obs', width: 32 }
       ];
 
-      wsTor.mergeCells('A1:M1');
+      wsTor.mergeCells('A1:O1');
       const hTor = wsTor.getCell('A1');
       hTor.value = '   CUBAGEM DE TORAS ROLIÇAS INDIVIDUAIS (FÓRMULA DE SMALIAN)';
       hTor.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
@@ -360,14 +362,19 @@ class CubagemExcelExport {
       hTor.alignment = { vertical: 'middle', horizontal: 'center' };
       wsTor.getRow(1).height = 32;
 
-      const torCols = ['#', 'ID Registro', 'Data', 'Horário', 'Nº Plaqueta', 'Local / Pátio', 'Responsável', 'Diâm. Ponta 1 (cm)', 'Diâm. Ponta 2 (cm)', 'Diâm. Médio (cm)', 'Comprimento (m)', 'Vol. Smalian (m³)', 'Observações'];
+      const torCols = [
+        '#', 'ID Registro', 'Data', 'Horário', 'Nº Plaqueta',
+        'Foto da Plaqueta (Arquivo)', 'Coordenadas UTM', 'Local / Pátio', 'Responsável',
+        'Diâm. Ponta 1 (cm)', 'Diâm. Ponta 2 (cm)', 'Diâm. Médio (cm)', 'Comprimento (m)',
+        'Vol. Smalian (m³)', 'Legenda da Foto / Obs'
+      ];
       const rTorH = wsTor.getRow(2);
       rTorH.height = 24;
       torCols.forEach((col, i) => {
         const c = rTorH.getCell(i + 1);
         c.value = col;
         c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i === 11 ? C.ouro : C.verde2 } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i === 13 ? C.ouro : C.verde2 } };
         c.alignment = { horizontal: 'center', vertical: 'middle' };
         c.border = thinBorder;
       });
@@ -375,18 +382,26 @@ class CubagemExcelExport {
       let rTorIdx = 3;
       toras.forEach((item, idx) => {
         const row = wsTor.getRow(rTorIdx);
-        row.height = 19;
+        row.height = item.foto ? 42 : 20;
         const bg = idx % 2 === 1 ? C.creme2 : C.creme;
+
+        const nomeFoto = item.foto
+          ? (item.fotoNome || `Plaqueta_${item.plaqueta || item.id}_${item.data}.jpg`)
+          : 'SEM FOTO';
+        const utmStr = item.fotoUtm || 'NÃO REGISTRADO';
+        const obsFinal = item.fotoLegenda
+          ? `${item.fotoLegenda}${item.observacoes ? ' | ' + item.observacoes : ''}`
+          : (item.observacoes || '');
 
         const vals = [
           idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.plaqueta || 'S/P',
-          item.rodovia || 'Pátio', item.responsavel,
+          nomeFoto, utmStr, item.rodovia || 'Pátio', item.responsavel,
           Number(item.diametroPonta1_cm) || (Number(item.diametroPonta1_m) * 100) || 0,
           Number(item.diametroPonta2_cm) || (Number(item.diametroPonta2_m) * 100) || 0,
           Number(item.diametroMedio_cm) || 0,
           Number(item.comprimento) || 0,
           Number(item.volumeGeometrico) || 0,
-          item.observacoes || ''
+          obsFinal
         ];
 
         vals.forEach((v, vi) => {
@@ -394,14 +409,31 @@ class CubagemExcelExport {
           c.value = v;
           c.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
           c.border = thinBorder;
-          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 11 ? 'D6C7A1' : bg } };
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 13 ? 'D6C7A1' : bg } };
           if (vi === 0 || vi === 2 || vi === 3 || vi === 4) c.alignment = { horizontal: 'center', vertical: 'middle' };
-          else if (vi >= 7 && vi <= 11) {
+          else if (vi >= 9 && vi <= 13) {
             c.alignment = { horizontal: 'right', vertical: 'middle' };
-            c.numFmt = vi === 11 ? '#,##0.000' : '#,##0.0';
-            if (vi === 11) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
+            c.numFmt = vi === 13 ? '#,##0.000' : '#,##0.0';
+            if (vi === 13) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
           } else c.alignment = { horizontal: 'left', vertical: 'middle' };
         });
+
+        // Embutir miniatura da foto na planilha se existir
+        if (item.foto) {
+          try {
+            const imgId = workbook.addImage({
+              base64: item.foto,
+              extension: 'jpeg'
+            });
+            wsTor.addImage(imgId, {
+              tl: { col: 5.1, row: rTorIdx - 0.95 },
+              ext: { width: 50, height: 38 }
+            });
+          } catch (e) {
+            console.warn('Erro ao embutir foto na planilha:', e);
+          }
+        }
+
         rTorIdx++;
       });
     }
