@@ -318,11 +318,17 @@ button.header-chip:active {
 }
 
 .view-section {
-  display: none;
-  animation: fadeIn 0.2s ease-in-out;
+  display: none !important;
+  animation: fadeIn 0.15s ease-in-out;
 }
 
-.view-section.active { display: block; }
+.view-section.active {
+  display: block !important;
+}
+
+.view-section.active.cover-screen {
+  display: flex !important;
+}
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
@@ -1343,11 +1349,16 @@ body[data-active-tab="inicio"] .app-content {
   margin: 0 !important;
 }
 
+body:not([data-active-tab="inicio"]) #view-inicio,
+body:not([data-active-tab="inicio"]) .cover-screen {
+  display: none !important;
+}
+
 .cover-screen {
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
-  display: flex !important;
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
@@ -1365,6 +1376,11 @@ body[data-active-tab="inicio"] .app-content {
   background-repeat: no-repeat;
   color: #F2EBDD;
   transition: background 0.3s ease;
+}
+
+body[data-active-tab="inicio"] .cover-screen,
+.cover-screen.active {
+  display: flex !important;
 }
 
 :root[data-theme="light"] .cover-screen {
