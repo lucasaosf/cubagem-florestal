@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1B4D3E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
+  <meta name="description" content="Aplicativo offline para cálculo, registro e exportação de cubagem de madeira.">
+
+  <title>Cubagem Florestal - Gestão e Medição de Cargas</title>
+
+  <!-- PWA Manifest & Favicon -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" href="./icons/favicon.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header Fixo Superior -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon">
+          <img src="./icons/favicon.png" alt="Logo">
+        </div>
+        <div>
+          <h1 class="brand-title">CUBAGEM FLORESTAL</h1>
+          <p class="brand-subtitle">Gestão de Cargas de Madeira</p>
+        </div>
+      </div>
+      <div class="header-status-badge" id="offlineStatusBadge" title="Status de Conexão">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Offline Ready</span>
+      </div>
+    </header>
+
+    <!-- Conteúdo Principal Dinâmico -->
+    <main class="app-content">
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 1: INÍCIO (DASHBOARD)               -->
+      <!-- ========================================== -->
+      <section id="view-inicio" class="view-section active">
+        <div class="section-header">
+          <h2 class="section-title">Painel Operacional</h2>
+          <p class="section-desc">Visão geral dos registros e volumes acumulados no dispositivo.</p>
+        </div>
+
+        <!-- Grade de Indicadores (KPIs) -->
+        <div class="kpi-grid">
+          <div class="kpi-card highlight">
+            <span class="kpi-label">Volume Acumulado</span>
+            <div class="kpi-value" id="kpiTotalVolume">0,00 <span class="kpi-unit">m³</span></div>
+            <span class="kpi-sub">Total registrado</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Caminhões</span>
+            <div class="kpi-value" id="kpiTotalCaminhoes">0</div>
+            <span class="kpi-sub">Cargas cadastradas</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Cubagens Hoje</span>
+            <div class="kpi-value" id="kpiHojeCaminhoes">0</div>
+            <span class="kpi-sub" id="kpiHojeVolume">0,00 m³</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Média por Carga</span>
+            <div class="kpi-value" id="kpiMediaVolume">0,00 <span class="kpi-unit">m³</span></div>
+            <span class="kpi-sub">Volume geométrico</span>
+          </div>
+        </div>
+
+        <!-- Ações Rápidas -->
+        <div class="quick-actions">
+          <button class="action-card-btn" onclick="app.navigate('nova')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span class="action-card-title">Nova Cubagem</span>
+            <span class="action-card-desc">Registrar medição de caminhão</span>
+          </button>
+
+          <button class="action-card-btn secondary" onclick="app.navigate('relatorios')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span class="action-card-title">Gerar Excel</span>
+            <span class="action-card-desc">Exportar relatório por período</span>
+          </button>
+        </div>
+
+        <!-- Últimas Cubagens Cadastradas -->
+        <div class="card">
+          <div class="card-title">
+            <span>Últimas Cubagens Cadastradas</span>
+            <button class="btn-action-small" onclick="app.navigate('historico')">Ver Todas</button>
+          </div>
+          <div id="dashboardRecentList">
+            <!-- Populado via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 2: NOVA CUBAGEM (FORMULÁRIO)        -->
+      <!-- ========================================== -->
+      <section id="view-nova" class="view-section">
+        <div class="section-header">
+          <h2 class="section-title">Nova Medição de Cubagem</h2>
+          <p class="section-desc">Insira as medidas do caminhão para cálculo imediato de volume geométrico.</p>
+        </div>
+
+        <form id="formNovaCubagem" onsubmit="event.preventDefault(); app.salvarCubagem();">
+          <!-- 1. Dados da Operação -->
+          <div class="card">
+            <h3 class="card-title">1. Informações da Operação</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="cubData">Data da Cubagem <span class="required">*</span></label>
+                <input type="date" id="cubData" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cubHorario">Horário <span class="required">*</span></label>
+                <input type="time" id="cubHorario" class="form-control" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="cubRodovia">Rodovia / BR <span class="required">*</span></label>
+                <input type="text" id="cubRodovia" class="form-control" placeholder="Ex: BR-116, BR-459" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cubKm">Quilômetro (Km) <span class="required">*</span></label>
+                <input type="text" inputmode="decimal" id="cubKm" class="form-control" placeholder="Ex: 47,5 ou 120" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="cubResponsavel">Responsável pela Cubagem <span class="required">*</span></label>
+                <input type="text" id="cubResponsavel" class="form-control" placeholder="Nome do profissional" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cubPlaca">Placa do Caminhão <span class="helper">(Opcional)</span></label>
+                <input type="text" id="cubPlaca" class="form-control" placeholder="Ex: ABC-1234 / BRA2E19" style="text-transform: uppercase;">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="cubObservacoes">Observações de Campo <span class="helper">(Opcional)</span></label>
+              <textarea id="cubObservacoes" class="form-control" placeholder="Tipo de carga, espécie, observações sobre o empilhamento..."></textarea>
+            </div>
+          </div>
+
+          <!-- 2. Medições de Alturas -->
+          <div class="card">
+            <h3 class="card-title">2. Medições de Alturas (m)</h3>
+            <p class="section-desc" style="margin-bottom: 12px;">Preencha as 3 medidas do lado esquerdo e as 3 medidas do lado direito.</p>
+
+            <!-- Lado Esquerdo -->
+            <div class="measure-box-container">
+              <div class="measure-box-header">
+                <span class="measure-box-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                  LADO ESQUERDO
+                </span>
+                <span class="helper">LE1, LE2, LE3</span>
+              </div>
+              <div class="form-row-3">
+                <div class="measure-input-card highlight-le">
+                  <div class="measure-input-label">LE 1 (m)</div>
+                  <input type="text" inputmode="decimal" id="cubLE1" class="measure-input-field calc-trigger" placeholder="0,00" required>
+                </div>
+                <div class="measure-input-card highlight-le">
+                  <div class="measure-input-label">LE 2 (m)</div>
+                  <input type="text" inputmode="decimal" id="cubLE2" class="measure-input-field calc-trigger" placeholder="0,00" required>
+                </div>
+                <div class="measure-input-card highlight-le">
+                  <div class="measure-input-label">LE 3 (m)</div>
+                  <input type="text" inputmode="decimal" id="cubLE3" class="measure-input-field calc-trigger" placeholder="0,00" required>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lado Direito -->
+            <div class="measure-box-container" style="background: #FDFBF7; border-color: #EAD7C3;">
+              <div class="measure-box-header">
+                <span class="measure-box-title" style="color: #8C4A15;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                  LADO DIREITO
+                </span>
+                <span class="helper">LD1, LD2, LD3</span>
+              </div>
+              <div class="form-row-3">
+                <div class="measure-input-card highlight-ld">
+                  <div class="measure-input-label">LD 1 (m)</div>
+                  <input type="text" inputmode="decimal" id="cubLD1" class="measure-input-field calc-trigger" placeholder="0,00" required>
+                </div>
+                <div class="measure-input-card highlight-ld">
+                  <div class="measure-input-label">LD 2 (m)</div>
+                  <input type="text" inputmode="decimal" id="cubLD2" class="measure-input-field calc-trigger" placeholder="0,00" required>
+                </div>
+                <div class="measure-input-card highlight-ld">
+                  <div class="measure-input-label">LD 3 (m)</div>
+                  <input type="text" inputmode="decimal" id="cubLD3" class="measure-input-field calc-trigger" placeholder="0,00" required>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Dimensões Complementares -->
+          <div class="card">
+            <h3 class="card-title">3. Dimensões Complementares da Carga</h3>
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="cubComprimento">Comprimento (m) <span class="required">*</span></label>
+                <input type="text" inputmode="decimal" id="cubComprimento" class="form-control calc-trigger" placeholder="Ex: 6,35" required>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="cubLargura">Largura (m) <span class="required">*</span></label>
+                <input type="text" inputmode="decimal" id="cubLargura" class="form-control calc-trigger" placeholder="Ex: 2,55" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Card de Cálculo em Tempo Real & Memória -->
+          <div class="calc-result-card" id="liveCalcCard">
+            <div class="calc-result-header">
+              <span class="calc-result-tag">Cálculo Automático em Tempo Real</span>
+              <span class="calc-result-type-badge">Volume Geométrico</span>
+            </div>
+
+            <div class="calc-volume-display">
+              <span class="calc-volume-number" id="liveVolumeDisplay">0,00</span>
+              <span class="calc-volume-unit">m³</span>
+            </div>
+
+            <div class="calc-details-row">
+              <div class="calc-detail-item">
+                <span class="calc-detail-label">Soma Alturas</span>
+                <span class="calc-detail-value" id="liveSomaDisplay">0,00 m</span>
+              </div>
+              <div class="calc-detail-item">
+                <span class="calc-detail-label">Altura Média (Hm)</span>
+                <span class="calc-detail-value" id="liveHmDisplay">0,00 m</span>
+              </div>
+              <div class="calc-detail-item">
+                <span class="calc-detail-label">Dimensões (C × L)</span>
+                <span class="calc-detail-value" id="liveDimDisplay">0 × 0 m</span>
+              </div>
+            </div>
+
+            <div class="calc-memory-text" id="liveMemoryText">
+              Preencha as 6 alturas e as dimensões (comprimento e largura) para gerar a memória de cálculo.
+            </div>
+          </div>
+
+          <!-- Botões de Ação -->
+          <div style="display: flex; gap: 10px; margin-bottom: 30px;">
+            <button type="button" class="btn btn-secondary" onclick="app.limparFormularioNova()">
+              Limpar
+            </button>
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnSalvarCubagem">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Salvar Cubagem
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 3: HISTÓRICO                         -->
+      <!-- ========================================== -->
+      <section id="view-historico" class="view-section">
+        <div class="section-header">
+          <h2 class="section-title">Histórico de Cubagens</h2>
+          <p class="section-desc">Consulte, pesquise, edite ou exclua medições realizadas.</p>
+        </div>
+
+        <div class="history-controls">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="historySearchInput" class="form-control search-input" placeholder="Pesquisar por BR, Km, Placa, Responsável, Data...">
+          </div>
+
+          <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px;">
+            <button class="btn-action-small active-filter" onclick="app.filtrarHistorico('todos')">Todos</button>
+            <button class="btn-action-small" onclick="app.filtrarHistorico('hoje')">Hoje</button>
+            <button class="btn-action-small" onclick="app.filtrarHistorico('mes')">Este Mês</button>
+          </div>
+        </div>
+
+        <div id="historyListContainer">
+          <!-- Populado via JS -->
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 4: RELATÓRIOS E EXPORTAÇÃO EXCEL     -->
+      <!-- ========================================== -->
+      <section id="view-relatorios" class="view-section">
+        <div class="section-header">
+          <h2 class="section-title">Relatórios e Exportação Excel</h2>
+          <p class="section-desc">Gere planilhas oficiais .xlsx por período com a identidade visual preservada.</p>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">1. Selecionar Período de Cubagem</h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="reportDataInicio">Data Inicial <span class="required">*</span></label>
+              <input type="date" id="reportDataInicio" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reportDataFim">Data Final <span class="required">*</span></label>
+              <input type="date" id="reportDataFim" class="form-control">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+            <button type="button" class="btn-action-small" onclick="app.setReportPeriod('mes-atual')">Mês Atual</button>
+            <button type="button" class="btn-action-small" onclick="app.setReportPeriod('mes-anterior')">Mês Anterior</button>
+            <button type="button" class="btn-action-small" onclick="app.setReportPeriod('ultimos-30')">Últimos 30 Dias</button>
+            <button type="button" class="btn-action-small" onclick="app.setReportPeriod('todos')">Todos os Registros</button>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="reportFileName">Nome do Arquivo Excel <span class="helper">(.xlsx)</span></label>
+            <input type="text" id="reportFileName" class="form-control" placeholder="Cubagem_Florestal_Periodo.xlsx">
+          </div>
+        </div>
+
+        <!-- Indicadores do Período Selecionado -->
+        <div class="kpi-grid">
+          <div class="kpi-card highlight">
+            <span class="kpi-label">Volume do Período</span>
+            <div class="kpi-value" id="repKpiVolume">0,00 <span class="kpi-unit">m³</span></div>
+            <span class="kpi-sub">Total no intervalo</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Caminhões</span>
+            <div class="kpi-value" id="repKpiCaminhoes">0</div>
+            <span class="kpi-sub">Cargas no período</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Média por Carga</span>
+            <div class="kpi-value" id="repKpiMedia">0,00 <span class="kpi-unit">m³</span></div>
+            <span class="kpi-sub">Volume geométrico</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Status</span>
+            <div class="kpi-value" style="font-size: 1.1rem; color: var(--primary-medium);" id="repKpiStatus">Pronto</div>
+            <span class="kpi-sub">Geração 100% offline</span>
+          </div>
+        </div>
+
+        <!-- Botão de Exportação -->
+        <button type="button" class="btn btn-primary btn-block btn-lg" id="btnExportarExcel" onclick="app.exportarPlanilhaExcel()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Exportar Planilha Excel (.xlsx)
+        </button>
+
+        <!-- Pré-visualização dos Registros Filtrados -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-title">
+            <span>Pré-visualização dos Registros</span>
+            <span id="repPreviewCountBadge" class="btn-action-small">0 registros</span>
+          </div>
+          <div id="reportPreviewList">
+            <!-- Populado via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 5: CONFIGURAÇÕES E BACKUP           -->
+      <!-- ========================================== -->
+      <section id="view-configuracoes" class="view-section">
+        <div class="section-header">
+          <h2 class="section-title">Configurações & Backup</h2>
+          <p class="section-desc">Segurança dos dados offline, backup JSON e preferências de campo.</p>
+        </div>
+
+        <!-- Backup e Segurança -->
+        <div class="card">
+          <h3 class="card-title">Backup & Segurança dos Dados</h3>
+          <p class="section-desc" style="margin-bottom: 14px;">
+            Seus dados são armazenados localmente e de forma permanente no celular. Faça backups regulares para maior tranquilidade.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-secondary btn-block" onclick="app.exportarBackupJSON()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Fazer Download do Backup Completo (JSON)
+            </button>
+
+            <button class="btn btn-secondary btn-block" onclick="document.getElementById('fileInputBackup').click()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Restaurar Backup a partir de Arquivo (JSON)
+            </button>
+            <input type="file" id="fileInputBackup" accept=".json" style="display: none;" onchange="app.processarArquivoBackup(event)">
+          </div>
+        </div>
+
+        <!-- Preferências do Operador em Campo -->
+        <div class="card">
+          <h3 class="card-title">Agilidade em Campo (Valores Padrão)</h3>
+          <p class="section-desc" style="margin-bottom: 12px;">
+            Defina seu nome e rodovia usual para pré-preencher novas cubagens automaticamente.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="cfgResponsavel">Responsável Padrão</label>
+            <input type="text" id="cfgResponsavel" class="form-control" placeholder="Seu nome completo">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfgRodovia">Rodovia Usual / Padrão</label>
+            <input type="text" id="cfgRodovia" class="form-control" placeholder="Ex: BR-116">
+          </div>
+
+          <button class="btn btn-primary btn-block" onclick="app.salvarPreferencias()">
+            Salvar Preferências
+          </button>
+        </div>
+
+        <!-- Instalação PWA e Sobre -->
+        <div class="card">
+          <h3 class="card-title">Aplicativo & Instalação Android</h3>
+          <p class="section-desc" style="margin-bottom: 14px;">
+            Este aplicativo funciona 100% offline via Progressive Web App (PWA).
+          </p>
+
+          <button class="btn btn-primary btn-block" id="btnInstallPwa" style="display: none;" onclick="app.instalarPwa()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+              <line x1="12" y1="18" x2="12.01" y2="18"/>
+            </svg>
+            Instalar Aplicativo no Celular
+          </button>
+
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; line-height: 1.6;">
+            <strong>Versão:</strong> 1.0.0 Oficial<br>
+            <strong>Repositório:</strong> <a href="https://github.com/lucasaosf/cubagem-florestal" target="_blank" style="color: var(--primary-medium);">github.com/lucasaosf/cubagem-florestal</a><br>
+            <strong>Armazenamento:</strong> IndexedDB Local (Totalmente privado no aparelho)<br>
+            <strong>Cálculo:</strong> $H_m \times \text{Comprimento} \times \text{Largura}$
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Barra de Navegação Inferior Fixa -->
+    <nav class="app-bottom-nav">
+      <button class="nav-item active" data-target="inicio" onclick="app.navigate('inicio')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Início</span>
+      </button>
+
+      <button class="nav-item" data-target="nova" onclick="app.navigate('nova')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="16"/>
+          <line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+        <span>Nova Cubagem</span>
+      </button>
+
+      <button class="nav-item" data-target="historico" onclick="app.navigate('historico')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        <span>Histórico</span>
+      </button>
+
+      <button class="nav-item" data-target="relatorios" onclick="app.navigate('relatorios')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <span>Relatórios</span>
+      </button>
+
+      <button class="nav-item" data-target="configuracoes" onclick="app.navigate('configuracoes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span>Config</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: DETALHES COMPLETOS DA CUBAGEM      -->
+  <!-- ========================================== -->
+  <div id="modalDetalhes" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalDetalhes')">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="detalheModalTitulo">Detalhes da Cubagem</h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalDetalhes')">&times;</button>
+      </div>
+      <div class="modal-body" id="detalheModalConteudo">
+        <!-- Conteúdo preenchido dinamicamente via JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.fecharModal('modalDetalhes')">Fechar</button>
+        <button class="btn btn-primary" id="btnEditarNoDetalhe" onclick="app.abrirEditarPeloDetalhe()">Editar Registro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: EDITAR CUBAGEM EXISTENTE           -->
+  <!-- ========================================== -->
+  <div id="modalEditar" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalEditar')">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Editar Medição</h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalEditar')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditarCubagem" onsubmit="event.preventDefault(); app.salvarEdicao();">
+          <input type="hidden" id="editId">
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="editData">Data</label>
+              <input type="date" id="editData" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editHorario">Horário</label>
+              <input type="time" id="editHorario" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="editRodovia">Rodovia (BR)</label>
+              <input type="text" id="editRodovia" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editKm">Quilômetro</label>
+              <input type="text" inputmode="decimal" id="editKm" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="editResponsavel">Responsável</label>
+              <input type="text" id="editResponsavel" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editPlaca">Placa</label>
+              <input type="text" id="editPlaca" class="form-control" style="text-transform: uppercase;">
+            </div>
+          </div>
+
+          <div class="measure-box-container">
+            <div class="measure-box-header">
+              <span class="measure-box-title">Alturas Lado Esquerdo (m)</span>
+            </div>
+            <div class="form-row-3">
+              <input type="text" inputmode="decimal" id="editLE1" class="measure-input-field" placeholder="LE1" required>
+              <input type="text" inputmode="decimal" id="editLE2" class="measure-input-field" placeholder="LE2" required>
+              <input type="text" inputmode="decimal" id="editLE3" class="measure-input-field" placeholder="LE3" required>
+            </div>
+          </div>
+
+          <div class="measure-box-container" style="background: #FDFBF7;">
+            <div class="measure-box-header">
+              <span class="measure-box-title" style="color: #8C4A15;">Alturas Lado Direito (m)</span>
+            </div>
+            <div class="form-row-3">
+              <input type="text" inputmode="decimal" id="editLD1" class="measure-input-field" placeholder="LD1" required>
+              <input type="text" inputmode="decimal" id="editLD2" class="measure-input-field" placeholder="LD2" required>
+              <input type="text" inputmode="decimal" id="editLD3" class="measure-input-field" placeholder="LD3" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="editComprimento">Comprimento (m)</label>
+              <input type="text" inputmode="decimal" id="editComprimento" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editLargura">Largura (m)</label>
+              <input type="text" inputmode="decimal" id="editLargura" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editObservacoes">Observações</label>
+            <textarea id="editObservacoes" class="form-control"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.fecharModal('modalEditar')">Cancelar</button>
+        <button class="btn btn-primary" onclick="app.salvarEdicao()">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: CONFIRMAÇÃO DE EXCLUSÃO            -->
+  <!-- ========================================== -->
+  <div id="modalExcluir" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalExcluir')">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--danger);">Excluir Registro</h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalExcluir')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.95rem; margin-bottom: 8px;">
+          Tem certeza de que deseja excluir permanentemente o registro:
+        </p>
+        <div id="excluirItemInfo" style="font-weight: 700; color: var(--text-main); background: var(--bg-elevated); padding: 10px; border-radius: var(--radius-sm);">
+          <!-- Info do item -->
+        </div>
+        <p style="font-size: 0.8rem; color: var(--danger); margin-top: 10px;">
+          Esta ação não poderá ser desfeita.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.fecharModal('modalExcluir')">Cancelar</button>
+        <button class="btn btn-danger" id="btnConfirmarExclusao" onclick="app.confirmarExclusao()">Sim, Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Container de Toasts -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts da Aplicação (100% Locais e Offline) -->
+  <script src="./vendor/exceljs.min.js"></script>
+  <script src="./js/db.js"></script>
+  <script src="./js/calculator.js"></script>
+  <script src="./js/excel-export.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
