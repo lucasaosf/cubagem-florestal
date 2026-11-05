@@ -604,13 +604,14 @@ class CubagemApp {
 
       const lote = window.CubagemCalculator.calculateLoteToras(this.torasPilha);
       const identInput = document.getElementById('cubIdentPilhaTora');
-      const identPilhaTora = (identInput ? identInput.value.trim() : '') || `Pilha de Toras (${lote.totalToras} toras)`;
+      const plaquetasList = this.torasPilha.map(t => t.plaqueta).filter(Boolean);
+      const identIndividualVal = (identInput ? identInput.value.trim() : '');
+      const identPilhaTora = identIndividualVal || (plaquetasList.length > 0 ? (plaquetasList.length === 1 ? `Plaqueta ${plaquetasList[0]}` : `Plaquetas ${plaquetasList.join(', ')}`) : `Tora Individual`);
       const especieFinal = (espGeralInp && espGeralInp.value.trim()) || (this.torasPilha.find(t => t.especie)?.especie) || '';
 
-      const plaquetasList = this.torasPilha.map(t => t.plaqueta).filter(Boolean);
       const plaquetasResumo = plaquetasList.length > 0
         ? (plaquetasList.length > 3 ? `${plaquetasList[0]} a ${plaquetasList[plaquetasList.length - 1]} (${lote.totalToras} toras)` : plaquetasList.join(', '))
-        : 'SEM PLAQUETA';
+        : (identIndividualVal || 'SEM PLAQUETA');
 
       record = {
         id: window.cubagemDB.generateId('PILHA-TORA'),
@@ -628,9 +629,6 @@ class CubagemApp {
         tipoVolume: `Pilha de Toras Roliças (${lote.totalToras} toras - Smalian)`,
         memoriaCalculo: lote.memoriaCalculo,
         toras: [...this.torasPilha],
-        foto: this.torasPilha.find(t => t.foto)?.foto || null,
-        fotoUtm: this.torasPilha.find(t => t.fotoUtm)?.fotoUtm || null,
-        fotoNome: this.torasPilha.find(t => t.fotoNome)?.fotoNome || null,
         timestamp: Date.now()
       };
     }
@@ -898,9 +896,9 @@ class CubagemApp {
       const nToras = item.totalToras || (item.toras ? item.toras.length : 1);
       detalheHtml = `
         <div style="margin-bottom: 12px;">
-          <strong>Pilha / Lote:</strong> ${item.identificacao || item.placa || item.id}<br>
+          <strong>Identificação Individual:</strong> ${item.identificacao || item.plaqueta || item.id}<br>
           <strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie || 'Não informada'}</span><br>
-          <strong>Plaquetas:</strong> ${item.plaqueta || 'S/P'}<br>
+          <strong>Nº da Plaqueta:</strong> ${item.plaqueta || 'S/P'}<br>
           <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}

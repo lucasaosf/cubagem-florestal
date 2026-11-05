@@ -370,7 +370,7 @@ class CubagemExcelExport {
       wsTor.getRow(1).height = 32;
 
       const torCols = [
-        '#', 'ID Registro', 'Data', 'Horário', 'Nº Plaqueta', 'Espécie Florestal',
+        '#', 'Identificação Individual', 'Data', 'Horário', 'Nº Plaqueta', 'Espécie Florestal',
         'Local / Pátio', 'Km', 'Responsável',
         'Diâm. Ponta 1 (cm)', 'Diâm. Ponta 2 (cm)', 'Diâm. Médio (cm)', 'Comprimento (m)',
         'Vol. Smalian (m³)', 'Observações'

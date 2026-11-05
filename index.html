@@ -227,10 +227,11 @@
                 <input type="text" id="cubIdentPilha" class="form-control" placeholder="Ex: Pilha 01, Lote A">
               </div>
 
-              <!-- Campo Identificação da Pilha de Toras (Para Toras) -->
+              <!-- Campo Identificação Individual / Plaqueta (Para Toras) -->
               <div class="form-group" id="grpIdentPilhaTora" style="display: none;">
-                <label class="form-label" for="cubIdentPilhaTora">Identificação da Pilha de Toras <span class="required">*</span></label>
-                <input type="text" id="cubIdentPilhaTora" class="form-control" placeholder="Ex: Pilha de Toras 01 / Lote A">
+                <label class="form-label" for="cubIdentPilhaTora">Identificação individual <span class="required">*</span></label>
+                <input type="text" id="cubIdentPilhaTora" class="form-control" placeholder="Nº da plaqueta grampeada por tora (Ex: 0124)" oninput="if(document.getElementById('cubPlaqueta') && !document.getElementById('cubPlaqueta').value) document.getElementById('cubPlaqueta').value = this.value">
+                <span class="helper">Número da plaqueta grampeado por tora</span>
               </div>
 
               <!-- Campo Origem da Madeira (Para Caminhão e Pilha de Madeira) -->
@@ -363,8 +364,8 @@
 
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="cubPlaqueta">Nº da Plaqueta <span class="required">*</span></label>
-                  <input type="text" id="cubPlaqueta" class="form-control calc-trigger" placeholder="Ex: 001, PLQ-104">
+                  <label class="form-label" for="cubPlaqueta">Nº da Plaqueta (Identificação Individual) <span class="required">*</span></label>
+                  <input type="text" id="cubPlaqueta" class="form-control calc-trigger" placeholder="Ex: 001, PLQ-104" oninput="if(document.getElementById('cubIdentPilhaTora') && !document.getElementById('cubIdentPilhaTora').value) document.getElementById('cubIdentPilhaTora').value = this.value">
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="cubEspecieTora">Espécie da Tora <span class="helper">(Opcional)</span></label>
