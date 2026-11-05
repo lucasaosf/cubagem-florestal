@@ -383,6 +383,7 @@ class CubagemApp {
     const cfgBadge = document.getElementById('cfgInstalledBadge');
 
     if (installed) {
+      this.esconderBalaoInstalacao();
       if (coverBtn) {
         coverBtn.innerHTML = '✅ Aplicativo Instalado';
         coverBtn.classList.add('installed');
@@ -406,8 +407,58 @@ class CubagemApp {
     }
   }
 
+  verificarExibicaoBalaoInstalacao() {
+    if (this.isAppInstalled()) return;
+
+    try {
+      const dismissed = localStorage.getItem('cubagem_install_balloon_dismissed');
+      if (dismissed) {
+        const hours = (Date.now() - parseInt(dismissed, 10)) / (1000 * 60 * 60);
+        if (hours < 12) {
+          return;
+        }
+      }
+    } catch (e) {}
+
+    setTimeout(() => {
+      if (!this.isAppInstalled()) {
+        const balloon = document.getElementById('installBalloon');
+        if (balloon) balloon.hidden = false;
+      }
+    }, 1500);
+  }
+
+  clicarInstalarBalao() {
+    this.fecharBalaoInstalacao(false);
+    this.iniciarInstalacaoApp();
+  }
+
+  fecharBalaoInstalacao(registrarDismiss = true) {
+    const balloon = document.getElementById('installBalloon');
+    if (balloon) {
+      balloon.style.transform = 'translateY(60px)';
+      balloon.style.opacity = '0';
+      setTimeout(() => {
+        balloon.hidden = true;
+        balloon.style.transform = '';
+        balloon.style.opacity = '';
+      }, 300);
+    }
+    if (registrarDismiss) {
+      try {
+        localStorage.setItem('cubagem_install_balloon_dismissed', Date.now().toString());
+      } catch (e) {}
+    }
+  }
+
+  esconderBalaoInstalacao() {
+    const balloon = document.getElementById('installBalloon');
+    if (balloon) balloon.hidden = true;
+  }
+
   configurarInstalacaoPWA() {
     this.atualizarUIInstalacao();
+    this.verificarExibicaoBalaoInstalacao();
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -421,6 +472,7 @@ class CubagemApp {
     window.addEventListener('appinstalled', () => {
       this.deferredInstallPrompt = null;
       this.atualizarUIInstalacao();
+      this.esconderBalaoInstalacao();
       this.fecharModal('modalInstalarApp');
       this.showToast('Cubagem Florestal instalado com sucesso no aparelho!', 'success');
     });

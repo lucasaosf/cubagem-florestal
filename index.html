@@ -42,6 +42,27 @@
   <!-- Notificação de Atualização Disponível -->
   <div class="update-bar" id="updateBar" hidden></div>
 
+  <!-- Balão Pop-up Flutuante de Instalação do Aplicativo -->
+  <aside class="install-balloon" id="installBalloon" hidden aria-label="Aviso de instalação do aplicativo">
+    <img src="icons/icon-192.png" alt="Ícone Cubagem Florestal" class="install-balloon-icon">
+    <div class="install-balloon-info">
+      <div class="install-balloon-title">
+        Cubagem Florestal <span class="badge-pwa">APP</span>
+      </div>
+      <p class="install-balloon-desc">
+        Instale no aparelho para usar em tela cheia e 100% offline no campo!
+      </p>
+    </div>
+    <div class="install-balloon-actions">
+      <button type="button" class="install-balloon-btn-install" onclick="app.clicarInstalarBalao()">
+        📲 Instalar
+      </button>
+      <button type="button" class="install-balloon-btn-close" onclick="app.fecharBalaoInstalacao()" aria-label="Fechar aviso de instalação" title="Lembrar mais tarde">
+        &times;
+      </button>
+    </div>
+  </aside>
+
   <div class="app-container">
     <!-- Header Oficial: Estritamente 'Cubagem Florestal' -->
     <header class="app-header">
