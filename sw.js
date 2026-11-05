@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v2.4.0';
+const CACHE_NAME = 'cubagem-florestal-v2.5.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
   './js/app.js',
   './js/auth.js',
   './js/camera.js',
+  './js/species-database.js',
   './js/db.js',
   './js/calculator.js',
   './js/excel-export.js',

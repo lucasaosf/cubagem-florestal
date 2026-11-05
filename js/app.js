@@ -58,6 +58,11 @@ class CubagemApp {
 
     this.renderizarGridsAlturas();
     this.configurarCalculoTempoReal();
+
+    if (window.CubagemEspecies && typeof window.CubagemEspecies.initInputs === 'function') {
+      window.CubagemEspecies.initInputs(this);
+    }
+
     await this.carregarPreferenciasIniciais();
     await this.atualizarDashboard();
 
@@ -220,6 +225,7 @@ class CubagemApp {
     const grpIdentPilhaTora = document.getElementById('grpIdentPilhaTora');
     const lblRodovia = document.getElementById('lblRodovia');
     const grpOrigemMadeira = document.getElementById('grpOrigemMadeira');
+    const grpEspecieCamPil = document.getElementById('grpEspecieCamPil');
     const grpEspecieGeral = document.getElementById('grpEspecieGeral');
 
     if (tipo === 'caminhao') {
@@ -230,6 +236,7 @@ class CubagemApp {
       if (grpIdentPilha) grpIdentPilha.style.display = 'none';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
       if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'block';
+      if (grpEspecieCamPil) grpEspecieCamPil.style.display = 'block';
       if (grpEspecieGeral) grpEspecieGeral.style.display = 'none';
       lblRodovia.innerHTML = 'Rodovia / BR <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Carga de Caminhão';
@@ -241,6 +248,7 @@ class CubagemApp {
       if (grpIdentPilha) grpIdentPilha.style.display = 'block';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
       if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'block';
+      if (grpEspecieCamPil) grpEspecieCamPil.style.display = 'block';
       if (grpEspecieGeral) grpEspecieGeral.style.display = 'none';
       lblRodovia.innerHTML = 'Local / Pátio / Rodovia <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Madeira';
@@ -252,6 +260,7 @@ class CubagemApp {
       if (grpIdentPilha) grpIdentPilha.style.display = 'none';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'block';
       if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'none';
+      if (grpEspecieCamPil) grpEspecieCamPil.style.display = 'none';
       if (grpEspecieGeral) grpEspecieGeral.style.display = 'block';
       lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Toras Roliças (Smalian)';
@@ -497,10 +506,12 @@ class CubagemApp {
         return;
       }
 
+      const espCamPil = (document.getElementById('cubEspecieCamPil')?.value.trim()) || '';
       record = {
         id: window.cubagemDB.generateId('CAM'),
         tipo: 'caminhao',
         origemMadeira: this.origemMadeira || 'Nativa',
+        especie: espCamPil,
         data, horario, rodovia, km, responsavel,
         placa: placa || 'NÃO INFORMADA',
         observacoes,
@@ -520,6 +531,7 @@ class CubagemApp {
       const comp = document.getElementById('cubComprimentoPilha').value;
       const larg = document.getElementById('cubLarguraPilha').value;
       const identPilha = document.getElementById('cubIdentPilha').value.trim();
+      const espCamPil = (document.getElementById('cubEspecieCamPil')?.value.trim()) || '';
 
       if (!identPilha) {
         this.showToast('Informe a identificação da pilha (ex: Pilha 01).', 'warning');
@@ -541,6 +553,7 @@ class CubagemApp {
         id: window.cubagemDB.generateId('PILHA'),
         tipo: 'pilha',
         origemMadeira: this.origemMadeira || 'Nativa',
+        especie: espCamPil,
         data, horario, rodovia, km, responsavel,
         identificacao: identPilha,
         placa: identPilha,
@@ -657,6 +670,9 @@ class CubagemApp {
 
   limparApenasMedidas() {
     this.setOrigemMadeira('Nativa');
+    const espCamPil = document.getElementById('cubEspecieCamPil');
+    if (espCamPil) espCamPil.value = '';
+
     if (this.tipoCubagem === 'caminhao') {
       this.alturasLE = ['', '', ''];
       this.alturasLD = ['', '', ''];
@@ -692,6 +708,8 @@ class CubagemApp {
   limparFormularioNova() {
     document.getElementById('formNovaCubagem').reset();
     this.setOrigemMadeira('Nativa');
+    const espCamPil = document.getElementById('cubEspecieCamPil');
+    if (espCamPil) espCamPil.value = '';
     const espTora = document.getElementById('cubEspecieTora');
     if (espTora) espTora.value = '';
     const espGeral = document.getElementById('cubEspecieGeral');
@@ -849,6 +867,7 @@ class CubagemApp {
         <div style="margin-bottom: 12px;">
           <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
           <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
+          ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
           <strong>Local:</strong> ${item.rodovia} ${item.km ? 'km ' + item.km : ''}<br>
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}
@@ -872,6 +891,7 @@ class CubagemApp {
         <div style="margin-bottom: 12px;">
           <strong>Identificação:</strong> ${item.identificacao || item.placa || 'Pilha'}<br>
           <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
+          ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
           <strong>Local:</strong> ${item.rodovia} ${item.km ? 'km ' + item.km : ''}<br>
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}

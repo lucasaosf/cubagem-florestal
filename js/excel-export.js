@@ -233,10 +233,12 @@ class CubagemExcelExport {
 
         const leStr = Array.isArray(item.alturasLE) ? item.alturasLE.map(v => Number(v).toFixed(2)).join('; ') : (item.le1 ? `${Number(item.le1).toFixed(2)}; ${Number(item.le2).toFixed(2)}; ${Number(item.le3).toFixed(2)}` : '');
         const ldStr = Array.isArray(item.alturasLD) ? item.alturasLD.map(v => Number(v).toFixed(2)).join('; ') : (item.ld1 ? `${Number(item.ld1).toFixed(2)}; ${Number(item.ld2).toFixed(2)}; ${Number(item.ld3).toFixed(2)}` : '');
+        const origBase = item.origemMadeira || 'Nativa';
+        const origFinal = item.especie ? `${origBase} (${item.especie})` : origBase;
 
         const vals = [
           idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.rodovia, item.km,
-          item.responsavel, item.placa, item.origemMadeira || 'Nativa', leStr, ldStr, Number(item.somaAlturas) || 0,
+          item.responsavel, item.placa, origFinal, leStr, ldStr, Number(item.somaAlturas) || 0,
           Number(item.alturaMedia) || 0, Number(item.comprimento) || 0, Number(item.largura) || 0,
           Number(item.volumeGeometrico) || 0, item.observacoes || ''
         ];
@@ -307,10 +309,12 @@ class CubagemExcelExport {
         row.height = 19;
         const bg = idx % 2 === 1 ? C.creme2 : C.creme;
         const altStr = Array.isArray(item.alturas) ? item.alturas.map(v => Number(v).toFixed(2)).join('; ') : '';
+        const origBasePil = item.origemMadeira || 'Nativa';
+        const origFinalPil = item.especie ? `${origBasePil} (${item.especie})` : origBasePil;
 
         const vals = [
           idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.rodovia,
-          item.identificacao || item.placa || `Pilha ${idx + 1}`, item.origemMadeira || 'Nativa', item.responsavel,
+          item.identificacao || item.placa || `Pilha ${idx + 1}`, origFinalPil, item.responsavel,
           altStr, Number(item.somaAlturas) || 0, Number(item.alturaMedia) || 0,
           Number(item.comprimento) || 0, Number(item.largura) || 0,
           Number(item.volumeGeometrico) || 0, item.observacoes || ''
