@@ -86,7 +86,14 @@ class CubagemApp {
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register('./sw.js')
-          .then((reg) => console.log('[Service Worker] Ativo:', reg.scope))
+          .then((reg) => {
+            console.log('[Service Worker] Ativo:', reg.scope);
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') {
+                reg.update().catch(() => {});
+              }
+            });
+          })
           .catch((err) => console.warn('[Service Worker] Falha:', err));
       });
     }

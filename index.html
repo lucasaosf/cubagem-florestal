@@ -34,7 +34,7 @@
 
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body data-active-tab="inicio">
   <div class="app-container">
     <!-- Header Oficial: Estritamente 'Cubagem Florestal' -->
     <header class="app-header">
@@ -151,7 +151,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill">Versão 2.13</span>
+            <span class="cover-ver-pill">Versão 3.0.0</span>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalComoUsar()">Como usar</button>
@@ -815,11 +815,11 @@
     </div>
   </div>
 
-  <!-- MODAL: NOVIDADES DA VERSÃO 2.13 -->
+  <!-- MODAL: NOVIDADES DA VERSÃO 3.0.0 -->
   <div id="modalNovidades" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalNovidades')">
     <div class="modal-dialog" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">Novidades da Versão 2.13</h3>
+        <h3 class="modal-title">Novidades da Versão 3.0.0</h3>
         <button class="modal-close-btn" onclick="app.fecharModal('modalNovidades')">&times;</button>
       </div>
       <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">

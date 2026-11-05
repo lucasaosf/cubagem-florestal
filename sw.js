@@ -1,5 +1,5 @@
-const CACHE_NAME = 'cubagem-florestal-v2.14.1';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'cubagem-florestal-v3.0.0';
+const CORE = [
   './',
   './index.html',
   './privacidade.html',
@@ -12,7 +12,6 @@ const ASSETS_TO_CACHE = [
   './js/db.js',
   './js/calculator.js',
   './js/excel-export.js',
-  './vendor/exceljs.min.js',
   './icons/favicon.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -21,67 +20,81 @@ const ASSETS_TO_CACHE = [
   './icons/logo-planilha.png',
   './icons/biokuri-light.png',
   './icons/biokuri-dark.png',
-  './icons/capa.jpg',
-  './icons/capa-clara.jpg',
   './capa.jpg',
   './capa-clara.jpg'
 ];
 
-// Install: Cache all static resources
+// Install: Cache all core shell assets and activate immediately
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching application shell with official assets');
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(CORE))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate: Clean old caches
+// Activate: Delete old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(
-        keyList.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('[Service Worker] Removing old cache:', key);
-            return caches.delete(key);
-          }
+        keyList.filter((key) => key !== CACHE_NAME).map((key) => {
+          console.log('[Service Worker] Removendo cache antigo:', key);
+          return caches.delete(key);
         })
       );
     }).then(() => self.clients.claim())
   );
 });
 
-// Fetch: Cache First, Network Fallback
+// Fetch: Network-First for Navigation, Cache-First with Dynamic Fallback for Assets
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  const req = event.request;
+  if (req.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        if (
-          !networkResponse ||
-          networkResponse.status !== 200 ||
-          networkResponse.type !== 'basic'
-        ) {
+  const url = new URL(req.url);
+
+  // Navegação: Network-first com fallback para cache local do index.html
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((networkResponse) => {
+          if (
+            networkResponse &&
+            networkResponse.ok &&
+            (url.pathname.endsWith('/') ||
+             url.pathname.endsWith('/index.html') ||
+             url.pathname.includes('/cubagem-florestal'))
+          ) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', clone));
+          }
           return networkResponse;
-        }
+        })
+        .catch(() =>
+          caches.match(req).then((hit) => hit || caches.match('./index.html') || caches.match('./'))
+        )
+    );
+    return;
+  }
 
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
+  // Assets locais, fontes do Google e Firebase SDK
+  const fonts = url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com');
+  const fbsdk = url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/');
+
+  if (url.origin === location.origin || fonts || fbsdk) {
+    event.respondWith(
+      caches.match(req).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+
+        return fetch(req).then((networkResponse) => {
+          if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
+          return networkResponse;
         });
-
-        return networkResponse;
-      }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
-  );
+      })
+    );
+  }
 });
