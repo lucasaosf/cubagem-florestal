@@ -1,11 +1,12 @@
 {
-  "v": "2.2",
-  "nome": "2.2",
+  "v": "2.3",
+  "nome": "2.3",
   "data": "2026-11-05",
   "novidades": [
+    "Correção de visibilidade do botão '+' para adicionar toras nos modos Claro e Escuro",
+    "Atalho rápido '+ Adicionar Tora' diretamente no cabeçalho da lista de toras",
     "Navegação direta para medição: tela inicial é ocultada imediatamente sem rolagem",
     "Correção da logo na tela inicial: emblema único integrado ao tema",
-    "Notificação e atualização automática direta pelo próprio aplicativo",
-    "Identificação individual por número de plaqueta e espécie para cada tora"
+    "Notificação e atualização automática direta pelo próprio aplicativo"
   ]
 }

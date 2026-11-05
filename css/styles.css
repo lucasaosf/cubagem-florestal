@@ -766,6 +766,51 @@ textarea.form-control {
   border: 1.5px solid var(--accent-strong);
 }
 
+/* Botão Principal de Adicionar Tora à Pilha */
+.btn-add-tora {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  letter-spacing: 0.3px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
+  cursor: pointer !important;
+  border-radius: 10px !important;
+  height: 52px !important;
+  transition: all 0.15s ease !important;
+}
+
+:root[data-theme="dark"] .btn-add-tora {
+  background: var(--creme) !important;
+  color: #0E2515 !important;
+  border: 1.5px solid var(--gold) !important;
+}
+
+:root[data-theme="dark"] .btn-add-tora svg {
+  stroke: #0E2515 !important;
+}
+
+:root[data-theme="light"] .btn-add-tora {
+  background: var(--forest) !important;
+  color: var(--creme) !important;
+  border: 1.5px solid var(--gold) !important;
+}
+
+:root[data-theme="light"] .btn-add-tora svg {
+  stroke: var(--creme) !important;
+}
+
+.btn-add-tora:hover {
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-add-tora:active {
+  transform: scale(0.98) !important;
+}
+
 .btn-secondary {
   background: var(--surface);
   color: var(--ink);

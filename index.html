@@ -154,7 +154,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill">Versão 2.2</span>
+            <span class="cover-ver-pill">Versão 2.3</span>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalComoUsar()">Como usar</button>
@@ -415,12 +415,13 @@
               </div>
 
               <!-- Botão Principal: Adicionar Tora à Pilha -->
-              <button type="button" class="btn btn-primary btn-block btn-lg" style="margin-top: 14px; background: var(--forest); border-color: var(--gold);" onclick="app.adicionarToraNaPilha()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
+              <button type="button" class="btn btn-add-tora btn-block btn-lg" id="btnAdicionarToraPilha" onclick="app.adicionarToraNaPilha()" style="margin-top: 14px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" stroke-opacity="0.35"/>
+                  <line x1="12" y1="8" x2="12" y2="16"/>
+                  <line x1="8" y1="12" x2="16" y2="12"/>
                 </svg>
-                + Adicionar Esta Tora à Pilha
+                <span>+ Adicionar Esta Tora à Pilha</span>
               </button>
             </div>
 
@@ -428,7 +429,10 @@
             <div style="margin-top: 8px;">
               <div style="font-weight: 700; font-size: 0.88rem; color: var(--ink); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                 <span>Toras Adicionadas na Pilha</span>
-                <button type="button" class="btn-action-small danger" id="btnLimparTorasPilha" style="display: none;" onclick="app.limparTodasTorasPilha()">Limpar Pilha</button>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button type="button" class="btn-action-small" onclick="document.getElementById('cubPlaqueta').focus(); document.getElementById('cubPlaqueta').scrollIntoView({behavior: 'smooth', block: 'center'});" style="border-color: var(--gold); color: var(--gold); font-weight: 700;">+ Adicionar Tora</button>
+                  <button type="button" class="btn-action-small danger" id="btnLimparTorasPilha" style="display: none;" onclick="app.limparTodasTorasPilha()">Limpar Pilha</button>
+                </div>
               </div>
 
               <div id="toraListContainer" style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
@@ -713,7 +717,7 @@
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
-            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.2</span><br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.3</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
@@ -827,15 +831,16 @@
     </div>
   </div>
 
-  <!-- MODAL: NOVIDADES DA VERSÃO 2.2 -->
+  <!-- MODAL: NOVIDADES DA VERSÃO 2.3 -->
   <div id="modalNovidades" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalNovidades')">
     <div class="modal-dialog" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">Novidades da Versão 2.2</h3>
+        <h3 class="modal-title">Novidades da Versão 2.3</h3>
         <button class="modal-close-btn" onclick="app.fecharModal('modalNovidades')">&times;</button>
       </div>
       <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
         <ul style="padding-left: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+          <li>➕ <b>Botão de Adicionar Toras Corrigido</b>: botão '+ Adicionar Esta Tora à Pilha' com alto contraste e destaque visual nos modos Claro e Escuro, além de atalho '+ Adicionar Tora' na lista de toras.</li>
           <li>🚀 <b>Abertura Direta de Medição</b>: transição instantânea para o formulário de cubagem ao tocar em '+ Nova medição', ocultando a capa sem rolagem de tela.</li>
           <li>✨ <b>Emblema Único Oficial</b>: correção da exibição da logo na tela inicial, perfeitamente integrada aos modos Claro e Escuro.</li>
           <li>🔄 <b>Atualização Direta no App</b>: notificação automática de novas versões e botão para atualizar instantaneamente.</li>
