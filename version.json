@@ -1,12 +1,11 @@
 {
-  "v": "3.0.0",
-  "nome": "3.0.0",
+  "v": "2.1",
+  "nome": "2.1",
   "data": "2026-11-05",
   "novidades": [
-    "Nova Capa Inicial Oficial BIOKURI com painel de volume total cubado",
+    "Correção da logo na tela inicial: remoção da duplicidade e exibição de emblema único",
+    "Padronização da numeração decimal de versões (10=1.0, 11=1.1, 20=2.0, 21=2.1)",
     "Notificação e atualização automática direta pelo próprio aplicativo",
-    "Identificação individual por número de plaqueta e espécie para cada tora",
-    "Campos operacionais refinados (UTM, Data, Hora, Local/Pátio, Km e Responsável)",
-    "Arquitetura Network-First com suporte offline aprimorado"
+    "Identificação individual por número de plaqueta e espécie para cada tora"
   ]
 }

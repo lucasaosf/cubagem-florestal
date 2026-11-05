@@ -194,14 +194,23 @@ html, body {
   display: block;
 }
 
-:root[data-theme="dark"] .brand-logo-img.logo-light { display: none; }
-:root[data-theme="dark"] .brand-logo-img.logo-dark { display: block; }
-:root[data-theme="light"] .brand-logo-img.logo-light { display: block; }
-:root[data-theme="light"] .brand-logo-img.logo-dark { display: none; }
+/* Alternância universal de logo claro / escuro (Header e Capa) */
+.logo-dark { display: block; }
+.logo-light { display: none; }
+
+:root[data-theme="dark"] .logo-light { display: none !important; }
+:root[data-theme="dark"] .logo-dark { display: block !important; }
+:root[data-theme="light"] .logo-light { display: block !important; }
+:root[data-theme="light"] .logo-dark { display: none !important; }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .brand-logo-img.logo-light { display: none; }
-  :root:not([data-theme="light"]) .brand-logo-img.logo-dark { display: block; }
+  :root:not([data-theme="light"]) .logo-light { display: none !important; }
+  :root:not([data-theme="light"]) .logo-dark { display: block !important; }
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .logo-light { display: block !important; }
+  :root:not([data-theme="dark"]) .logo-dark { display: none !important; }
 }
 
 .brand-text {
@@ -1439,8 +1448,12 @@ body[data-active-tab="inicio"] .app-content {
   width: 90px;
   height: 90px;
   object-fit: contain;
-  display: block;
+  margin: 0 auto;
   filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+}
+
+:root[data-theme="light"] .cover-emblem-img {
+  filter: drop-shadow(0 4px 10px rgba(14, 37, 21, 0.15));
 }
 
 .cover-brand-title {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v3.0.0';
+const CACHE_NAME = 'cubagem-florestal-v2.1';
 const CORE = [
   './',
   './index.html',
