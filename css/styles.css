@@ -1348,13 +1348,23 @@ body[data-active-tab="inicio"] .app-content {
   position: relative;
   box-sizing: border-box;
   padding: calc(env(safe-area-inset-top, 0px) + 16px) 20px calc(env(safe-area-inset-bottom, 0px) + 16px);
-  background: #0E2515 url("../icons/capa.jpg") center bottom / cover no-repeat;
+  background-color: #0E2515;
+  background-image: url("../capa.jpg");
+  background-image: url("../icons/capa.jpg");
+  background-position: center bottom;
+  background-size: cover;
+  background-repeat: no-repeat;
   color: #F2EBDD;
   transition: background 0.3s ease;
 }
 
 :root[data-theme="light"] .cover-screen {
-  background: #F2EBDD url("../icons/capa-clara.jpg") center bottom / cover no-repeat;
+  background-color: #F2EBDD;
+  background-image: url("../capa-clara.jpg");
+  background-image: url("../icons/capa-clara.jpg");
+  background-position: center bottom;
+  background-size: cover;
+  background-repeat: no-repeat;
   color: #0E2515;
 }
 
