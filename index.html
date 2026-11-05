@@ -227,10 +227,10 @@
                 <input type="text" id="cubIdentPilha" class="form-control" placeholder="Ex: Pilha 01, Lote A">
               </div>
 
-              <!-- Campo Número da Plaqueta (Para Toras) -->
-              <div class="form-group" id="grpPlaqueta" style="display: none;">
-                <label class="form-label" for="cubPlaqueta">Nº da Plaqueta <span class="required">*</span></label>
-                <input type="text" id="cubPlaqueta" class="form-control" placeholder="Ex: PLQ-1042 / 0845">
+              <!-- Campo Identificação da Pilha de Toras (Para Toras) -->
+              <div class="form-group" id="grpIdentPilhaTora" style="display: none;">
+                <label class="form-label" for="cubIdentPilhaTora">Identificação da Pilha de Toras <span class="required">*</span></label>
+                <input type="text" id="cubIdentPilhaTora" class="form-control" placeholder="Ex: Pilha de Toras 01 / Lote A">
               </div>
             </div>
 
@@ -321,64 +321,118 @@
           <!-- 2C. MEDIÇÕES PARA TORA INDIVIDUAL (SMALIAN)              -->
           <!-- ======================================================== -->
           <div id="sectionTora" class="card" style="display: none;">
-            <h3 class="card-title">2. Dimensões da Tora Roliça (Fórmula de Smalian)</h3>
-            <p class="section-desc" style="margin-bottom: 12px;">Informe os diâmetros das pontas em centímetros (ou metros) e o comprimento.</p>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="cubDiametroPonta1">Diâmetro Ponta 1 (cm) <span class="required">*</span></label>
-                <input type="text" inputmode="decimal" id="cubDiametroPonta1" class="form-control calc-trigger" placeholder="Ex: 38 (ou 0,38)">
-                <span class="helper">Ponta fina</span>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cubDiametroPonta2">Diâmetro Ponta 2 (cm) <span class="required">*</span></label>
-                <input type="text" inputmode="decimal" id="cubDiametroPonta2" class="form-control calc-trigger" placeholder="Ex: 46 (ou 0,46)">
-                <span class="helper">Ponta grossa</span>
-              </div>
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>2. Medição da Pilha de Toras (Indivíduos)</span>
+              <span id="toraListCountBadge" class="badge-type tora">0 toras</span>
             </div>
+            <p class="section-desc" style="margin-bottom: 12px;">
+              Adicione cada tora com sua plaqueta, diâmetros das pontas e foto. O volume de toda a pilha é somado automaticamente no final.
+            </p>
 
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" for="cubComprimentoTora">Comprimento da Tora (m) <span class="required">*</span></label>
-              <input type="text" inputmode="decimal" id="cubComprimentoTora" class="form-control calc-trigger" placeholder="Ex: 6,00">
-            </div>
-
-            <!-- Registro Fotográfico da Tora / Plaqueta com Timestamp & UTM -->
-            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);">
-              <label class="form-label" style="display: flex; align-items: center; justify-content: space-between;">
-                <span>Foto da Plaqueta &amp; Tora</span>
-                <span id="toraPhotoAttachedBadge" class="badge-tora" style="display: none; background: var(--sage); color: #fff;">Foto Anexada</span>
-              </label>
-
-              <div style="display: flex; gap: 8px; margin-top: 6px;">
-                <button type="button" class="btn btn-primary" style="flex: 1;" onclick="app.abrirCameraTora()">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                  </svg>
-                  Tirar Foto / Timestamp
-                </button>
-                <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('inputFotoGaleria').click()">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
-                  Galeria
-                </button>
-                <input type="file" id="inputFotoGaleria" accept="image/*" style="display: none;" onchange="app.camera.processarArquivoSelecionado(event); app.camera.abrirCameraModal();">
+            <!-- Card de Inserção da Tora / Indivíduo Atual -->
+            <div style="background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+              <div style="font-weight: 700; color: var(--gold); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <span>🪵 Dados da Tora Atual</span>
+                <span id="currentToraVolPreview" style="font-size: 0.95rem; font-family: var(--display); color: var(--ink);">0,000 m³</span>
               </div>
 
-              <!-- Card de Prévia da Foto Anexada -->
-              <div id="toraFotoPreviewBox" class="tora-photo-preview-card" style="display: none;">
-                <img id="toraFotoThumbnail" src="" class="tora-photo-thumbnail" alt="Foto da Tora" onclick="app.visualizarFotoToraAmpliada()">
-                <div style="flex: 1; font-size: 0.8rem; line-height: 1.45;">
-                  <div style="font-weight: 700; color: var(--ink);" id="toraFotoInfoPlaqueta">Foto da Plaqueta</div>
-                  <div style="color: var(--muted); font-size: 0.74rem;" id="toraFotoInfoUtm">UTM</div>
-                  <div style="color: var(--gold); font-size: 0.72rem;" id="toraFotoInfoData">Data/Hora</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="cubPlaqueta">Nº da Plaqueta <span class="required">*</span></label>
+                  <input type="text" id="cubPlaqueta" class="form-control calc-trigger" placeholder="Ex: 001, PLQ-104">
                 </div>
-                <button type="button" class="btn-action-small" style="color: var(--rec);" onclick="app.removerFotoToraAtiva()" title="Remover Foto">
-                  🗑️
-                </button>
+                <div class="form-group">
+                  <label class="form-label" for="cubComprimentoTora">Comprimento (m) <span class="required">*</span></label>
+                  <input type="text" inputmode="decimal" id="cubComprimentoTora" class="form-control calc-trigger" placeholder="Ex: 6,00">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="cubDiametroPonta1">Diâmetro Ponta 1 (cm) <span class="required">*</span></label>
+                  <input type="text" inputmode="decimal" id="cubDiametroPonta1" class="form-control calc-trigger" placeholder="Ex: 38">
+                  <span class="helper">Ponta fina</span>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="cubDiametroPonta2">Diâmetro Ponta 2 (cm) <span class="required">*</span></label>
+                  <input type="text" inputmode="decimal" id="cubDiametroPonta2" class="form-control calc-trigger" placeholder="Ex: 46">
+                  <span class="helper">Ponta grossa</span>
+                </div>
+              </div>
+
+              <!-- Registro Fotográfico da Tora / Plaqueta com Timestamp & UTM -->
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line);">
+                <label class="form-label" style="display: flex; align-items: center; justify-content: space-between;">
+                  <span>Foto com Timestamp &amp; UTM (Opcional)</span>
+                  <span id="toraPhotoAttachedBadge" class="badge-tora" style="display: none; background: var(--sage); color: #fff;">Foto Anexada</span>
+                </label>
+
+                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                  <button type="button" class="btn btn-primary" style="flex: 1;" onclick="app.abrirCameraTora()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    Tirar Foto / Timestamp
+                  </button>
+                  <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('inputFotoGaleria').click()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    Galeria
+                  </button>
+                  <input type="file" id="inputFotoGaleria" accept="image/*" style="display: none;" onchange="app.camera.processarArquivoSelecionado(event); app.camera.abrirCameraModal();">
+                </div>
+
+                <!-- Card de Prévia da Foto Anexada -->
+                <div id="toraFotoPreviewBox" class="tora-photo-preview-card" style="display: none;">
+                  <img id="toraFotoThumbnail" src="" class="tora-photo-thumbnail" alt="Foto da Tora" onclick="app.visualizarFotoToraAmpliada()">
+                  <div style="flex: 1; font-size: 0.8rem; line-height: 1.45;">
+                    <div style="font-weight: 700; color: var(--ink);" id="toraFotoInfoPlaqueta">Foto da Plaqueta</div>
+                    <div style="color: var(--muted); font-size: 0.74rem;" id="toraFotoInfoUtm">UTM</div>
+                    <div style="color: var(--gold); font-size: 0.72rem;" id="toraFotoInfoData">Data/Hora</div>
+                  </div>
+                  <button type="button" class="btn-action-small" style="color: var(--rec);" onclick="app.removerFotoToraAtiva()" title="Remover Foto">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+
+              <!-- Botão Principal: Adicionar Tora à Pilha -->
+              <button type="button" class="btn btn-primary btn-block btn-lg" style="margin-top: 14px; background: var(--forest); border-color: var(--gold);" onclick="app.adicionarToraNaPilha()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                + Adicionar Esta Tora à Pilha
+              </button>
+            </div>
+
+            <!-- Lista de Toras Já Adicionadas na Pilha Atual -->
+            <div style="margin-top: 8px;">
+              <div style="font-weight: 700; font-size: 0.88rem; color: var(--ink); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>Toras Adicionadas na Pilha</span>
+                <button type="button" class="btn-action-small danger" id="btnLimparTorasPilha" style="display: none;" onclick="app.limparTodasTorasPilha()">Limpar Pilha</button>
+              </div>
+
+              <div id="toraListContainer" style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
+                <div style="text-align: center; padding: 18px 12px; color: var(--muted); font-size: 0.82rem; background: var(--surface-2); border-radius: 8px; border: 1px dashed var(--line);">
+                  Nenhuma tora adicionada nesta pilha ainda.<br>
+                  Preencha os campos acima e toque em <strong>"+ Adicionar Esta Tora à Pilha"</strong>.
+                </div>
+              </div>
+
+              <!-- Resumo Acumulado da Pilha -->
+              <div id="toraPileTotalSummary" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold);">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                  <span style="font-weight: 700; color: var(--gold); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">Volume Total da Pilha</span>
+                  <span style="font-size: 1.45rem; font-family: var(--display); font-weight: 700; color: var(--ink);" id="toraPileTotalVolDisplay">0,000 m³</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;" id="toraPileTotalStats">
+                  0 toras • Dm Médio: 0,0 cm • Comp. Médio: 0,00 m
+                </div>
               </div>
             </div>
           </div>

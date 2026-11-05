@@ -30,6 +30,9 @@ class CubagemApp {
     this.camera = window.CubagemCamera ? new window.CubagemCamera() : null;
     this.currentToraPhoto = null;
     this.activeZoomPhoto = null;
+
+    // Lista dinâmica de toras para cubagem de pilhas de toras
+    this.torasPilha = [];
   }
 
   async init() {
@@ -203,36 +206,37 @@ class CubagemApp {
 
     const grpPlaca = document.getElementById('grpPlaca');
     const grpIdentPilha = document.getElementById('grpIdentPilha');
-    const grpPlaqueta = document.getElementById('grpPlaqueta');
+    const grpIdentPilhaTora = document.getElementById('grpIdentPilhaTora');
     const lblRodovia = document.getElementById('lblRodovia');
 
     if (tipo === 'caminhao') {
       secCam.style.display = 'block';
       secPil.style.display = 'none';
       secTor.style.display = 'none';
-      grpPlaca.style.display = 'block';
-      grpIdentPilha.style.display = 'none';
-      grpPlaqueta.style.display = 'none';
+      if (grpPlaca) grpPlaca.style.display = 'block';
+      if (grpIdentPilha) grpIdentPilha.style.display = 'none';
+      if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
       lblRodovia.innerHTML = 'Rodovia / BR <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Carga de Caminhão';
     } else if (tipo === 'pilha') {
       secCam.style.display = 'none';
       secPil.style.display = 'block';
       secTor.style.display = 'none';
-      grpPlaca.style.display = 'none';
-      grpIdentPilha.style.display = 'block';
-      grpPlaqueta.style.display = 'none';
+      if (grpPlaca) grpPlaca.style.display = 'none';
+      if (grpIdentPilha) grpIdentPilha.style.display = 'block';
+      if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
       lblRodovia.innerHTML = 'Local / Pátio / Rodovia <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Madeira';
     } else if (tipo === 'tora') {
       secCam.style.display = 'none';
       secPil.style.display = 'none';
       secTor.style.display = 'block';
-      grpPlaca.style.display = 'none';
-      grpIdentPilha.style.display = 'none';
-      grpPlaqueta.style.display = 'block';
+      if (grpPlaca) grpPlaca.style.display = 'none';
+      if (grpIdentPilha) grpIdentPilha.style.display = 'none';
+      if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'block';
       lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
-      document.getElementById('liveTypeBadge').textContent = 'Tora Roliça (Smalian)';
+      document.getElementById('liveTypeBadge').textContent = 'Pilha de Toras Roliças (Smalian)';
+      this.renderizarListaTorasPilha();
     }
 
     this.executarCalculoTempoReal();
@@ -394,29 +398,47 @@ class CubagemApp {
       const comp = document.getElementById('cubComprimentoTora').value;
       const plaqueta = document.getElementById('cubPlaqueta').value;
 
-      const res = window.CubagemCalculator.calculateTora({
+      const resCurrent = window.CubagemCalculator.calculateTora({
         diametroPonta1Raw: d1,
         diametroPonta2Raw: d2,
         comprimentoRaw: comp,
         plaqueta: plaqueta
       });
 
-      l1.textContent = 'Diâmetro Médio';
-      l2.textContent = 'Comprimento';
-      l3.textContent = 'Plaqueta';
+      const currentPreviewEl = document.getElementById('currentToraVolPreview');
+      if (currentPreviewEl) {
+        currentPreviewEl.textContent = resCurrent.isValid ? `${resCurrent.display.volumeGeometrico} m³` : '0,000 m³';
+      }
 
-      if (res.isValid) {
-        volEl.textContent = res.display.volumeGeometrico;
-        v1.textContent = res.display.diametroMedio;
-        v2.textContent = res.display.comprimento;
-        v3.textContent = res.plaqueta;
-        memEl.innerHTML = res.memoriaCalculo.join('<br>');
+      if (this.torasPilha.length > 0) {
+        const lote = window.CubagemCalculator.calculateLoteToras(this.torasPilha);
+        volEl.textContent = lote.display.volumeTotal;
+        l1.textContent = 'Total de Toras';
+        v1.textContent = `${lote.totalToras} unid.`;
+        l2.textContent = 'Diâmetro Médio';
+        v2.textContent = lote.display.diametroMedio;
+        l3.textContent = 'Comp. Médio';
+        v3.textContent = lote.display.comprimentoMedio;
+        memEl.innerHTML = lote.memoriaCalculo.join('<br>');
+        document.getElementById('liveTypeBadge').textContent = `Pilha de Toras (${lote.totalToras} toras)`;
       } else {
-        volEl.textContent = '0,000';
-        v1.textContent = '0 cm';
-        v2.textContent = '0 m';
-        v3.textContent = plaqueta || '-';
-        memEl.textContent = 'Informe os diâmetros das duas pontas da tora e o comprimento.';
+        l1.textContent = 'Diâmetro Médio';
+        l2.textContent = 'Comprimento';
+        l3.textContent = 'Plaqueta';
+
+        if (resCurrent.isValid) {
+          volEl.textContent = resCurrent.display.volumeGeometrico;
+          v1.textContent = resCurrent.display.diametroMedio;
+          v2.textContent = resCurrent.display.comprimento;
+          v3.textContent = resCurrent.plaqueta;
+          memEl.innerHTML = resCurrent.memoriaCalculo.join('<br>');
+        } else {
+          volEl.textContent = '0,000';
+          v1.textContent = '0 cm';
+          v2.textContent = '0 m';
+          v3.textContent = plaqueta || '-';
+          memEl.textContent = 'Preencha os dados da tora e toque em "+ Adicionar Esta Tora à Pilha".';
+        }
       }
     }
   }
@@ -514,53 +536,75 @@ class CubagemApp {
         timestamp: Date.now()
       };
     } else if (this.tipoCubagem === 'tora') {
+      // Se houver uma tora preenchida nos inputs que ainda não foi adicionada, adiciona automaticamente
       const d1 = document.getElementById('cubDiametroPonta1').value;
       const d2 = document.getElementById('cubDiametroPonta2').value;
       const comp = document.getElementById('cubComprimentoTora').value;
       const plaqueta = document.getElementById('cubPlaqueta').value.trim();
 
-      if (!plaqueta) {
-        this.showToast('Informe o número da plaqueta de identificação da tora.', 'warning');
+      if (d1 && d2 && comp && plaqueta) {
+        const calcAuto = window.CubagemCalculator.calculateTora({
+          diametroPonta1Raw: d1,
+          diametroPonta2Raw: d2,
+          comprimentoRaw: comp,
+          plaqueta: plaqueta
+        });
+        if (calcAuto.isValid) {
+          const nomeFoto = this.currentToraPhoto
+            ? `Plaqueta_${calcAuto.plaqueta}_${data}.jpg`
+            : null;
+          this.torasPilha.push({
+            numero: this.torasPilha.length + 1,
+            plaqueta: calcAuto.plaqueta,
+            diametroPonta1_cm: calcAuto.diametroPonta1_cm,
+            diametroPonta2_cm: calcAuto.diametroPonta2_cm,
+            diametroPonta1_m: calcAuto.diametroPonta1_m,
+            diametroPonta2_m: calcAuto.diametroPonta2_m,
+            diametroMedio_cm: calcAuto.diametroMedio_cm,
+            comprimento: calcAuto.comprimento,
+            volumeGeometrico: calcAuto.volumeGeometrico,
+            foto: this.currentToraPhoto ? this.currentToraPhoto.dataUrl : null,
+            fotoUtm: this.currentToraPhoto ? this.currentToraPhoto.utm : null,
+            fotoDataHora: this.currentToraPhoto ? this.currentToraPhoto.dataHora : null,
+            fotoLegenda: this.currentToraPhoto ? this.currentToraPhoto.legenda : null,
+            fotoNome: nomeFoto
+          });
+          this.removerFotoToraAtiva();
+        }
+      }
+
+      if (this.torasPilha.length === 0) {
+        this.showToast('Adicione ao menos uma tora à pilha tocando em "+ Adicionar Esta Tora à Pilha".', 'warning');
         return;
       }
 
-      const calc = window.CubagemCalculator.calculateTora({
-        diametroPonta1Raw: d1,
-        diametroPonta2Raw: d2,
-        comprimentoRaw: comp,
-        plaqueta: plaqueta
-      });
+      const lote = window.CubagemCalculator.calculateLoteToras(this.torasPilha);
+      const identInput = document.getElementById('cubIdentPilhaTora');
+      const identPilhaTora = (identInput ? identInput.value.trim() : '') || `Pilha de Toras (${lote.totalToras} toras)`;
 
-      if (!calc.isValid) {
-        this.showToast(calc.errors[0] || 'Verifique os diâmetros e comprimento da tora.', 'danger');
-        return;
-      }
-
-      const nomeFoto = this.currentToraPhoto
-        ? (calc.plaqueta ? `Plaqueta_${calc.plaqueta}_${data}.jpg` : `Tora_${Date.now()}.jpg`)
-        : null;
+      const plaquetasList = this.torasPilha.map(t => t.plaqueta).filter(Boolean);
+      const plaquetasResumo = plaquetasList.length > 0
+        ? (plaquetasList.length > 3 ? `${plaquetasList[0]} a ${plaquetasList[plaquetasList.length - 1]} (${lote.totalToras} toras)` : plaquetasList.join(', '))
+        : 'SEM PLAQUETA';
 
       record = {
-        id: window.cubagemDB.generateId('TORA'),
+        id: window.cubagemDB.generateId('PILHA-TORA'),
         tipo: 'tora',
         data, horario, rodovia, km, responsavel,
-        plaqueta: calc.plaqueta,
-        placa: calc.plaqueta,
+        identificacao: identPilhaTora,
+        placa: identPilhaTora,
+        plaqueta: plaquetasResumo,
         observacoes,
-        diametroPonta1_cm: calc.diametroPonta1_cm,
-        diametroPonta2_cm: calc.diametroPonta2_cm,
-        diametroPonta1_m: calc.diametroPonta1_m,
-        diametroPonta2_m: calc.diametroPonta2_m,
-        diametroMedio_cm: calc.diametroMedio_cm,
-        comprimento: calc.comprimento,
-        volumeGeometrico: calc.volumeGeometrico,
-        tipoVolume: calc.tipoVolume,
-        memoriaCalculo: calc.memoriaCalculo,
-        foto: this.currentToraPhoto ? this.currentToraPhoto.dataUrl : null,
-        fotoUtm: this.currentToraPhoto ? this.currentToraPhoto.utm : null,
-        fotoDataHora: this.currentToraPhoto ? this.currentToraPhoto.dataHora : null,
-        fotoLegenda: this.currentToraPhoto ? this.currentToraPhoto.legenda : null,
-        fotoNome: nomeFoto,
+        totalToras: lote.totalToras,
+        diametroMedio_cm: lote.diametroMedio_cm,
+        comprimentoMedio: lote.comprimentoMedio,
+        volumeGeometrico: lote.volumeTotal,
+        tipoVolume: `Pilha de Toras Roliças (${lote.totalToras} toras - Smalian)`,
+        memoriaCalculo: lote.memoriaCalculo,
+        toras: [...this.torasPilha],
+        foto: this.torasPilha.find(t => t.foto)?.foto || null,
+        fotoUtm: this.torasPilha.find(t => t.fotoUtm)?.fotoUtm || null,
+        fotoNome: this.torasPilha.find(t => t.fotoNome)?.fotoNome || null,
         timestamp: Date.now()
       };
     }
@@ -573,7 +617,7 @@ class CubagemApp {
       }
 
       const vFmt = window.CubagemCalculator.formatNumber(record.volumeGeometrico, record.tipo === 'tora' ? 3 : 2);
-      this.showToast(`Cubagem de ${record.tipo.toUpperCase()} salva com sucesso! Volume: ${vFmt} m³`, 'success');
+      this.showToast(`Cubagem de ${record.tipo.toUpperCase()} salva com sucesso! Volume Total: ${vFmt} m³`, 'success');
 
       this.limparApenasMedidas();
       this.resetarDataHoraAtual();
@@ -603,6 +647,10 @@ class CubagemApp {
       document.getElementById('cubDiametroPonta2').value = '';
       document.getElementById('cubComprimentoTora').value = '';
       document.getElementById('cubPlaqueta').value = '';
+      const identTora = document.getElementById('cubIdentPilhaTora');
+      if (identTora) identTora.value = '';
+      this.torasPilha = [];
+      this.renderizarListaTorasPilha();
       this.removerFotoToraAtiva();
     }
     document.getElementById('cubObservacoes').value = '';
@@ -615,6 +663,8 @@ class CubagemApp {
     this.alturasLD = ['', '', ''];
     this.alturasPilha = ['', '', '', ''];
     this.renderizarGridsAlturas();
+    this.torasPilha = [];
+    this.renderizarListaTorasPilha();
     this.removerFotoToraAtiva();
     this.carregarPreferenciasIniciais();
     this.executarCalculoTempoReal();
@@ -795,28 +845,65 @@ class CubagemApp {
         </div>
       `;
     } else if (tipo === 'tora') {
+      const nToras = item.totalToras || (item.toras ? item.toras.length : 1);
       detalheHtml = `
         <div style="margin-bottom: 12px;">
-          <strong>Nº da Plaqueta:</strong> ${item.plaqueta || 'S/P'}<br>
-          <strong>Local / Pátio:</strong> ${item.rodovia}<br>
+          <strong>Pilha / Lote:</strong> ${item.identificacao || item.placa || item.id}<br>
+          <strong>Plaquetas:</strong> ${item.plaqueta || 'S/P'}<br>
+          <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}
         </div>
         <div class="calc-result-card">
           <div class="calc-result-header">
-            <span class="calc-result-tag">Volume Smalian</span>
+            <span class="calc-result-tag">Volume Total da Pilha</span>
             <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 3)} m³</span>
           </div>
           <div style="font-size: 0.85rem; line-height: 1.6;">
-            <strong>Diâmetro Ponta 1 (fina):</strong> ${fNum(item.diametroPonta1_cm, 1)} cm<br>
-            <strong>Diâmetro Ponta 2 (grossa):</strong> ${fNum(item.diametroPonta2_cm, 1)} cm<br>
-            <strong>Diâmetro Médio:</strong> ${fNum(item.diametroMedio_cm, 1)} cm<br>
-            <strong>Comprimento:</strong> ${fNum(item.comprimento, 2)} m
+            <strong>Total de Indivíduos:</strong> ${nToras} toras<br>
+            <strong>Diâmetro Médio da Pilha:</strong> ${fNum(item.diametroMedio_cm, 1)} cm<br>
+            <strong>Comprimento Médio:</strong> ${fNum(item.comprimentoMedio || item.comprimento, 2)} m
           </div>
         </div>
       `;
 
-      if (item.foto) {
+      if (item.toras && Array.isArray(item.toras) && item.toras.length > 0) {
+        detalheHtml += `
+          <div style="margin-top: 14px;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--gold); text-transform: uppercase; margin-bottom: 8px;">
+              Indivíduos da Pilha (${item.toras.length} toras)
+            </div>
+            <div style="max-height: 240px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+                <thead>
+                  <tr style="background: var(--surface-2); border-bottom: 1px solid var(--line); text-align: left;">
+                    <th style="padding: 6px 8px;">#</th>
+                    <th style="padding: 6px 8px;">Plaqueta</th>
+                    <th style="padding: 6px 8px;">D1 × D2 (cm)</th>
+                    <th style="padding: 6px 8px;">Comp.</th>
+                    <th style="padding: 6px 8px; text-align: right;">Vol (m³)</th>
+                    <th style="padding: 6px 8px; text-align: center;">Foto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${item.toras.map(t => `
+                    <tr style="border-bottom: 1px solid var(--line);">
+                      <td style="padding: 6px 8px; font-weight: 700;">#${t.numero}</td>
+                      <td style="padding: 6px 8px; font-weight: 700; color: var(--ink);">${t.plaqueta}</td>
+                      <td style="padding: 6px 8px;">${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)}</td>
+                      <td style="padding: 6px 8px;">${fNum(t.comprimento, 2)} m</td>
+                      <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: var(--gold);">${fNum(t.volumeGeometrico, 3)}</td>
+                      <td style="padding: 6px 8px; text-align: center;">
+                        ${t.foto ? `<button type="button" class="btn-action-small" onclick="app.visualizarFotoToraAmpliada('${t.foto}', 'Plaqueta #${t.plaqueta}', '${t.fotoLegenda || ''}')" title="Ver foto">📷</button>` : '-'}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } else if (item.foto) {
         detalheHtml += `
           <div style="margin-top: 12px; background: var(--surface-2); padding: 12px; border-radius: 10px; border: 1px solid var(--line);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -1069,6 +1156,156 @@ class CubagemApp {
   }
 
   // =========================================================================
+  // GESTÃO DE MÚLTIPLAS TORAS NA PILHA (INDIVÍDUOS COM FOTOS E PLAQUETAS)
+  // =========================================================================
+  adicionarToraNaPilha() {
+    const d1 = document.getElementById('cubDiametroPonta1').value;
+    const d2 = document.getElementById('cubDiametroPonta2').value;
+    const comp = document.getElementById('cubComprimentoTora').value;
+    const plaqueta = document.getElementById('cubPlaqueta').value.trim();
+
+    if (!plaqueta) {
+      this.showToast('Informe o número da plaqueta da tora.', 'warning');
+      document.getElementById('cubPlaqueta').focus();
+      return;
+    }
+
+    const calc = window.CubagemCalculator.calculateTora({
+      diametroPonta1Raw: d1,
+      diametroPonta2Raw: d2,
+      comprimentoRaw: comp,
+      plaqueta: plaqueta
+    });
+
+    if (!calc.isValid) {
+      this.showToast(calc.errors[0] || 'Verifique as medidas da tora.', 'danger');
+      return;
+    }
+
+    const dataCub = document.getElementById('cubData').value || new Date().toISOString().slice(0, 10);
+    const nomeFoto = this.currentToraPhoto
+      ? `Plaqueta_${calc.plaqueta}_${dataCub}.jpg`
+      : null;
+
+    const toraItem = {
+      numero: this.torasPilha.length + 1,
+      plaqueta: calc.plaqueta,
+      diametroPonta1_cm: calc.diametroPonta1_cm,
+      diametroPonta2_cm: calc.diametroPonta2_cm,
+      diametroPonta1_m: calc.diametroPonta1_m,
+      diametroPonta2_m: calc.diametroPonta2_m,
+      diametroMedio_cm: calc.diametroMedio_cm,
+      comprimento: calc.comprimento,
+      volumeGeometrico: calc.volumeGeometrico,
+      foto: this.currentToraPhoto ? this.currentToraPhoto.dataUrl : null,
+      fotoUtm: this.currentToraPhoto ? this.currentToraPhoto.utm : null,
+      fotoDataHora: this.currentToraPhoto ? this.currentToraPhoto.dataHora : null,
+      fotoLegenda: this.currentToraPhoto ? this.currentToraPhoto.legenda : null,
+      fotoNome: nomeFoto
+    };
+
+    this.torasPilha.push(toraItem);
+    this.removerFotoToraAtiva();
+
+    // Limpa diâmetros para a próxima tora, preservando comprimento
+    document.getElementById('cubDiametroPonta1').value = '';
+    document.getElementById('cubDiametroPonta2').value = '';
+
+    // Tenta auto-incrementar plaqueta se for número (ex: 101 -> 102)
+    const numPlaqueta = parseInt(plaqueta, 10);
+    if (!isNaN(numPlaqueta) && String(numPlaqueta) === plaqueta) {
+      document.getElementById('cubPlaqueta').value = String(numPlaqueta + 1);
+    } else {
+      document.getElementById('cubPlaqueta').value = '';
+    }
+    document.getElementById('cubDiametroPonta1').focus();
+
+    this.renderizarListaTorasPilha();
+    this.executarCalculoTempoReal();
+
+    const volFmt = window.CubagemCalculator.formatNumber(toraItem.volumeGeometrico, 3);
+    this.showToast(`Tora #${toraItem.numero} (Plaqueta ${toraItem.plaqueta}) adicionada! Vol: ${volFmt} m³`, 'success');
+  }
+
+  removerToraDaPilha(index) {
+    if (index >= 0 && index < this.torasPilha.length) {
+      this.torasPilha.splice(index, 1);
+      this.torasPilha.forEach((t, i) => { t.numero = i + 1; });
+      this.renderizarListaTorasPilha();
+      this.executarCalculoTempoReal();
+      this.showToast('Tora removida da pilha.', 'warning');
+    }
+  }
+
+  limparTodasTorasPilha() {
+    if (this.torasPilha.length === 0) return;
+    if (confirm('Deseja realmente limpar todas as toras adicionadas nesta pilha?')) {
+      this.torasPilha = [];
+      this.renderizarListaTorasPilha();
+      this.executarCalculoTempoReal();
+      this.showToast('Pilha de toras zerada.', 'info');
+    }
+  }
+
+  renderizarListaTorasPilha() {
+    const container = document.getElementById('toraListContainer');
+    const badge = document.getElementById('toraListCountBadge');
+    const sumBox = document.getElementById('toraPileTotalSummary');
+    const btnLimpar = document.getElementById('btnLimparTorasPilha');
+
+    if (badge) badge.textContent = `${this.torasPilha.length} ${this.torasPilha.length === 1 ? 'tora' : 'toras'}`;
+    if (btnLimpar) btnLimpar.style.display = this.torasPilha.length > 0 ? 'inline-block' : 'none';
+
+    if (!container) return;
+
+    if (this.torasPilha.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 18px 12px; color: var(--muted); font-size: 0.82rem; background: var(--surface-2); border-radius: 8px; border: 1px dashed var(--line);">
+          Nenhuma tora adicionada nesta pilha ainda.<br>
+          Preencha os campos acima e toque em <strong>"+ Adicionar Esta Tora à Pilha"</strong>.
+        </div>
+      `;
+      if (sumBox) sumBox.style.display = 'none';
+      return;
+    }
+
+    const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+
+    container.innerHTML = this.torasPilha.map((t, idx) => `
+      <div class="tora-item-row">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+          <span class="tora-item-badge">#${t.numero}</span>
+          ${t.foto ? `<img src="${t.foto}" style="width: 38px; height: 28px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); cursor: pointer;" onclick="app.visualizarFotoToraAmpliada('${t.foto}', 'Plaqueta #${t.plaqueta}', '${t.fotoLegenda || ''}')" title="Ver foto">` : ''}
+          <div style="min-width: 0; flex: 1;">
+            <div style="font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              Plaqueta: ${t.plaqueta}
+            </div>
+            <div style="font-size: 0.73rem; color: var(--muted);">
+              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="text-align: right;">
+            <div style="font-weight: 700; color: var(--gold); font-size: 0.9rem;">${fNum(t.volumeGeometrico, 3)} m³</div>
+            ${t.fotoUtm ? `<div style="font-size: 0.68rem; color: var(--sage);">📍 UTM</div>` : ''}
+          </div>
+          <button type="button" class="btn-action-small danger" onclick="app.removerToraDaPilha(${idx})" title="Remover tora">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+
+    const lote = window.CubagemCalculator.calculateLoteToras(this.torasPilha);
+    if (sumBox) {
+      sumBox.style.display = 'block';
+      const dispEl = document.getElementById('toraPileTotalVolDisplay');
+      const statsEl = document.getElementById('toraPileTotalStats');
+      if (dispEl) dispEl.textContent = `${lote.display.volumeTotal} m³`;
+      if (statsEl) statsEl.textContent = `${lote.totalToras} toras • Dm Médio: ${lote.display.diametroMedio} • Comp. Médio: ${lote.display.comprimentoMedio}`;
+    }
+  }
+
+  // =========================================================================
   // GESTÃO DE FOTOS DE TORAS E TIMESTAMP CAMERA
   // =========================================================================
   abrirCameraTora() {
@@ -1160,7 +1397,37 @@ class CubagemApp {
     try {
       this.showToast('Localizando toras com fotos no período...', 'info');
       const records = await window.cubagemDB.getByDateRange(start, end);
-      const torasComFoto = records.filter((r) => r.tipo === 'tora' && r.foto);
+
+      const torasComFoto = [];
+      records.forEach((r) => {
+        if (r.tipo === 'tora') {
+          if (Array.isArray(r.toras) && r.toras.length > 0) {
+            r.toras.forEach((t) => {
+              if (t.foto) {
+                torasComFoto.push({
+                  plaqueta: t.plaqueta,
+                  data: r.data,
+                  horario: r.horario,
+                  foto: t.foto,
+                  fotoUtm: t.fotoUtm,
+                  fotoNome: t.fotoNome || `Plaqueta_${t.plaqueta}_${r.data}.jpg`,
+                  volumeGeometrico: t.volumeGeometrico
+                });
+              }
+            });
+          } else if (r.foto) {
+            torasComFoto.push({
+              plaqueta: r.plaqueta,
+              data: r.data,
+              horario: r.horario,
+              foto: r.foto,
+              fotoUtm: r.fotoUtm,
+              fotoNome: r.fotoNome || `Plaqueta_${r.plaqueta}_${r.data}.jpg`,
+              volumeGeometrico: r.volumeGeometrico
+            });
+          }
+        }
+      });
 
       if (torasComFoto.length === 0) {
         this.showToast('Nenhuma tora com foto registrada no período selecionado.', 'warning');
@@ -1186,7 +1453,7 @@ class CubagemApp {
 
       torasComFoto.forEach((item, idx) => {
         const rawBase64 = item.foto.replace(/^data:image\/[a-z]+;base64,/, '');
-        const fileName = item.fotoNome || `Plaqueta_${item.plaqueta || item.id}_${item.data}.jpg`;
+        const fileName = item.fotoNome || `Plaqueta_${item.plaqueta}_${item.data}.jpg`;
         folder.file(fileName, rawBase64, { base64: true });
 
         const vol = window.CubagemCalculator.formatNumber(item.volumeGeometrico, 3);

@@ -380,61 +380,140 @@ class CubagemExcelExport {
       });
 
       let rTorIdx = 3;
-      toras.forEach((item, idx) => {
-        const row = wsTor.getRow(rTorIdx);
-        row.height = item.foto ? 42 : 20;
-        const bg = idx % 2 === 1 ? C.creme2 : C.creme;
+      let totalTorasLinhas = 0;
 
-        const nomeFoto = item.foto
-          ? (item.fotoNome || `Plaqueta_${item.plaqueta || item.id}_${item.data}.jpg`)
-          : 'SEM FOTO';
-        const utmStr = item.fotoUtm || 'NÃO REGISTRADO';
-        const obsFinal = item.fotoLegenda
-          ? `${item.fotoLegenda}${item.observacoes ? ' | ' + item.observacoes : ''}`
-          : (item.observacoes || '');
+      toras.forEach((pileItem) => {
+        const torasIndiv = (pileItem.toras && Array.isArray(pileItem.toras) && pileItem.toras.length > 0)
+          ? pileItem.toras
+          : [pileItem];
 
-        const vals = [
-          idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.plaqueta || 'S/P',
-          nomeFoto, utmStr, item.rodovia || 'Pátio', item.responsavel,
-          Number(item.diametroPonta1_cm) || (Number(item.diametroPonta1_m) * 100) || 0,
-          Number(item.diametroPonta2_cm) || (Number(item.diametroPonta2_m) * 100) || 0,
-          Number(item.diametroMedio_cm) || 0,
-          Number(item.comprimento) || 0,
-          Number(item.volumeGeometrico) || 0,
-          obsFinal
-        ];
+        let subtotalVolPilha = 0;
+        let subtotalDmPilha = 0;
 
-        vals.forEach((v, vi) => {
-          const c = row.getCell(vi + 1);
-          c.value = v;
-          c.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
-          c.border = thinBorder;
-          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 13 ? 'D6C7A1' : bg } };
-          if (vi === 0 || vi === 2 || vi === 3 || vi === 4) c.alignment = { horizontal: 'center', vertical: 'middle' };
-          else if (vi >= 9 && vi <= 13) {
-            c.alignment = { horizontal: 'right', vertical: 'middle' };
-            c.numFmt = vi === 13 ? '#,##0.000' : '#,##0.0';
-            if (vi === 13) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
-          } else c.alignment = { horizontal: 'left', vertical: 'middle' };
+        torasIndiv.forEach((item) => {
+          totalTorasLinhas++;
+          const row = wsTor.getRow(rTorIdx);
+          row.height = item.foto ? 42 : 20;
+          const bg = totalTorasLinhas % 2 === 1 ? C.creme2 : C.creme;
+
+          const nomeFoto = item.foto
+            ? (item.fotoNome || `Plaqueta_${item.plaqueta || pileItem.id}_${pileItem.data}.jpg`)
+            : 'SEM FOTO';
+          const utmStr = item.fotoUtm || pileItem.fotoUtm || 'NÃO REGISTRADO';
+          const obsFinal = item.fotoLegenda
+            ? `${item.fotoLegenda}${pileItem.observacoes ? ' | ' + pileItem.observacoes : ''}`
+            : (pileItem.observacoes || '');
+
+          const vVol = Number(item.volumeGeometrico) || 0;
+          const vDm = Number(item.diametroMedio_cm) || 0;
+          subtotalVolPilha += vVol;
+          subtotalDmPilha += vDm;
+
+          const vals = [
+            totalTorasLinhas,
+            pileItem.identificacao || pileItem.id,
+            this.formatDateBR(pileItem.data),
+            pileItem.horario,
+            item.plaqueta || 'S/P',
+            nomeFoto,
+            utmStr,
+            pileItem.rodovia || 'Pátio',
+            pileItem.responsavel,
+            Number(item.diametroPonta1_cm) || (Number(item.diametroPonta1_m) * 100) || 0,
+            Number(item.diametroPonta2_cm) || (Number(item.diametroPonta2_m) * 100) || 0,
+            vDm,
+            Number(item.comprimento) || 0,
+            vVol,
+            obsFinal
+          ];
+
+          vals.forEach((v, vi) => {
+            const c = row.getCell(vi + 1);
+            c.value = v;
+            c.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
+            c.border = thinBorder;
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 13 ? 'D6C7A1' : bg } };
+            if (vi === 0 || vi === 2 || vi === 3 || vi === 4) c.alignment = { horizontal: 'center', vertical: 'middle' };
+            else if (vi >= 9 && vi <= 13) {
+              c.alignment = { horizontal: 'right', vertical: 'middle' };
+              c.numFmt = vi === 13 ? '#,##0.000' : '#,##0.0';
+              if (vi === 13) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
+            } else c.alignment = { horizontal: 'left', vertical: 'middle' };
+          });
+
+          // Embutir miniatura da foto na planilha se existir
+          if (item.foto) {
+            try {
+              const imgId = workbook.addImage({
+                base64: item.foto,
+                extension: 'jpeg'
+              });
+              wsTor.addImage(imgId, {
+                tl: { col: 5.1, row: rTorIdx - 0.95 },
+                ext: { width: 50, height: 38 }
+              });
+            } catch (e) {
+              console.warn('Erro ao embutir foto na planilha:', e);
+            }
+          }
+
+          rTorIdx++;
         });
 
-        // Embutir miniatura da foto na planilha se existir
-        if (item.foto) {
-          try {
-            const imgId = workbook.addImage({
-              base64: item.foto,
-              extension: 'jpeg'
-            });
-            wsTor.addImage(imgId, {
-              tl: { col: 5.1, row: rTorIdx - 0.95 },
-              ext: { width: 50, height: 38 }
-            });
-          } catch (e) {
-            console.warn('Erro ao embutir foto na planilha:', e);
-          }
-        }
+        // Se a pilha tiver mais de 1 indivíduo, adiciona linha de subtotal da pilha
+        if (torasIndiv.length > 1) {
+          const subRow = wsTor.getRow(rTorIdx);
+          subRow.height = 22;
+          const avgDm = subtotalDmPilha / torasIndiv.length;
 
-        rTorIdx++;
+          // Mescla colunas 1 a 9 para o título do subtotal
+          wsTor.mergeCells(`A${rTorIdx}:I${rTorIdx}`);
+          const cTit = subRow.getCell(1);
+          cTit.value = `SUBTOTAL DA PILHA (${torasIndiv.length} toras) — ${pileItem.identificacao || pileItem.id}`;
+          cTit.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
+          cTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
+          cTit.alignment = { horizontal: 'right', vertical: 'middle' };
+          cTit.border = thinBorder;
+
+          for (let col = 10; col <= 11; col++) {
+            const c = subRow.getCell(col);
+            c.value = '-';
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
+            c.border = thinBorder;
+            c.alignment = { horizontal: 'center', vertical: 'middle' };
+          }
+
+          const cDm = subRow.getCell(12);
+          cDm.value = avgDm;
+          cDm.numFmt = '#,##0.0';
+          cDm.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.verde } };
+          cDm.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
+          cDm.border = thinBorder;
+          cDm.alignment = { horizontal: 'right', vertical: 'middle' };
+
+          const cComp = subRow.getCell(13);
+          cComp.value = '-';
+          cComp.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
+          cComp.border = thinBorder;
+          cComp.alignment = { horizontal: 'center', vertical: 'middle' };
+
+          const cVol = subRow.getCell(14);
+          cVol.value = subtotalVolPilha;
+          cVol.numFmt = '#,##0.000';
+          cVol.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
+          cVol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D6C7A1' } };
+          cVol.border = thinBorder;
+          cVol.alignment = { horizontal: 'right', vertical: 'middle' };
+
+          const cObs = subRow.getCell(15);
+          cObs.value = 'Volume Total da Pilha';
+          cObs.font = { name: FONT_NAME, size: 8, italic: true, color: { argb: C.texto } };
+          cObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
+          cObs.border = thinBorder;
+          cObs.alignment = { horizontal: 'left', vertical: 'middle' };
+
+          rTorIdx++;
+        }
       });
     }
 

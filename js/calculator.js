@@ -262,6 +262,62 @@ class CubagemCalculator {
     };
   }
 
+  // =========================================================================
+  // 4. CÁLCULO DE PILHA / LOTE DE TORAS (Agrupamento e Soma de Múltiplos Indivíduos)
+  // =========================================================================
+  static calculateLoteToras(toras) {
+    if (!Array.isArray(toras) || toras.length === 0) {
+      return {
+        isValid: false,
+        totalToras: 0,
+        volumeTotal: 0,
+        diametroMedio: 0,
+        comprimentoMedio: 0,
+        display: {
+          volumeTotal: '0,000',
+          totalToras: '0 toras',
+          diametroMedio: '0,0 cm',
+          comprimentoMedio: '0,00 m'
+        }
+      };
+    }
+
+    let somaVolume = 0;
+    let somaDm = 0;
+    let somaComp = 0;
+
+    toras.forEach((t) => {
+      somaVolume += Number(t.volumeGeometrico) || 0;
+      somaDm += Number(t.diametroMedio_cm) || 0;
+      somaComp += Number(t.comprimento) || 0;
+    });
+
+    const totalToras = toras.length;
+    const dmGeral = somaDm / totalToras;
+    const compMedio = somaComp / totalToras;
+
+    return {
+      isValid: true,
+      tipo: 'tora',
+      totalToras,
+      volumeTotal: somaVolume,
+      diametroMedio_cm: dmGeral,
+      comprimentoMedio: compMedio,
+      display: {
+        volumeTotal: this.formatNumber(somaVolume, 3),
+        volumeTotalPreciso: this.formatPrecision(somaVolume, 4),
+        totalToras: `${totalToras} toras adicionadas na pilha`,
+        diametroMedio: `${this.formatNumber(dmGeral, 1)} cm`,
+        comprimentoMedio: `${this.formatNumber(compMedio, 2)} m`
+      },
+      memoriaCalculo: [
+        `Pilha de Toras: Total de ${totalToras} indivíduos mensurados`,
+        `Diâmetro Médio da Pilha: ${this.formatNumber(dmGeral, 1)} cm | Comprimento Médio: ${this.formatNumber(compMedio, 2)} m`,
+        `Volume Total Acumulado (Smalian) = ${this.formatNumber(somaVolume, 3)} m³`
+      ]
+    };
+  }
+
   /**
    * Ponto de entrada genérico para cálculo dependente do tipo
    */

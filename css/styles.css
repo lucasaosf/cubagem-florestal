@@ -1217,3 +1217,30 @@ textarea.form-control {
 .tora-photo-thumbnail:active {
   transform: scale(0.96);
 }
+
+.tora-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  transition: background-color 0.15s ease;
+}
+
+.tora-item-row:hover {
+  background: var(--surface-2);
+}
+
+.tora-item-badge {
+  background: var(--gold);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
