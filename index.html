@@ -183,7 +183,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill">Versão 2.4</span>
+            <span class="cover-ver-pill">Versão 2.5</span>
             <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
@@ -423,7 +423,10 @@
 
               <!-- Espécie Individual da Tora - LARGURA AMPLA -->
               <div class="form-group form-group-species-wide" style="margin-bottom: 12px;">
-                <label class="form-label" for="cubEspecieTora">Espécie Individual da Tora <span class="helper">(Opcional - Busca Botânica)</span></label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="form-label" for="cubEspecieTora" style="margin-bottom: 0;">Espécie Individual da Tora <span class="helper">(Opcional - Busca Botânica)</span></label>
+                  <button type="button" class="btn-guia-inline" onclick="app.abrirModalGuiaEspecies('campeiro')">🌿 Guia Botânico &amp; Pranchas</button>
+                </div>
                 <input type="text" id="cubEspecieTora" class="form-control input-species-wide" placeholder="Digite para buscar espécie desta tora (ex: eucalipto, pinus, ipê, cedro...)">
               </div>
 
@@ -1128,21 +1131,109 @@
     </div>
   </div>
 
-  <!-- MODAL: GUIA DE ESPÉCIES DO BRASIL -->
-  <div id="modalGuiaEspecies" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalGuiaEspecies')">
-    <div class="modal-dialog" style="max-width: 520px;">
-      <div class="modal-header">
-        <h3 class="modal-title">Guia de Espécies do Brasil</h3>
+  <!-- MODAL: GUIA BOTÂNICO DE IDENTIFICAÇÃO & PRANCHAS DE CAMPO -->
+  <div id="modalGuiaEspecies" class="modal-overlay modal-guia-overlay" onclick="if(event.target===this) app.fecharModal('modalGuiaEspecies')">
+    <div class="modal-dialog modal-dialog-guia">
+      <div class="modal-header modal-header-guia">
+        <div class="guia-header-left">
+          <h3 class="modal-title">🌿 Guia Botânico de Campo &amp; Pranchas de Identificação</h3>
+          <div class="guia-header-subtitle">
+            Base Integrada • 315 Pranchas Modo Campeiro • Vegetação do Cerrado (MMA) • Flora Nativa &amp; Silvicultura
+          </div>
+        </div>
         <button class="modal-close-btn" onclick="app.fecharModal('modalGuiaEspecies')">&times;</button>
       </div>
-      <div class="modal-body">
-        <div style="margin-bottom: 12px;">
-          <input type="search" class="form-control" placeholder="Buscar por nome popular ou científico..." oninput="app.pesquisarGuiaEspecies(this.value)">
+
+      <div class="modal-body modal-body-guia">
+        <!-- Barra de Busca -->
+        <div class="guia-search-wrapper">
+          <div class="guia-search-input-box">
+            <span class="guia-search-icon">🔍</span>
+            <input
+              type="search"
+              id="inpGuiaEspeciesBusca"
+              class="form-control guia-search-input"
+              placeholder="Buscar por nome popular, científico, família (ex: jatobá, Dalbergia, Fabaceae, látex, fruto)..."
+              oninput="app.onInputBuscaGuia(this.value)"
+            >
+            <button
+              type="button"
+              class="guia-search-clear"
+              onclick="document.getElementById('inpGuiaEspeciesBusca').value=''; app.onInputBuscaGuia('');"
+              title="Limpar busca"
+            >&times;</button>
+          </div>
         </div>
-        <div class="guia-especies-box" id="guiaEspeciesList"></div>
+
+        <!-- Filtros em Chips / Abas -->
+        <div class="guia-pills-row" id="guiaPillsContainer">
+          <button type="button" class="guia-pill active" data-cat="todas" onclick="app.filtrarCategoriaGuia('todas')">🌟 Todas as Espécies</button>
+          <button type="button" class="guia-pill" data-cat="campeiro" onclick="app.filtrarCategoriaGuia('campeiro')">🌿 Modo Campeiro (315 Pranchas)</button>
+          <button type="button" class="guia-pill" data-cat="cerrado" onclick="app.filtrarCategoriaGuia('cerrado')">🌾 Vegetação do Cerrado</button>
+          <button type="button" class="guia-pill" data-cat="ameacadas" onclick="app.filtrarCategoriaGuia('ameacadas')">🚨 Ameaçadas (Portaria MMA 148)</button>
+          <button type="button" class="guia-pill" data-cat="nativas" onclick="app.filtrarCategoriaGuia('nativas')">🌳 Árvores Nativas</button>
+          <button type="button" class="guia-pill" data-cat="comerciais" onclick="app.filtrarCategoriaGuia('comerciais')">🪵 Comerciais / Silvicultura</button>
+        </div>
+
+        <!-- Barra de Status / Contagem -->
+        <div class="guia-status-bar">
+          <span id="guiaContadorResultados">Carregando catálogo botânico...</span>
+          <span class="guia-hint-badge">💡 Clique em <b>"Ver Prancha"</b> para ampliar e inspecionar detalhes botânicos</span>
+        </div>
+
+        <!-- Lista / Grid de Espécies -->
+        <div class="guia-especies-grid" id="guiaEspeciesList"></div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="app.fecharModal('modalGuiaEspecies')">Fechar</button>
+
+      <div class="modal-footer modal-footer-guia">
+        <button class="btn btn-secondary" onclick="app.fecharModal('modalGuiaEspecies')">Fechar Guia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LIGHTBOX DE ALTA RESOLUÇÃO DA PRANCHA BOTÂNICA -->
+  <div id="modalPranchaLightbox" class="modal-overlay modal-lightbox-overlay" onclick="if(event.target===this) app.fecharPranchaLightbox()">
+    <div class="lightbox-container">
+      <!-- Barra Superior de Ferramentas -->
+      <div class="lightbox-toolbar">
+        <div class="lightbox-info">
+          <span class="lightbox-badge-prancha" id="lbPranchaNum">Prancha nº --</span>
+          <div class="lightbox-titles">
+            <span class="lightbox-sci-title" id="lbSciTitle">Nome Científico</span>
+            <span class="lightbox-pop-sub" id="lbPopSub">Nome Popular • Família</span>
+          </div>
+        </div>
+        <div class="lightbox-actions">
+          <button type="button" class="btn-lb-action" onclick="app.ajustarZoomPrancha(0.25)" title="Aproximar Zoom (Mais Zoom)">🔍+</button>
+          <button type="button" class="btn-lb-action" onclick="app.ajustarZoomPrancha(-0.25)" title="Afastar Zoom (Menos Zoom)">🔍-</button>
+          <button type="button" class="btn-lb-action" onclick="app.resetarZoomPrancha()" title="Tamanho Original (100%)">🔄 100%</button>
+          <a id="lbBtnDownload" href="#" download="prancha_botanica.jpg" class="btn-lb-action download" title="Baixar Imagem da Prancha">⬇️ Baixar</a>
+          <button type="button" class="btn-lb-action close" onclick="app.fecharPranchaLightbox()" title="Fechar Visualizador">&times;</button>
+        </div>
+      </div>
+
+      <!-- Área de Visualização com Zoom e Pan -->
+      <div class="lightbox-canvas" id="lbCanvas" onwheel="app.onWheelZoomPrancha(event)">
+        <img id="lbImagem" src="" alt="Prancha Botânica Ilustrada" class="lightbox-img">
+      </div>
+
+      <!-- Barra de Chaves Diagnósticas no Rodapé -->
+      <div class="lightbox-footer-card" id="lbFooterCard">
+        <div class="lb-footer-item">
+          <strong>🌿 Família:</strong> <span id="lbFamTxt">--</span>
+        </div>
+        <div class="lb-footer-item">
+          <strong>🏷️ Nomes Populares:</strong> <span id="lbPopTxt">--</span>
+        </div>
+        <div class="lb-footer-item">
+          <strong>🚨 Status Conservação:</strong> <span id="lbAmeacaTxt">--</span>
+        </div>
+        <div class="lb-footer-item">
+          <strong>🌎 Ocorrência:</strong> <span id="lbBiomasTxt">--</span>
+        </div>
+        <div class="lb-footer-actions">
+          <button type="button" class="btn btn-sm btn-primary" id="lbBtnUsarCubagem" onclick="app.usarPranchaAtivaNaCubagem()">🪵 Usar esta Espécie na Cubagem</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1156,6 +1247,7 @@
   <script src="js/calculator.js"></script>
   <script src="js/excel-export.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
   <script src="js/app.js"></script>
 </body>

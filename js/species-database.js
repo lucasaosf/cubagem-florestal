@@ -1552,12 +1552,54 @@
       .toLowerCase();
   }
 
+  // =========================================================================
+  // INTEGRAÇÃO AUTOMÁTICA COM A BASE MODO CAMPEIRO (315 PRANCHAS ILUSTRADAS)
+  // =========================================================================
+  if (typeof window !== 'undefined' && Array.isArray(window.ESPECIES_CAMPEIRO)) {
+    const mapaExistentes = new Map();
+    BANCO_ESPECIES.forEach((sp, idx) => {
+      mapaExistentes.set(normalizarTexto(sp.nomeCientifico), idx);
+    });
+
+    window.ESPECIES_CAMPEIRO.forEach((spCam) => {
+      const chave = normalizarTexto(spCam.nomeCientifico);
+      if (mapaExistentes.has(chave)) {
+        const idx = mapaExistentes.get(chave);
+        const original = BANCO_ESPECIES[idx];
+        original.prancha = spCam.prancha;
+        original.imagem = spCam.imagem;
+        original.thumb = spCam.thumb;
+        original.caracteristicas = spCam.caracteristicas;
+        original.ameaca = spCam.ameaca || original.ameaca || 'NA';
+        original.biomas = spCam.biomas || original.biomas;
+        original.fonte = spCam.fonte;
+        (spCam.nomesPopulares || []).forEach((np) => {
+          if (!original.nomesPopulares.some((p) => normalizarTexto(p) === normalizarTexto(np))) {
+            original.nomesPopulares.push(np);
+          }
+        });
+      } else {
+        BANCO_ESPECIES.push(spCam);
+        mapaExistentes.set(chave, BANCO_ESPECIES.length - 1);
+      }
+    });
+  }
+
   // Pré-indexar termos de busca para cada espécie acelerando o processamento offline
   const BANCO_INDEXADO = BANCO_ESPECIES.map((sp) => {
     const scNorm = normalizarTexto(sp.nomeCientifico);
     const famNorm = normalizarTexto(sp.familia);
     const popNorm = sp.nomesPopulares.map(normalizarTexto);
     const sinNorm = (sp.sinonimos || []).map(normalizarTexto);
+    const biomasNorm = (sp.biomas || []).map(normalizarTexto);
+    const ameacaNorm = normalizarTexto(sp.ameaca || '');
+    const traitsNorm = sp.caracteristicas
+      ? [
+          normalizarTexto(sp.caracteristicas.filotaxia || ''),
+          normalizarTexto(sp.caracteristicas.folha || ''),
+          normalizarTexto(sp.caracteristicas.exsudacao || '')
+        ]
+      : [];
 
     return {
       raw: sp,
@@ -1565,7 +1607,17 @@
       famNorm,
       popNorm,
       sinNorm,
-      allTermsNorm: [scNorm, famNorm, ...popNorm, ...sinNorm].join(' ')
+      biomasNorm,
+      ameacaNorm,
+      allTermsNorm: [
+        scNorm,
+        famNorm,
+        ...popNorm,
+        ...sinNorm,
+        ...biomasNorm,
+        ameacaNorm,
+        ...traitsNorm
+      ].join(' ')
     };
   });
 
@@ -1577,7 +1629,6 @@
     if (!q || q.length < 2) return [];
 
     const palavrasQuery = q.split(' ').filter(Boolean);
-
     const resultados = [];
 
     for (let i = 0; i < BANCO_INDEXADO.length; i++) {
@@ -1617,6 +1668,93 @@
     // Ordenar por pontuação decrescente
     resultados.sort((a, b) => b.pontuacao - a.pontuacao);
 
+    return resultados.slice(0, limite).map((r) => r.especie);
+  }
+
+  // =========================================================================
+  // BUSCA AVANÇADA PARA O GUIA BOTÂNICO DE CAMPO
+  // =========================================================================
+  function searchEspeciesAvancada(termoBusca = '', filtroOuLimite = 'todas', maybeLimit = 50) {
+    let categoria = 'todas';
+    let limite = 50;
+
+    if (typeof filtroOuLimite === 'number') {
+      limite = filtroOuLimite;
+    } else if (typeof filtroOuLimite === 'string') {
+      categoria = filtroOuLimite;
+      limite = typeof maybeLimit === 'number' ? maybeLimit : 50;
+    } else if (typeof filtroOuLimite === 'object' && filtroOuLimite !== null) {
+      categoria = filtroOuLimite.category || 'todas';
+      limite = filtroOuLimite.limit || 50;
+    }
+
+    const q = normalizarTexto(termoBusca || '');
+    const palavrasQuery = q ? q.split(' ').filter(Boolean) : [];
+
+    let pool = BANCO_INDEXADO;
+
+    // Filtro por categoria
+    if (categoria && categoria !== 'todas') {
+      pool = pool.filter((item) => {
+        const sp = item.raw;
+        if (categoria === 'campeiro') return !!sp.prancha;
+        if (categoria === 'cerrado') {
+          return sp.biomas && sp.biomas.some((b) => normalizarTexto(b).includes('cerrado'));
+        }
+        if (categoria === 'ameacadas') return sp.ameaca && sp.ameaca !== 'NA';
+        if (categoria === 'nativas') return sp.origem === 'Nativa';
+        if (categoria === 'comerciais') {
+          return (
+            sp.origem === 'Exótica' ||
+            (sp.nomesPopulares &&
+              sp.nomesPopulares.some((n) => /eucalipto|pinus|teca|cedro|mogno|acacia/i.test(n)))
+          );
+        }
+        return true;
+      });
+    }
+
+    if (!q) {
+      // Se não houver termo de busca, priorizar quem tem prancha e ordenar alfabeticamente
+      const ordenado = [...pool].sort((a, b) => {
+        const temA = a.raw.prancha ? 1 : 0;
+        const temB = b.raw.prancha ? 1 : 0;
+        if (temB !== temA) return temB - temA;
+        return (a.raw.nomesPopulares[0] || '').localeCompare(b.raw.nomesPopulares[0] || '');
+      });
+      return ordenado.slice(0, limite).map((item) => item.raw);
+    }
+
+    const resultados = [];
+    for (let i = 0; i < pool.length; i++) {
+      const item = pool[i];
+      let pontuacao = 0;
+
+      if (item.scNorm === q) pontuacao += 100;
+      else if (item.popNorm.some((p) => p === q)) pontuacao += 95;
+      else if (item.scNorm.startsWith(q)) pontuacao += 75;
+      else if (item.popNorm.some((p) => p.startsWith(q))) pontuacao += 70;
+      else if (item.famNorm === q) pontuacao += 50;
+      else {
+        const atendeTodas = palavrasQuery.every((palavra) => item.allTermsNorm.includes(palavra));
+        if (atendeTodas) {
+          pontuacao += 40;
+          if (item.popNorm.some((p) => p.includes(q))) pontuacao += 20;
+          if (item.scNorm.includes(q)) pontuacao += 15;
+          if (item.famNorm.includes(q)) pontuacao += 10;
+        }
+      }
+
+      if (pontuacao > 0) {
+        if (item.raw.prancha) pontuacao += 15; // Bônus para espécie ilustrada com prancha
+        resultados.push({
+          especie: item.raw,
+          pontuacao
+        });
+      }
+    }
+
+    resultados.sort((a, b) => b.pontuacao - a.pontuacao);
     return resultados.slice(0, limite).map((r) => r.especie);
   }
 
@@ -1828,11 +1966,14 @@
   }
 
   // =========================================================================
-  // EXPORTAÇÃO GLOBAL NO OBJETO WINDOW
+  // EXPORTAÇÃO GLOBAL NO OBJETO WINDOW (CUBAGEM & GUIA BOTÂNICO)
   // =========================================================================
-  window.CubagemEspecies = {
+  const especiesApi = {
     BANCO: BANCO_ESPECIES,
     buscar: buscarEspecies,
+    search: searchEspeciesAvancada,
+    getAll: () => BANCO_ESPECIES,
+    getPrancha: (num) => BANCO_ESPECIES.find((sp) => sp.prancha === parseInt(num, 10)),
     normalizar: normalizarTexto,
     Autocomplete: SpeciesAutocomplete,
 
@@ -1852,5 +1993,8 @@
     }
   };
 
-  console.log(`[Espécies Florestais] Banco botânico carregado com ${BANCO_ESPECIES.length} espécies brasileiras (Sistaxon / Sinaflor / Flora do Brasil).`);
+  window.CubagemEspecies = especiesApi;
+  window.speciesDatabase = especiesApi;
+
+  console.log(`[Espécies Florestais] Banco botânico carregado com ${BANCO_ESPECIES.length} espécies brasileiras (Sistaxon / Sinaflor / Flora do Brasil / Modo Campeiro).`);
 })();

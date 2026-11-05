@@ -1893,40 +1893,354 @@ class CubagemApp {
     this.abrirModal('modalComoUsar');
   }
 
-  abrirModalGuiaEspecies() {
+  // =========================================================================
+  // GUIA BOTÂNICO DE CAMPO & IDENTIFICAÇÃO DE ESPÉCIES (MODO CAMPEIRO & CERRADO)
+  // =========================================================================
+  abrirModalGuiaEspecies(categoria = 'todas') {
+    this.guiaCategoriaAtiva = categoria || 'todas';
+    this.guiaTermoBusca = '';
+
+    const inpBusca = document.getElementById('inpGuiaEspeciesBusca');
+    if (inpBusca) inpBusca.value = '';
+
+    this.atualizarPillsGuiaUI();
+    this.renderGuiaEspecies();
     this.abrirModal('modalGuiaEspecies');
-    this.pesquisarGuiaEspecies('');
+  }
+
+  filtrarCategoriaGuia(categoria) {
+    this.guiaCategoriaAtiva = categoria || 'todas';
+    this.atualizarPillsGuiaUI();
+    this.renderGuiaEspecies();
+  }
+
+  atualizarPillsGuiaUI() {
+    const pills = document.querySelectorAll('#guiaPillsContainer .guia-pill');
+    pills.forEach((p) => {
+      const cat = p.getAttribute('data-cat');
+      p.classList.toggle('active', cat === this.guiaCategoriaAtiva);
+    });
+  }
+
+  onInputBuscaGuia(query) {
+    clearTimeout(this.debounceGuiaTimer);
+    this.debounceGuiaTimer = setTimeout(() => {
+      this.guiaTermoBusca = query || '';
+      this.renderGuiaEspecies();
+    }, 120);
   }
 
   pesquisarGuiaEspecies(query) {
+    this.guiaTermoBusca = query || '';
+    this.renderGuiaEspecies();
+  }
+
+  renderGuiaEspecies() {
     const container = document.getElementById('guiaEspeciesList');
+    const contador = document.getElementById('guiaContadorResultados');
     if (!container || !window.speciesDatabase) return;
 
-    const results = window.speciesDatabase.search(query, 30);
+    const termo = this.guiaTermoBusca || '';
+    const categoria = this.guiaCategoriaAtiva || 'todas';
+    const results = window.speciesDatabase.search(termo, categoria, 100);
+
+    if (contador) {
+      const totalDisp = results ? results.length : 0;
+      contador.textContent = `Exibindo ${totalDisp} espécie(s) no catálogo botânico`;
+    }
+
     if (!results || results.length === 0) {
       container.innerHTML = `
-        <div class="species-item-empty">
-          Nenhuma espécie encontrada para "<b>${this.escapeHtml(query)}</b>".
+        <div class="species-item-empty" style="grid-column: 1 / -1; padding: 36px 16px; text-align: center;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">🌿</div>
+          <p style="font-weight: 600; font-size: 1rem; color: var(--gold);">Nenhuma espécie encontrada</p>
+          <p style="font-size: 0.85rem; color: var(--muted); margin-top: 4px;">
+            Não encontramos resultados para "<b>${this.escapeHtml(termo)}</b>" nesta categoria.<br>
+            Tente buscar por gênero, nome popular, família botânica ou selecione "🌟 Todas as Espécies".
+          </p>
         </div>
       `;
       return;
     }
 
     container.innerHTML = results.map((sp) => {
+      const nomePrincipal = (sp.nomesPopulares && sp.nomesPopulares[0]) ? sp.nomesPopulares[0] : sp.nomeCientifico;
+      const outrosNomes = (sp.nomesPopulares && sp.nomesPopulares.length > 1)
+        ? sp.nomesPopulares.slice(1, 4).join(', ')
+        : '';
       const isExotica = sp.origem === 'Exótica';
-      const badgeCls = isExotica ? 'badge-exotica' : 'badge-nativa';
-      const badgeTxt = isExotica ? 'Exótica' : 'Nativa';
+      const badgeOrigemCls = isExotica ? 'badge-exotica' : 'badge-nativa';
+      const badgeOrigemTxt = isExotica ? '🌲 Exótica' : '🌿 Nativa';
+
+      // Badge de conservação (Portaria MMA 148/2022)
+      let badgeAmeacaHtml = '';
+      if (sp.ameaca && sp.ameaca !== 'NA') {
+        const ameacaMap = {
+          'CR': { label: '🚨 CR - Criticamente em Perigo', cls: 'threat-cr' },
+          'EN': { label: '⚠️ EN - Em Perigo', cls: 'threat-en' },
+          'VU': { label: '⚡ VU - Vulnerável', cls: 'threat-vu' },
+          'IC': { label: '🛡️ Imune de Corte (MG)', cls: 'threat-ic' }
+        };
+        const m = ameacaMap[sp.ameaca] || { label: sp.ameaca, cls: 'threat-vu' };
+        badgeAmeacaHtml = `<span class="species-threat-pill ${m.cls}">${m.label}</span>`;
+      }
+
+      // Imagem da prancha / miniatura
+      const hasPrancha = !!sp.prancha;
+      const thumbUrl = sp.thumb || (hasPrancha ? `img/pranchas/thumbs/thumb_${sp.prancha}.jpg` : '');
+      const pranchaNum = sp.prancha || '';
+
+      // Traits tags
+      let traitsHtml = '';
+      if (sp.caracteristicas) {
+        if (sp.caracteristicas.folha) {
+          traitsHtml += `<span class="guia-trait-tag">🍃 Folha: ${this.escapeHtml(sp.caracteristicas.folha)}</span>`;
+        }
+        if (sp.caracteristicas.filotaxia) {
+          traitsHtml += `<span class="guia-trait-tag">🌿 Filotaxia: ${this.escapeHtml(sp.caracteristicas.filotaxia)}</span>`;
+        }
+        if (sp.caracteristicas.exsudacao && sp.caracteristicas.exsudacao !== 'Ausente') {
+          traitsHtml += `<span class="guia-trait-tag highlight">💧 Exsudação: ${this.escapeHtml(sp.caracteristicas.exsudacao)}</span>`;
+        }
+      }
+
+      // Biomas
+      let biomasHtml = '';
+      if (Array.isArray(sp.biomas) && sp.biomas.length > 0) {
+        biomasHtml = `<span class="guia-bioma-tag">🌎 ${this.escapeHtml(sp.biomas.slice(0, 3).join(', '))}</span>`;
+      }
+
       return `
-        <div class="guia-specie-card">
-          <div class="guia-specie-info">
-            <div class="guia-specie-nome">${this.escapeHtml(sp.nomePopular)}</div>
-            <div class="guia-specie-cientifico">${this.escapeHtml(sp.nomeCientifico)}</div>
-            ${sp.familia ? `<div class="guia-specie-fam">${this.escapeHtml(sp.familia)}</div>` : ''}
+        <div class="guia-specie-card ${hasPrancha ? 'has-prancha' : ''}">
+          <div class="guia-card-top">
+            ${hasPrancha ? `
+              <div class="guia-card-thumb-box" onclick="app.abrirPrancha(${pranchaNum})" title="Clique para ampliar a Prancha Botânica nº ${pranchaNum}">
+                <img src="${thumbUrl}" alt="${this.escapeHtml(sp.nomeCientifico)}" class="guia-card-thumb" loading="lazy">
+                <span class="guia-prancha-badge">Prancha ${pranchaNum}</span>
+                <span class="guia-zoom-overlay">🔍 Ampliar</span>
+              </div>
+            ` : `
+              <div class="guia-card-thumb-box placeholder">
+                <span class="guia-thumb-tree-icon">${isExotica ? '🌲' : '🌳'}</span>
+              </div>
+            `}
+
+            <div class="guia-card-body">
+              <div class="guia-specie-pop">${this.escapeHtml(nomePrincipal)}</div>
+              ${outrosNomes ? `<div class="guia-specie-syn">• ${this.escapeHtml(outrosNomes)}</div>` : ''}
+              <div class="guia-specie-sci"><em>${this.escapeHtml(sp.nomeCientifico)}</em></div>
+              <div class="guia-specie-meta-pills">
+                <span class="guia-family-pill">${this.escapeHtml(sp.familia || 'Não categorizada')}</span>
+                <span class="species-origin-pill ${badgeOrigemCls}">${badgeOrigemTxt}</span>
+                ${badgeAmeacaHtml}
+              </div>
+
+              ${(traitsHtml || biomasHtml) ? `
+                <div class="guia-traits-row">
+                  ${traitsHtml}
+                  ${biomasHtml}
+                </div>
+              ` : ''}
+            </div>
           </div>
-          <span class="species-origin-pill ${badgeCls}">${badgeTxt}</span>
+
+          <div class="guia-card-actions">
+            ${hasPrancha ? `
+              <button type="button" class="btn-card-action prancha" onclick="app.abrirPrancha(${pranchaNum})">
+                🔍 Ver Prancha Completa
+              </button>
+            ` : ''}
+            <button type="button" class="btn-card-action usar" onclick="app.selecionarEspecieParaCubagem('${this.escapeHtml(nomePrincipal)}', '${this.escapeHtml(sp.nomeCientifico)}', '${sp.origem}')">
+              🪵 Usar na Cubagem
+            </button>
+          </div>
         </div>
       `;
     }).join('');
+  }
+
+  // =========================================================================
+  // LIGHTBOX INTERATIVO COM ZOOM E PAN PARA PRANCHAS BOTÂNICAS
+  // =========================================================================
+  abrirPrancha(pranchaNum) {
+    const num = parseInt(pranchaNum, 10);
+    if (!num) return;
+
+    this.pranchaAtivaNum = num;
+    this.zoomLevel = 1.0;
+    this.panX = 0;
+    this.panY = 0;
+
+    // Buscar espécie nos metadados
+    const sp = window.speciesDatabase ? window.speciesDatabase.getPrancha(num) : null;
+    this.especieAtivaLightbox = sp;
+
+    const lbNum = document.getElementById('lbPranchaNum');
+    const lbSci = document.getElementById('lbSciTitle');
+    const lbPop = document.getElementById('lbPopSub');
+    const lbImg = document.getElementById('lbImagem');
+    const lbDl = document.getElementById('lbBtnDownload');
+    const lbFam = document.getElementById('lbFamTxt');
+    const lbPopTxt = document.getElementById('lbPopTxt');
+    const lbAmeacaTxt = document.getElementById('lbAmeacaTxt');
+    const lbBiomasTxt = document.getElementById('lbBiomasTxt');
+
+    const imgSrc = `img/pranchas/prancha_${num}.jpg`;
+
+    if (lbNum) lbNum.textContent = `Prancha Botânica nº ${num}`;
+    if (lbImg) {
+      lbImg.src = imgSrc;
+      lbImg.alt = sp ? sp.nomeCientifico : `Prancha ${num}`;
+    }
+    if (lbDl) {
+      lbDl.href = imgSrc;
+      lbDl.download = sp ? `Prancha_${num}_${sp.nomeCientifico.replace(/\s+/g, '_')}.jpg` : `Prancha_${num}.jpg`;
+    }
+
+    if (sp) {
+      if (lbSci) lbSci.innerHTML = `<em>${this.escapeHtml(sp.nomeCientifico)}</em>`;
+      if (lbPop) lbPop.textContent = `${(sp.nomesPopulares && sp.nomesPopulares[0]) || ''} • ${sp.familia || ''}`;
+      if (lbFam) lbFam.textContent = sp.familia || '--';
+      if (lbPopTxt) lbPopTxt.textContent = (sp.nomesPopulares && sp.nomesPopulares.join(', ')) || '--';
+      if (lbAmeacaTxt) {
+        const amMap = {
+          'CR': '🚨 Criticamente em Perigo (CR - MMA 148/2022)',
+          'EN': '⚠️ Em Perigo (EN - MMA 148/2022)',
+          'VU': '⚡ Vulnerável (VU - MMA 148/2022)',
+          'IC': '🛡️ Imune de Corte (MG)',
+          'NA': '🌿 Não Ameaçada (Menor Preocupação - LC/NA)'
+        };
+        lbAmeacaTxt.textContent = amMap[sp.ameaca] || sp.ameaca || 'Não Ameaçada';
+      }
+      if (lbBiomasTxt) lbBiomasTxt.textContent = (sp.biomas && sp.biomas.join(', ')) || 'Brasil';
+    } else {
+      if (lbSci) lbSci.textContent = `Prancha Ilustrada nº ${num}`;
+      if (lbPop) lbPop.textContent = 'Guia de Campo no Modo Campeiro';
+      if (lbFam) lbFam.textContent = '--';
+      if (lbPopTxt) lbPopTxt.textContent = '--';
+      if (lbAmeacaTxt) lbAmeacaTxt.textContent = 'Nativa do Brasil';
+      if (lbBiomasTxt) lbBiomasTxt.textContent = 'Brasil';
+    }
+
+    this.atualizarTransformPrancha();
+    this.iniciarArrastoPrancha();
+    this.abrirModal('modalPranchaLightbox');
+  }
+
+  fecharPranchaLightbox() {
+    this.fecharModal('modalPranchaLightbox');
+  }
+
+  ajustarZoomPrancha(delta) {
+    this.zoomLevel = Math.max(0.6, Math.min(4.0, this.zoomLevel + delta));
+    this.atualizarTransformPrancha();
+  }
+
+  resetarZoomPrancha() {
+    this.zoomLevel = 1.0;
+    this.panX = 0;
+    this.panY = 0;
+    this.atualizarTransformPrancha();
+  }
+
+  onWheelZoomPrancha(e) {
+    if (!e) return;
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.2 : -0.2;
+    this.ajustarZoomPrancha(delta);
+  }
+
+  atualizarTransformPrancha() {
+    const img = document.getElementById('lbImagem');
+    if (img) {
+      img.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoomLevel})`;
+    }
+  }
+
+  iniciarArrastoPrancha() {
+    const canvas = document.getElementById('lbCanvas');
+    if (!canvas || canvas._dragIniciado) return;
+    canvas._dragIniciado = true;
+
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    const startPan = (clientX, clientY) => {
+      isDragging = true;
+      startX = clientX - this.panX;
+      startY = clientY - this.panY;
+      canvas.style.cursor = 'grabbing';
+    };
+
+    const movePan = (clientX, clientY) => {
+      if (!isDragging) return;
+      this.panX = clientX - startX;
+      this.panY = clientY - startY;
+      this.atualizarTransformPrancha();
+    };
+
+    const stopPan = () => {
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+    };
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      startPan(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', (e) => movePan(e.clientX, e.clientY));
+    window.addEventListener('mouseup', stopPan);
+
+    // Touch support (Mobile)
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length === 1) {
+        startPan(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      if (isDragging && e.touches && e.touches.length === 1) {
+        movePan(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+    window.addEventListener('touchend', stopPan);
+  }
+
+  usarPranchaAtivaNaCubagem() {
+    if (!this.especieAtivaLightbox) {
+      this.fecharPranchaLightbox();
+      return;
+    }
+    const sp = this.especieAtivaLightbox;
+    const nomePop = (sp.nomesPopulares && sp.nomesPopulares[0]) || sp.nomeCientifico;
+    this.selecionarEspecieParaCubagem(nomePop, sp.nomeCientifico, sp.origem);
+    this.fecharPranchaLightbox();
+  }
+
+  selecionarEspecieParaCubagem(nomePopular, nomeCientifico, origem) {
+    const inpTora = document.getElementById('cubEspecieTora');
+    const valorFormatado = nomeCientifico ? `${nomePopular} (${nomeCientifico})` : nomePopular;
+
+    if (inpTora) {
+      inpTora.value = valorFormatado;
+      inpTora.classList.add('highlight-glow');
+      setTimeout(() => inpTora.classList.remove('highlight-glow'), 1200);
+    }
+
+    if (typeof this.setOrigemMadeira === 'function') {
+      this.setOrigemMadeira(origem || 'Nativa');
+    }
+
+    // Se estiver em outra tela, navegar para 'cubagem' e selecionar sub-aba 'toras'
+    if (this.currentScreen !== 'cubagem') {
+      this.navigate('cubagem');
+    }
+    if (typeof this.setTipoCubagem === 'function') {
+      this.setTipoCubagem('tora');
+    }
+
+    this.fecharModal('modalGuiaEspecies');
+    this.showToast(`✓ Espécie "${nomePopular}" selecionada para a cubagem de toras!`, 'success');
   }
 
   escapeHtml(str) {
