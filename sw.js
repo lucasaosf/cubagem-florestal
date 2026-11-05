@@ -1,7 +1,8 @@
-const CACHE_NAME = 'cubagem-florestal-v2.11.0';
+const CACHE_NAME = 'cubagem-florestal-v2.12.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
+  './privacidade.html',
   './manifest.webmanifest',
   './css/styles.css',
   './firebase-config.js',

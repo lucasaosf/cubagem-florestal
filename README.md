@@ -1,77 +1,50 @@
-# 🌲 Cubagem Florestal — Pesquisa & Soluções Ambientais
+<p align="center">
+  <img src="docs/banner.png" alt="Cubagem Florestal — app de cubagem florestal e dendrometria" width="100%">
+</p>
 
-> Aplicativo de cubagem florestal para cálculo de **Cargas de Caminhões**, **Pilhas de Madeira** e **Toras Roliças Individuais (Smalian)** com exportação Excel (.xlsx) multipasta. Funciona **100% offline** com suporte a **Modo Claro** e **Modo Escuro**.
-> 
-> **Desenvolvido por Lucas Aøsf** (CRBio 127233/01-D).
+# Cubagem Florestal
 
-[![PWA Ready](https://img.shields.io/badge/PWA-100%25%20Offline-13301A?style=flat&logo=pwa)](https://lucasaosf.github.io/cubagem-florestal/)
-[![GitHub Pages](https://img.shields.io/badge/Deploy-GitHub%20Pages-A88552?style=flat&logo=github)](https://lucasaosf.github.io/cubagem-florestal/)
-[![Tema Claro & Escuro](https://img.shields.io/badge/Tema-Claro%20%26%20Escuro-8FA37F?style=flat)](https://lucasaosf.github.io/cubagem-florestal/)
-[![Licença MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-B08854)](./LICENSE)
+App de cubagem florestal e dendrometria para o trabalho de campo — **Pesquisa & Soluções Ambientais**, criado por **Lucas Aøsf**.
 
----
+**[Abrir o app](https://lucasaosf.github.io/cubagem-florestal/)** · [Política de privacidade](https://lucasaosf.github.io/cubagem-florestal/privacidade.html)
 
-## 📱 Acesso Rápido & Instalação no Celular
+## O que o app faz
 
-- **Link do Aplicativo Online:** [https://lucasaosf.github.io/cubagem-florestal/](https://lucasaosf.github.io/cubagem-florestal/)
-- **Repositório GitHub:** [https://github.com/lucasaosf/cubagem-florestal](https://github.com/lucasaosf/cubagem-florestal)
+- **Cargas de caminhões**: medição de ambos os lados (Lado Esquerdo e Lado Direito) com alturas dinâmicas, cálculo de altura média ponderada e volume geométrico.
+- **Pilhas de madeira**: medição prática em face única com número flexível de alturas verticais e cálculo de volume estéreo.
+- **Toras roliças individuais (Fórmula de Smalian)**: cubagem individual de toras com diâmetro das pontas (fina e grossa), comprimento, número de plaqueta e espécie botânica, com somatório automático do volume de toda a pilha.
+- **Catálogo botânico brasileiro**: busca inteligente por nome popular (sem hífens) ou nome científico, cobrindo espécies nativas e exóticas da flora do Brasil (Sistaxon / Sinaflor / Flora do Brasil) e identificação de origem.
+- **Informações da operação simplificadas**: data, hora, local/pátio, km/localização com suporte a caracteres e estacas (ex: `37 + 150 Norte`), coordenadas UTM automáticas via GPS do celular e observações de campo.
+- **Exportação em planilha Excel oficial**: arquivo `.xlsx` multipasta (Resumo, Caminhões, Pilhas de Madeira e Toras Roliças) estilizado na identidade visual verde floresta e ouro, com tipografia Century Gothic e fórmulas matemáticas oficiais.
+- **Modo claro e escuro**, funciona **100% sem internet (Offline-First)** no Android, iPhone e computador.
 
-### 📲 Instalação no Android:
-1. Acesse o link acima no **Google Chrome** do celular.
-2. Toque nos três pontinhos no canto superior direito do navegador.
-3. Selecione **"Instalar aplicativo"** ou **"Adicionar à tela inicial"**.
-4. O ícone oficial será adicionado à sua tela de aplicativos e funcionará **100% sem conexão com a internet** em campo.
+## Telas
 
----
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="icons/capa.jpg" alt="Início e Modalidades"><br><sub>Início e Modalidades</sub></td>
+    <td align="center" width="33%"><img src="icons/capa-clara.jpg" alt="Modo Claro"><br><sub>Modo Claro</sub></td>
+    <td align="center" width="33%"><img src="icons/logo-planilha.png" alt="Planilha Oficial" width="180"><br><sub>Planilha Oficial .xlsx</sub></td>
+  </tr>
+</table>
 
-## 🪵 Modalidades de Cubagem
+## Planilha de cubagem e dendrometria
 
-### 1. 🚚 Cargas de Caminhões
-- **Medição de Ambos os Lados:** Lado Esquerdo (LE) e Lado Direito (LD).
-- **Alturas Dinâmicas:** Adicione (`+ Altura`) ou remova (`-`) alturas conforme a carga exigir (sem limite fixo).
-- **Fórmulas:**
-  $$H_m = \frac{\sum \text{LE} + \sum \text{LD}}{N_{\text{total}}}$$
-  $$\text{Volume Geométrico} = H_m \times \text{Comprimento} \times \text{Largura}$$
+Gera planilhas oficiais com abas separadas para cada modalidade operacional:
+- **Resumo Executivo**: totalizador consolidado com indicadores de volume total (m³), volume médio por carga e contadores de caminhões, pilhas e toras.
+- **Caminhões**: tabela completa com placa, origem da madeira (nativa/exótica), alturas LE e LD, Hm média, dimensões geométricas e volume total.
+- **Pilhas de Madeira**: registro detalhado de cada pilha, alturas medidas na face única, comprimento, profundidade e volume estéreo.
+- **Toras Roliças (Smalian)**: discriminação de cada indivíduo com número da plaqueta, espécie florestal individual, diâmetros das pontas ($d_1$ e $d_2$), diâmetro médio, comprimento, volume Smalian individual e subtotal automático por lote/pilha.
 
-### 2. 🪵 Pilhas de Madeira no Pátio / Campo
-- **Medição em Uma Face:** Não é necessário medir ambos os lados da pilha.
-- **Número Variável de Alturas:** Adicione quantas alturas verticais forem necessárias ao longo do comprimento da pilha.
-- **Fórmulas:**
-  $$H_m = \frac{\sum A_i}{n}$$
-  $$\text{Volume Geométrico (Estéreo)} = H_m \times \text{Comprimento} \times \text{Profundidade / Largura}$$
+## Instalar
 
-### 3. 🌲 Toras Roliças Individuais (Fórmula de Smalian)
-- **Rastreabilidade:** Controle por **Número da Plaqueta** florestal.
-- **Diâmetro das Pontas:** Diâmetro da ponta fina ($d_1$) e da ponta grossa ($d_2$) em centímetros (ou metros).
-- **Comprimento:** Comprimento da tora ($L$) em metros.
-- **Fórmula Oficial de Smalian:**
-  $$g_1 = \frac{\pi \times d_1^2}{4}, \quad g_2 = \frac{\pi \times d_2^2}{4}$$
-  $$\text{Volume Smalian} = \frac{g_1 + g_2}{2} \times L$$
+- **Android:** abra o app no **Chrome** e toque em **Instalar app** (ou ⋮ → *Adicionar à tela inicial*).
+- **iPhone:** abra o app no **Safari** → **Compartilhar** → *Adicionar à Tela de Início*.
+
+As medições ficam salvas no celular (IndexedDB offline) e o app funciona sem internet depois de aberto uma vez.
+
+<sub>Dados mostrados nas imagens são de exemplo.</sub>
 
 ---
 
-## 📊 Planilha Excel (.xlsx) Multipasta
-
-O aplicativo gera relatórios em formato `.xlsx` com abas organizadas:
-1. **Resumo Geral:** Totalizadores consolidados, volume por modalidade e médias gerais com logotipo oficial no cabeçalho.
-2. **Caminhões:** Tabela detalhada de todas as cargas cubadas.
-3. **Pilhas de Madeira:** Tabela com identificação de pilha e medição de face única.
-4. **Toras Roliças:** Tabela com número da plaqueta, diâmetros das pontas, comprimento e volume Smalian.
-
----
-
-## 🎨 Identidade Visual (Pesquisa & Soluções Ambientais)
-
-- Padrão oficial de cores: Verde-Floresta (`#13301A`, `#173A1E`), Creme (`#F3EEE3`, `#FBF8F1`), Sálvia (`#8FA37F`) e Ouro/Bronze (`#B08854`, `#A88552`).
-- **Modo Claro e Modo Escuro** com alternância no cabeçalho (☀️ / 🌙) e persistência no celular.
-- **Logotipos Oficiais:** `logo-creme.png` (modo escuro), `logo-verde.png` (modo claro) e `logo-planilha.png` (Excel).
-
----
-
-## 👤 Desenvolvedor & Contato
-
-- **Desenvolvido por:** Lucas Aøsf
-- **Registro Profissional:** CRBio 127233/01-D
-- **E-mail:** lucasaosf@gmail.com
-- **WhatsApp/Telefone:** (12) 99182-1729
-- **GitHub:** [github.com/lucasaosf/cubagem-florestal](https://github.com/lucasaosf/cubagem-florestal)
+<p align="center"><sub><i>Pesquisa &amp; Soluções Ambientais</i> · ciência aplicada à conservação</sub></p>
