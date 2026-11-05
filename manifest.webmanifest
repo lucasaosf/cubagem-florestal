@@ -1,13 +1,13 @@
 {
   "name": "Cubagem Florestal",
   "short_name": "Cubagem",
-  "description": "Registro, cálculo de volume geométrico e exportação de cubagens de caminhões de madeira.",
+  "description": "App de cubagem florestal de caminhões, pilhas e toras roliças. BIOKURI Pesquisa e Soluções Ambientais.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0F172A",
-  "theme_color": "#1B4D3E",
+  "background_color": "#0E2515",
+  "theme_color": "#0E2515",
   "lang": "pt-BR",
   "categories": ["utilities", "productivity", "business"],
   "icons": [

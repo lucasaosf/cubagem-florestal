@@ -737,19 +737,6 @@ class CubagemApp {
         toras: [...this.torasPilha],
         timestamp: Date.now()
       };
-        identificacao: identPilhaTora,
-        placa: identPilhaTora,
-        plaqueta: plaquetasResumo,
-        observacoes,
-        totalToras: lote.totalToras,
-        diametroMedio_cm: lote.diametroMedio_cm,
-        comprimentoMedio: lote.comprimentoMedio,
-        volumeGeometrico: lote.volumeTotal,
-        tipoVolume: `Pilha de Toras Roliças (${lote.totalToras} toras - Smalian)`,
-        memoriaCalculo: lote.memoriaCalculo,
-        toras: [...this.torasPilha],
-        timestamp: Date.now()
-      };
     }
 
     try {

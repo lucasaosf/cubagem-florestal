@@ -4,7 +4,7 @@
 
 # Cubagem Florestal
 
-App de cubagem florestal e dendrometria para o trabalho de campo — **Pesquisa & Soluções Ambientais**, criado por **Lucas Aøsf**.
+App de cubagem florestal e dendrometria para o trabalho de campo — **BIOKURI · Pesquisa e Soluções Ambientais**, criado por **Lucas Aøsf**.
 
 **[Abrir o app](https://lucasaosf.github.io/cubagem-florestal/)** · [Política de privacidade](https://lucasaosf.github.io/cubagem-florestal/privacidade.html)
 
@@ -47,4 +47,4 @@ As medições ficam salvas no celular (IndexedDB offline) e o app funciona sem i
 
 ---
 
-<p align="center"><sub><i>Pesquisa &amp; Soluções Ambientais</i> · ciência aplicada à conservação</sub></p>
+<p align="center"><sub><i>BIOKURI · Pesquisa e Soluções Ambientais</i> · ciência aplicada à conservação</sub></p>

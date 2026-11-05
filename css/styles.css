@@ -1,36 +1,36 @@
 /* ==========================================================================
-   Cubagem Florestal - Identidade Visual Oficial: Pesquisa & Soluções Ambientais
-   Cores e Padrão: Lucas Aøsf (Cormorant Garamond + Jost, Verde-Floresta, Creme, Sálvia e Bronze)
+   Cubagem Florestal - Identidade Visual Oficial: BIOKURI — Pesquisa e Soluções Ambientais
+   Cores e Padrão: Lucas Aøsf (Cormorant Garamond + Jost, Verde-Floresta #0E2515, Creme #F2EBDD, Ouro/Bronze #96784A)
    Suporte a Modo Claro e Modo Escuro
    Suporte a Caminhões, Pilhas de Madeira e Toras Roliças
    ========================================================================== */
 
 /* Tema Claro (Padrão) */
 :root {
-  --bg: #F3EEE3;
-  --surface: #FBF8F1;
-  --surface-2: #EEE8DA;
-  --ink: #1D2A1F;
+  --bg: #F2EBDD;
+  --surface: #FAF6ED;
+  --surface-2: #EAE2D2;
+  --ink: #0E2515;
   --muted: #5B675A;
   --line: #DDD5C3;
 
-  --accent: #173A1E;
+  --accent: #163E1C;
   --accent-strong: #0E2515;
-  --on-accent: #F3EEE3;
+  --on-accent: #F2EBDD;
   --accent-soft: #E2E5D5;
 
-  --tally: #D4B277;
-  --on-tally: #1D2A1F;
+  --tally: #96784A;
+  --on-tally: #0E2515;
   --rec: #A8402E;
-  --warn: #86602E;
+  --warn: #96784A;
   --warn-soft: #F1E5CD;
 
-  --bronze: #86602E;
-  --gold: #B08854;
+  --bronze: #856A3E;
+  --gold: #96784A;
   --sage: #B2C2A5;
   --forest: #0E2515;
 
-  --shadow: 0 1px 2px rgba(29, 42, 31, 0.06), 0 6px 20px rgba(29, 42, 31, 0.08);
+  --shadow: 0 1px 2px rgba(14, 37, 21, 0.06), 0 6px 20px rgba(14, 37, 21, 0.08);
 
   --display: "Cormorant Garamond", "Cormorant", Garamond, Georgia, serif;
   --body: "Jost", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -53,18 +53,18 @@
     --line: #24502F;
 
     --accent: #B2C2A5;
-    --accent-strong: #CDD8C1;
+    --accent-strong: #F2EBDD;
     --on-accent: #0E2515;
     --accent-soft: #1E472A;
 
-    --tally: #D4B277;
+    --tally: #B28F59;
     --on-tally: #0E2515;
     --rec: #E07A62;
-    --warn: #D4B277;
+    --warn: #B28F59;
     --warn-soft: #2B2A18;
 
-    --bronze: #D4B277;
-    --gold: #B08854;
+    --bronze: #96784A;
+    --gold: #B28F59;
 
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
     color-scheme: dark;
@@ -81,18 +81,18 @@
   --line: #24502F;
 
   --accent: #B2C2A5;
-  --accent-strong: #CDD8C1;
+  --accent-strong: #F2EBDD;
   --on-accent: #0E2515;
   --accent-soft: #1E472A;
 
-  --tally: #D4B277;
+  --tally: #B28F59;
   --on-tally: #0E2515;
   --rec: #E07A62;
-  --warn: #D4B277;
+  --warn: #B28F59;
   --warn-soft: #2B2A18;
 
-  --bronze: #D4B277;
-  --gold: #B08854;
+  --bronze: #96784A;
+  --gold: #B28F59;
 
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
@@ -100,30 +100,30 @@
 
 /* Modo Claro Forçado */
 :root[data-theme="light"] {
-  --bg: #F3EEE3;
-  --surface: #FBF8F1;
-  --surface-2: #EEE8DA;
-  --ink: #1D2A1F;
+  --bg: #F2EBDD;
+  --surface: #FAF6ED;
+  --surface-2: #EAE2D2;
+  --ink: #0E2515;
   --muted: #5B675A;
   --line: #DDD5C3;
 
-  --accent: #173A1E;
+  --accent: #163E1C;
   --accent-strong: #0E2515;
-  --on-accent: #F3EEE3;
+  --on-accent: #F2EBDD;
   --accent-soft: #E2E5D5;
 
-  --tally: #D4B277;
-  --on-tally: #1D2A1F;
+  --tally: #96784A;
+  --on-tally: #0E2515;
   --rec: #A8402E;
-  --warn: #86602E;
+  --warn: #96784A;
   --warn-soft: #F1E5CD;
 
-  --bronze: #86602E;
-  --gold: #B08854;
+  --bronze: #856A3E;
+  --gold: #96784A;
   --sage: #B2C2A5;
   --forest: #0E2515;
 
-  --shadow: 0 1px 2px rgba(29, 42, 31, 0.06), 0 6px 20px rgba(29, 42, 31, 0.08);
+  --shadow: 0 1px 2px rgba(14, 37, 21, 0.06), 0 6px 20px rgba(14, 37, 21, 0.08);
   color-scheme: light;
 }
 
