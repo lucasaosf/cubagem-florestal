@@ -193,63 +193,40 @@
                 <input type="date" id="cubData" class="form-control" required>
               </div>
               <div class="form-group">
-                <label class="form-label" for="cubHorario">Horário <span class="required">*</span></label>
+                <label class="form-label" for="cubHorario">Hora <span class="required">*</span></label>
                 <input type="time" id="cubHorario" class="form-control" required>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="cubRodovia" id="lblRodovia">Rodovia / Local <span class="required">*</span></label>
-                <input type="text" id="cubRodovia" class="form-control" placeholder="Ex: BR-116 ou Pátio 02" required>
+                <label class="form-label" for="cubRodovia" id="lblRodovia">Local / Pátio <span class="required">*</span></label>
+                <input type="text" id="cubRodovia" class="form-control" placeholder="Ex: BR 153 ou Pátio 02" required>
               </div>
               <div class="form-group" id="grpKm">
                 <label class="form-label" for="cubKm">Km / Localização</label>
-                <input type="text" id="cubKm" class="form-control" placeholder="Ex: 37 + 150 ou Talhão 3">
+                <input type="text" id="cubKm" class="form-control" placeholder="Ex: 37 + 150 Norte">
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
+                <label class="form-label" for="cubUtm">Coordenada UTM</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="cubUtm" class="form-control" placeholder="Ex: 22K 483210 E 7421350 N">
+                  <button type="button" class="btn btn-secondary" id="btnCapturarGps" style="white-space: nowrap; padding: 0 12px; font-size: 0.82rem;" onclick="app.capturarGpsUtm()" title="Capturar GPS do celular">
+                    📍 GPS
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
                 <label class="form-label" for="cubResponsavel">Responsável <span class="required">*</span></label>
                 <input type="text" id="cubResponsavel" class="form-control" placeholder="Nome do profissional" required>
-              </div>
-              
-              <!-- Campo Placa (Para Caminhões) -->
-              <div class="form-group" id="grpPlaca">
-                <label class="form-label" for="cubPlaca">Placa do Caminhão <span class="helper">(Opcional)</span></label>
-                <input type="text" id="cubPlaca" class="form-control" placeholder="ABC-1234" style="text-transform: uppercase;">
-              </div>
-
-              <!-- Campo Identificação da Pilha (Para Pilhas) -->
-              <div class="form-group" id="grpIdentPilha" style="display: none;">
-                <label class="form-label" for="cubIdentPilha">Identificação da Pilha <span class="required">*</span></label>
-                <input type="text" id="cubIdentPilha" class="form-control" placeholder="Ex: Pilha 01, Lote A">
-              </div>
-
-              <!-- Campo Identificação Individual / Plaqueta (Para Toras) -->
-              <div class="form-group" id="grpIdentPilhaTora" style="display: none;">
-                <label class="form-label" for="cubIdentPilhaTora">Identificação individual <span class="required">*</span></label>
-                <input type="text" id="cubIdentPilhaTora" class="form-control" placeholder="Nº da plaqueta grampeada por tora (Ex: 0124)" oninput="if(document.getElementById('cubPlaqueta') && !document.getElementById('cubPlaqueta').value) document.getElementById('cubPlaqueta').value = this.value">
-                <span class="helper">Número da plaqueta grampeado por tora</span>
-              </div>
-            </div>
-
-            <!-- Campo Origem da Madeira (Para Caminhão e Pilha de Madeira) -->
-            <div class="form-group" id="grpOrigemMadeira">
-              <label class="form-label">Origem da Madeira <span class="required">*</span></label>
-              <div class="toggle-pills-row">
-                <button type="button" class="btn-toggle-pill active" id="btnOrigemNativa" onclick="app.setOrigemMadeira('Nativa')">
-                  🌿 Nativa
-                </button>
-                <button type="button" class="btn-toggle-pill" id="btnOrigemExotica" onclick="app.setOrigemMadeira('Exótica')">
-                  🌲 Exótica
-                </button>
               </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" for="cubObservacoes">Observações de Campo <span class="helper">(Opcional)</span></label>
+              <label class="form-label" for="cubObservacoes">Observação <span class="helper">(Opcional)</span></label>
               <textarea id="cubObservacoes" class="form-control" placeholder="Condições da carga, lote, notas adicionais..."></textarea>
             </div>
           </div>
@@ -258,7 +235,26 @@
           <!-- 2A. MEDIÇÕES PARA CAMINHÃO (LE + LD DINÂMICOS)          -->
           <!-- ======================================================== -->
           <div id="sectionCaminhao" class="card">
-            <h3 class="card-title">2. Alturas da Carga (m)</h3>
+            <h3 class="card-title">2. Medição da Carga do Caminhão</h3>
+
+            <div class="form-row" style="margin-bottom: 14px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="cubPlaca">Placa do Caminhão <span class="helper">(Opcional)</span></label>
+                <input type="text" id="cubPlaca" class="form-control" placeholder="ABC-1234" style="text-transform: uppercase;">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Origem da Madeira <span class="required">*</span></label>
+                <div class="toggle-pills-row">
+                  <button type="button" class="btn-toggle-pill active" id="btnOrigemNativaCam" onclick="app.setOrigemMadeira('Nativa')">
+                    🌿 Nativa
+                  </button>
+                  <button type="button" class="btn-toggle-pill" id="btnOrigemExoticaCam" onclick="app.setOrigemMadeira('Exótica')">
+                    🌲 Exótica
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <p class="section-desc" style="margin-bottom: 12px;">Adicione ou remova medições conforme a variação de alturas da carga.</p>
 
             <div class="measure-box-container">
@@ -303,7 +299,26 @@
           <!-- 2B. MEDIÇÕES PARA PILHA DE MADEIRA (1 FACE DINÂMICA)     -->
           <!-- ======================================================== -->
           <div id="sectionPilha" class="card" style="display: none;">
-            <h3 class="card-title">2. Alturas da Pilha (m) — Medição em 1 Face</h3>
+            <h3 class="card-title">2. Medição da Pilha de Madeira (1 Face)</h3>
+
+            <div class="form-row" style="margin-bottom: 14px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="cubIdentPilha">Identificação da Pilha <span class="required">*</span></label>
+                <input type="text" id="cubIdentPilha" class="form-control" placeholder="Ex: Pilha 01, Lote A">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Origem da Madeira <span class="required">*</span></label>
+                <div class="toggle-pills-row">
+                  <button type="button" class="btn-toggle-pill active" id="btnOrigemNativaPil" onclick="app.setOrigemMadeira('Nativa')">
+                    🌿 Nativa
+                  </button>
+                  <button type="button" class="btn-toggle-pill" id="btnOrigemExoticaPil" onclick="app.setOrigemMadeira('Exótica')">
+                    🌲 Exótica
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <p class="section-desc" style="margin-bottom: 12px;">Meça as alturas verticais ao longo da face da pilha de madeira.</p>
 
             <div class="measure-box-container">

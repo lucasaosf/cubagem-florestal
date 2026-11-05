@@ -197,10 +197,140 @@ class CubagemApp {
   // =========================================================================
   setOrigemMadeira(origem) {
     this.origemMadeira = origem || 'Nativa';
-    const btnNat = document.getElementById('btnOrigemNativa');
-    const btnExo = document.getElementById('btnOrigemExotica');
-    if (btnNat) btnNat.classList.toggle('active', this.origemMadeira === 'Nativa');
-    if (btnExo) btnExo.classList.toggle('active', this.origemMadeira === 'Exótica');
+    ['btnOrigemNativa', 'btnOrigemNativaCam', 'btnOrigemNativaPil'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active', this.origemMadeira === 'Nativa');
+    });
+    ['btnOrigemExotica', 'btnOrigemExoticaCam', 'btnOrigemExoticaPil'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active', this.origemMadeira === 'Exótica');
+    });
+  }
+
+  // =========================================================================
+  // GEOLOCALIZAÇÃO E COORDENADAS UTM (WGS84 / SIRGAS2000)
+  // =========================================================================
+  latLonToUtm(lat, lon) {
+    if (lat === null || lon === null || isNaN(lat) || isNaN(lon)) return null;
+
+    const a = 6378137.0; // Raio equatorial (WGS84)
+    const f = 1.0 / 298.257223563;
+    const b = a * (1.0 - f);
+    const e2 = (a * a - b * b) / (a * a);
+    const ep2 = (a * a - b * b) / (b * b);
+    const k0 = 0.9996;
+
+    const zone = Math.floor((lon + 180.0) / 6.0) + 1;
+    const lon0 = (zone - 1) * 6 - 180 + 3;
+    const lon0Rad = (lon0 * Math.PI) / 180.0;
+
+    const latRad = (lat * Math.PI) / 180.0;
+    const lonRad = (lon * Math.PI) / 180.0;
+
+    const N = a / Math.sqrt(1.0 - e2 * Math.sin(latRad) * Math.sin(latRad));
+    const T = Math.tan(latRad) * Math.tan(latRad);
+    const C = ep2 * Math.cos(latRad) * Math.cos(latRad);
+    const A = Math.cos(latRad) * (lonRad - lon0Rad);
+
+    const e4 = e2 * e2;
+    const e6 = e4 * e2;
+
+    const M = a * (
+      (1.0 - e2 / 4.0 - 3.0 * e4 / 64.0 - 5.0 * e6 / 256.0) * latRad -
+      (3.0 * e2 / 8.0 + 3.0 * e4 / 32.0 + 45.0 * e6 / 1024.0) * Math.sin(2.0 * latRad) +
+      (15.0 * e4 / 256.0 + 45.0 * e6 / 1024.0) * Math.sin(4.0 * latRad) -
+      (35.0 * e6 / 3072.0) * Math.sin(6.0 * latRad)
+    );
+
+    const A2 = A * A;
+    const A3 = A2 * A;
+    const A4 = A2 * A2;
+    const A5 = A4 * A;
+    const A6 = A3 * A3;
+
+    const x = k0 * N * (
+      A +
+      (1.0 - T + C) * A3 / 6.0 +
+      (5.0 - 18.0 * T + T * T + 72.0 * C - 58.0 * ep2) * A5 / 120.0
+    ) + 500000.0;
+
+    let y = k0 * (
+      M +
+      N * Math.tan(latRad) * (
+        A2 / 2.0 +
+        (5.0 - T + 9.0 * C + 4.0 * C * C) * A4 / 24.0 +
+        (61.0 - 58.0 * T + T * T + 600.0 * C - 330.0 * ep2) * A6 / 720.0
+      )
+    );
+
+    if (lat < 0) {
+      y += 10000000.0; // False Northing hemisfério sul
+    }
+
+    const letters = 'CDEFGHJKLMNPQRSTUVWX';
+    let bandIdx = Math.floor((lat + 80.0) / 8.0);
+    if (bandIdx < 0) bandIdx = 0;
+    if (bandIdx >= letters.length) bandIdx = letters.length - 1;
+    const bandLetter = letters.charAt(bandIdx);
+
+    const easting = Math.round(x);
+    const northing = Math.round(y);
+
+    return {
+      zone,
+      band: bandLetter,
+      easting,
+      northing,
+      formatted: `${zone}${bandLetter} ${easting} E ${northing} N`
+    };
+  }
+
+  capturarGpsUtm() {
+    const btn = document.getElementById('btnCapturarGps');
+    const inpUtm = document.getElementById('cubUtm');
+    if (!navigator.geolocation) {
+      this.showToast('Geolocalização não é suportada por este dispositivo.', 'warning');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Localizando...';
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const utm = this.latLonToUtm(lat, lon);
+        if (utm && inpUtm) {
+          inpUtm.value = utm.formatted;
+          const acc = Math.round(pos.coords.accuracy);
+          this.showToast(`Coordenada UTM capturada (±${acc}m): ${utm.formatted}`, 'success');
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '📍 GPS';
+        }
+      },
+      (err) => {
+        console.warn('Erro ao obter GPS:', err);
+        let msg = 'Não foi possível capturar o GPS.';
+        if (err.code === 1) msg = 'Permissão de localização não concedida.';
+        else if (err.code === 2) msg = 'Sinal de GPS indisponível.';
+        else if (err.code === 3) msg = 'Tempo limite de busca do GPS esgotado.';
+        this.showToast(`${msg} Você pode digitar a coordenada UTM manualmente.`, 'warning');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '📍 GPS';
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000
+      }
+    );
   }
 
   setTipoCubagem(tipo) {
@@ -214,42 +344,25 @@ class CubagemApp {
     const secCam = document.getElementById('sectionCaminhao');
     const secPil = document.getElementById('sectionPilha');
     const secTor = document.getElementById('sectionTora');
-
-    const grpPlaca = document.getElementById('grpPlaca');
-    const grpIdentPilha = document.getElementById('grpIdentPilha');
-    const grpIdentPilhaTora = document.getElementById('grpIdentPilhaTora');
     const lblRodovia = document.getElementById('lblRodovia');
-    const grpOrigemMadeira = document.getElementById('grpOrigemMadeira');
 
     if (tipo === 'caminhao') {
       secCam.style.display = 'block';
       secPil.style.display = 'none';
       secTor.style.display = 'none';
-      if (grpPlaca) grpPlaca.style.display = 'block';
-      if (grpIdentPilha) grpIdentPilha.style.display = 'none';
-      if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
-      if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'block';
-      lblRodovia.innerHTML = 'Rodovia / BR <span class="required">*</span>';
+      if (lblRodovia) lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Carga de Caminhão';
     } else if (tipo === 'pilha') {
       secCam.style.display = 'none';
       secPil.style.display = 'block';
       secTor.style.display = 'none';
-      if (grpPlaca) grpPlaca.style.display = 'none';
-      if (grpIdentPilha) grpIdentPilha.style.display = 'block';
-      if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
-      if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'block';
-      lblRodovia.innerHTML = 'Local / Pátio / Rodovia <span class="required">*</span>';
+      if (lblRodovia) lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Madeira';
     } else if (tipo === 'tora') {
       secCam.style.display = 'none';
       secPil.style.display = 'none';
       secTor.style.display = 'block';
-      if (grpPlaca) grpPlaca.style.display = 'none';
-      if (grpIdentPilha) grpIdentPilha.style.display = 'none';
-      if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'block';
-      if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'none';
-      lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
+      if (lblRodovia) lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Toras Roliças (Smalian)';
       this.renderizarListaTorasPilha();
     }
@@ -465,12 +578,13 @@ class CubagemApp {
     const data = document.getElementById('cubData').value;
     const horario = document.getElementById('cubHorario').value;
     const rodovia = document.getElementById('cubRodovia').value.trim();
-    const km = document.getElementById('cubKm').value.trim();
+    const km = (document.getElementById('cubKm')?.value.trim()) || '';
+    const utm = (document.getElementById('cubUtm')?.value.trim()) || '';
     const responsavel = document.getElementById('cubResponsavel').value.trim();
     const observacoes = document.getElementById('cubObservacoes').value.trim();
 
     if (!data || !horario || !rodovia || !responsavel) {
-      this.showToast('Preencha os campos operacionais obrigatórios (Data, Horário, Local e Responsável).', 'warning');
+      this.showToast('Preencha os campos operacionais obrigatórios (Data, Hora, Local e Responsável).', 'warning');
       return;
     }
 
@@ -498,7 +612,7 @@ class CubagemApp {
         tipo: 'caminhao',
         origemMadeira: this.origemMadeira || 'Nativa',
         especie: '',
-        data, horario, rodovia, km, responsavel,
+        data, horario, rodovia, km, utm, responsavel,
         placa: placa || 'NÃO INFORMADA',
         observacoes,
         alturasLE: calc.alturasLE,
@@ -539,7 +653,7 @@ class CubagemApp {
         tipo: 'pilha',
         origemMadeira: this.origemMadeira || 'Nativa',
         especie: '',
-        data, horario, rodovia, km, responsavel,
+        data, horario, rodovia, km, utm, responsavel,
         identificacao: identPilha,
         placa: identPilha,
         observacoes,
@@ -609,7 +723,20 @@ class CubagemApp {
         id: window.cubagemDB.generateId('PILHA-TORA'),
         tipo: 'tora',
         especie: especieFinal,
-        data, horario, rodovia, km, responsavel,
+        data, horario, rodovia, km, utm, responsavel,
+        identificacao: identPilhaTora,
+        placa: identPilhaTora,
+        plaqueta: plaquetasResumo,
+        observacoes,
+        totalToras: lote.totalToras,
+        diametroMedio_cm: lote.diametroMedio_cm,
+        comprimentoMedio: lote.comprimentoMedio,
+        volumeGeometrico: lote.volumeTotal,
+        tipoVolume: `Pilha de Toras Roliças (${lote.totalToras} toras - Smalian)`,
+        memoriaCalculo: lote.memoriaCalculo,
+        toras: [...this.torasPilha],
+        timestamp: Date.now()
+      };
         identificacao: identPilhaTora,
         placa: identPilhaTora,
         plaqueta: plaquetasResumo,
@@ -834,7 +961,8 @@ class CubagemApp {
           <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
           <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
           ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
-          <strong>Local:</strong> ${item.rodovia} ${item.km ? 'km ' + item.km : ''}<br>
+          <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
+          ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}
         </div>
@@ -858,7 +986,8 @@ class CubagemApp {
           <strong>Identificação:</strong> ${item.identificacao || item.placa || 'Pilha'}<br>
           <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
           ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
-          <strong>Local:</strong> ${item.rodovia} ${item.km ? 'km ' + item.km : ''}<br>
+          <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
+          ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}
         </div>
@@ -879,9 +1008,10 @@ class CubagemApp {
       detalheHtml = `
         <div style="margin-bottom: 12px;">
           <strong>Identificação Individual:</strong> ${item.identificacao || item.plaqueta || item.id}<br>
-          <strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie || 'Não informada'}</span><br>
+          ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
           <strong>Nº da Plaqueta:</strong> ${item.plaqueta || 'S/P'}<br>
           <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
+          ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}
         </div>
