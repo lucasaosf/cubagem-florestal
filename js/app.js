@@ -15,6 +15,9 @@ class CubagemApp {
     // Modalidade ativa: 'caminhao' | 'pilha' | 'tora'
     this.tipoCubagem = 'caminhao';
 
+    // Origem da madeira: 'Nativa' | 'Exótica'
+    this.origemMadeira = 'Nativa';
+
     // Listas dinâmicas de alturas
     this.alturasLE = ['', '', ''];
     this.alturasLD = ['', '', ''];
@@ -190,8 +193,16 @@ class CubagemApp {
   }
 
   // =========================================================================
-  // GESTÃO DE MODALIDADES (CAMINHÃO / PILHA / TORA)
+  // GESTÃO DE MODALIDADES (CAMINHÃO / PILHA / TORA) E ORIGEM DA MADEIRA
   // =========================================================================
+  setOrigemMadeira(origem) {
+    this.origemMadeira = origem || 'Nativa';
+    const btnNat = document.getElementById('btnOrigemNativa');
+    const btnExo = document.getElementById('btnOrigemExotica');
+    if (btnNat) btnNat.classList.toggle('active', this.origemMadeira === 'Nativa');
+    if (btnExo) btnExo.classList.toggle('active', this.origemMadeira === 'Exótica');
+  }
+
   setTipoCubagem(tipo) {
     this.tipoCubagem = tipo;
 
@@ -208,6 +219,8 @@ class CubagemApp {
     const grpIdentPilha = document.getElementById('grpIdentPilha');
     const grpIdentPilhaTora = document.getElementById('grpIdentPilhaTora');
     const lblRodovia = document.getElementById('lblRodovia');
+    const grpOrigemMadeira = document.getElementById('grpOrigemMadeira');
+    const grpEspecieGeral = document.getElementById('grpEspecieGeral');
 
     if (tipo === 'caminhao') {
       secCam.style.display = 'block';
@@ -216,6 +229,8 @@ class CubagemApp {
       if (grpPlaca) grpPlaca.style.display = 'block';
       if (grpIdentPilha) grpIdentPilha.style.display = 'none';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
+      if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'block';
+      if (grpEspecieGeral) grpEspecieGeral.style.display = 'none';
       lblRodovia.innerHTML = 'Rodovia / BR <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Carga de Caminhão';
     } else if (tipo === 'pilha') {
@@ -225,6 +240,8 @@ class CubagemApp {
       if (grpPlaca) grpPlaca.style.display = 'none';
       if (grpIdentPilha) grpIdentPilha.style.display = 'block';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'none';
+      if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'block';
+      if (grpEspecieGeral) grpEspecieGeral.style.display = 'none';
       lblRodovia.innerHTML = 'Local / Pátio / Rodovia <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Madeira';
     } else if (tipo === 'tora') {
@@ -234,6 +251,8 @@ class CubagemApp {
       if (grpPlaca) grpPlaca.style.display = 'none';
       if (grpIdentPilha) grpIdentPilha.style.display = 'none';
       if (grpIdentPilhaTora) grpIdentPilhaTora.style.display = 'block';
+      if (grpOrigemMadeira) grpOrigemMadeira.style.display = 'none';
+      if (grpEspecieGeral) grpEspecieGeral.style.display = 'block';
       lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
       document.getElementById('liveTypeBadge').textContent = 'Pilha de Toras Roliças (Smalian)';
       this.renderizarListaTorasPilha();
@@ -481,6 +500,7 @@ class CubagemApp {
       record = {
         id: window.cubagemDB.generateId('CAM'),
         tipo: 'caminhao',
+        origemMadeira: this.origemMadeira || 'Nativa',
         data, horario, rodovia, km, responsavel,
         placa: placa || 'NÃO INFORMADA',
         observacoes,
@@ -520,6 +540,7 @@ class CubagemApp {
       record = {
         id: window.cubagemDB.generateId('PILHA'),
         tipo: 'pilha',
+        origemMadeira: this.origemMadeira || 'Nativa',
         data, horario, rodovia, km, responsavel,
         identificacao: identPilha,
         placa: identPilha,
@@ -541,6 +562,9 @@ class CubagemApp {
       const d2 = document.getElementById('cubDiametroPonta2').value;
       const comp = document.getElementById('cubComprimentoTora').value;
       const plaqueta = document.getElementById('cubPlaqueta').value.trim();
+      const espToraInp = document.getElementById('cubEspecieTora');
+      const espGeralInp = document.getElementById('cubEspecieGeral');
+      const espAuto = (espToraInp && espToraInp.value.trim()) || (espGeralInp && espGeralInp.value.trim()) || '';
 
       if (d1 && d2 && comp && plaqueta) {
         const calcAuto = window.CubagemCalculator.calculateTora({
@@ -556,6 +580,7 @@ class CubagemApp {
           this.torasPilha.push({
             numero: this.torasPilha.length + 1,
             plaqueta: calcAuto.plaqueta,
+            especie: espAuto,
             diametroPonta1_cm: calcAuto.diametroPonta1_cm,
             diametroPonta2_cm: calcAuto.diametroPonta2_cm,
             diametroPonta1_m: calcAuto.diametroPonta1_m,
@@ -581,6 +606,7 @@ class CubagemApp {
       const lote = window.CubagemCalculator.calculateLoteToras(this.torasPilha);
       const identInput = document.getElementById('cubIdentPilhaTora');
       const identPilhaTora = (identInput ? identInput.value.trim() : '') || `Pilha de Toras (${lote.totalToras} toras)`;
+      const especieFinal = (espGeralInp && espGeralInp.value.trim()) || (this.torasPilha.find(t => t.especie)?.especie) || '';
 
       const plaquetasList = this.torasPilha.map(t => t.plaqueta).filter(Boolean);
       const plaquetasResumo = plaquetasList.length > 0
@@ -590,6 +616,7 @@ class CubagemApp {
       record = {
         id: window.cubagemDB.generateId('PILHA-TORA'),
         tipo: 'tora',
+        especie: especieFinal,
         data, horario, rodovia, km, responsavel,
         identificacao: identPilhaTora,
         placa: identPilhaTora,
@@ -629,6 +656,7 @@ class CubagemApp {
   }
 
   limparApenasMedidas() {
+    this.setOrigemMadeira('Nativa');
     if (this.tipoCubagem === 'caminhao') {
       this.alturasLE = ['', '', ''];
       this.alturasLD = ['', '', ''];
@@ -647,6 +675,10 @@ class CubagemApp {
       document.getElementById('cubDiametroPonta2').value = '';
       document.getElementById('cubComprimentoTora').value = '';
       document.getElementById('cubPlaqueta').value = '';
+      const espTora = document.getElementById('cubEspecieTora');
+      if (espTora) espTora.value = '';
+      const espGeral = document.getElementById('cubEspecieGeral');
+      if (espGeral) espGeral.value = '';
       const identTora = document.getElementById('cubIdentPilhaTora');
       if (identTora) identTora.value = '';
       this.torasPilha = [];
@@ -659,6 +691,11 @@ class CubagemApp {
 
   limparFormularioNova() {
     document.getElementById('formNovaCubagem').reset();
+    this.setOrigemMadeira('Nativa');
+    const espTora = document.getElementById('cubEspecieTora');
+    if (espTora) espTora.value = '';
+    const espGeral = document.getElementById('cubEspecieGeral');
+    if (espGeral) espGeral.value = '';
     this.alturasLE = ['', '', ''];
     this.alturasLD = ['', '', ''];
     this.alturasPilha = ['', '', '', ''];
@@ -751,15 +788,20 @@ class CubagemApp {
     let tituloItem = item.placa || 'SEM PLACA';
     let subItem = `${item.rodovia} ${item.km ? '• km ' + item.km : ''}`;
 
-    if (tipo === 'pilha') {
-      tagTipo = '🪵 Pilha';
+    if (tipo === 'caminhao') {
+      const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
+      tagTipo = `🚚 Caminhão${origStr}`;
+    } else if (tipo === 'pilha') {
+      const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
+      tagTipo = `🪵 Pilha${origStr}`;
       tituloItem = item.identificacao || item.placa || 'Pilha Sem Identificação';
       const nAlt = Array.isArray(item.alturas) ? item.alturas.length : (item.totalAlturas || '-');
       subItem = `${item.rodovia} • ${nAlt} alturas`;
     } else if (tipo === 'tora') {
       tagTipo = item.foto ? '🌲 Tora • 📷 Foto' : '🌲 Tora (Smalian)';
       tituloItem = `Plaqueta: ${item.plaqueta || 'S/P'}`;
-      subItem = `D: ${item.diametroMedio_cm ? Number(item.diametroMedio_cm).toFixed(1) + ' cm' : '-'} • L: ${item.comprimento || '-'} m`;
+      const espStr = item.especie ? ` • ${item.especie}` : '';
+      subItem = `D: ${item.diametroMedio_cm ? Number(item.diametroMedio_cm).toFixed(1) + ' cm' : '-'} • L: ${item.comprimento || '-'} m${espStr}`;
     }
 
     return `
@@ -806,6 +848,7 @@ class CubagemApp {
       detalheHtml = `
         <div style="margin-bottom: 12px;">
           <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
+          <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
           <strong>Local:</strong> ${item.rodovia} ${item.km ? 'km ' + item.km : ''}<br>
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}
@@ -828,6 +871,7 @@ class CubagemApp {
       detalheHtml = `
         <div style="margin-bottom: 12px;">
           <strong>Identificação:</strong> ${item.identificacao || item.placa || 'Pilha'}<br>
+          <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
           <strong>Local:</strong> ${item.rodovia} ${item.km ? 'km ' + item.km : ''}<br>
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
           <strong>Responsável:</strong> ${item.responsavel}
@@ -849,6 +893,7 @@ class CubagemApp {
       detalheHtml = `
         <div style="margin-bottom: 12px;">
           <strong>Pilha / Lote:</strong> ${item.identificacao || item.placa || item.id}<br>
+          <strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie || 'Não informada'}</span><br>
           <strong>Plaquetas:</strong> ${item.plaqueta || 'S/P'}<br>
           <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
           <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
@@ -879,6 +924,7 @@ class CubagemApp {
                   <tr style="background: var(--surface-2); border-bottom: 1px solid var(--line); text-align: left;">
                     <th style="padding: 6px 8px;">#</th>
                     <th style="padding: 6px 8px;">Plaqueta</th>
+                    <th style="padding: 6px 8px;">Espécie</th>
                     <th style="padding: 6px 8px;">D1 × D2 (cm)</th>
                     <th style="padding: 6px 8px;">Comp.</th>
                     <th style="padding: 6px 8px; text-align: right;">Vol (m³)</th>
@@ -890,6 +936,7 @@ class CubagemApp {
                     <tr style="border-bottom: 1px solid var(--line);">
                       <td style="padding: 6px 8px; font-weight: 700;">#${t.numero}</td>
                       <td style="padding: 6px 8px; font-weight: 700; color: var(--ink);">${t.plaqueta}</td>
+                      <td style="padding: 6px 8px; font-style: italic; color: var(--gold);">${t.especie || item.especie || '-'}</td>
                       <td style="padding: 6px 8px;">${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)}</td>
                       <td style="padding: 6px 8px;">${fNum(t.comprimento, 2)} m</td>
                       <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: var(--gold);">${fNum(t.volumeGeometrico, 3)}</td>
@@ -1187,9 +1234,14 @@ class CubagemApp {
       ? `Plaqueta_${calc.plaqueta}_${dataCub}.jpg`
       : null;
 
+    const espToraInput = document.getElementById('cubEspecieTora');
+    const espGeralInput = document.getElementById('cubEspecieGeral');
+    const especie = (espToraInput && espToraInput.value.trim()) || (espGeralInput && espGeralInput.value.trim()) || '';
+
     const toraItem = {
       numero: this.torasPilha.length + 1,
       plaqueta: calc.plaqueta,
+      especie: especie,
       diametroPonta1_cm: calc.diametroPonta1_cm,
       diametroPonta2_cm: calc.diametroPonta2_cm,
       diametroPonta1_m: calc.diametroPonta1_m,
@@ -1278,7 +1330,7 @@ class CubagemApp {
           ${t.foto ? `<img src="${t.foto}" style="width: 38px; height: 28px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); cursor: pointer;" onclick="app.visualizarFotoToraAmpliada('${t.foto}', 'Plaqueta #${t.plaqueta}', '${t.fotoLegenda || ''}')" title="Ver foto">` : ''}
           <div style="min-width: 0; flex: 1;">
             <div style="font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              Plaqueta: ${t.plaqueta}
+              Plaqueta: ${t.plaqueta} ${t.especie ? `<span style="font-weight: 400; font-style: italic; color: var(--gold); font-size: 0.78rem;">(${t.especie})</span>` : ''}
             </div>
             <div style="font-size: 0.73rem; color: var(--muted);">
               D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m

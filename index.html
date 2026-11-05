@@ -232,6 +232,25 @@
                 <label class="form-label" for="cubIdentPilhaTora">Identificação da Pilha de Toras <span class="required">*</span></label>
                 <input type="text" id="cubIdentPilhaTora" class="form-control" placeholder="Ex: Pilha de Toras 01 / Lote A">
               </div>
+
+              <!-- Campo Origem da Madeira (Para Caminhão e Pilha de Madeira) -->
+              <div class="form-group" id="grpOrigemMadeira">
+                <label class="form-label">Origem da Madeira <span class="required">*</span></label>
+                <div class="toggle-pills-row">
+                  <button type="button" class="btn-toggle-pill active" id="btnOrigemNativa" onclick="app.setOrigemMadeira('Nativa')">
+                    🌿 Nativa
+                  </button>
+                  <button type="button" class="btn-toggle-pill" id="btnOrigemExotica" onclick="app.setOrigemMadeira('Exótica')">
+                    🌲 Exótica
+                  </button>
+                </div>
+              </div>
+
+              <!-- Campo Espécie Geral da Pilha / Lote de Toras -->
+              <div class="form-group" id="grpEspecieGeral" style="display: none;">
+                <label class="form-label" for="cubEspecieGeral">Espécie Florestal da Pilha / Lote</label>
+                <input type="text" id="cubEspecieGeral" class="form-control" placeholder="Ex: Eucalyptus grandis, Pinus taeda, Ipê..." oninput="if(document.getElementById('cubEspecieTora') && !document.getElementById('cubEspecieTora').value) document.getElementById('cubEspecieTora').value = this.value">
+              </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
@@ -342,19 +361,23 @@
                   <input type="text" id="cubPlaqueta" class="form-control calc-trigger" placeholder="Ex: 001, PLQ-104">
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="cubComprimentoTora">Comprimento (m) <span class="required">*</span></label>
-                  <input type="text" inputmode="decimal" id="cubComprimentoTora" class="form-control calc-trigger" placeholder="Ex: 6,00">
+                  <label class="form-label" for="cubEspecieTora">Espécie da Tora <span class="helper">(Opcional)</span></label>
+                  <input type="text" id="cubEspecieTora" class="form-control" placeholder="Ex: Eucalipto, Pinus, Ipê, Cedro...">
                 </div>
               </div>
 
               <div class="form-row">
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" for="cubDiametroPonta1">Diâmetro Ponta 1 (cm) <span class="required">*</span></label>
+                  <label class="form-label" for="cubComprimentoTora">Comprimento (m) <span class="required">*</span></label>
+                  <input type="text" inputmode="decimal" id="cubComprimentoTora" class="form-control calc-trigger" placeholder="Ex: 6,00">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="cubDiametroPonta1">Diâm. Ponta 1 (cm) <span class="required">*</span></label>
                   <input type="text" inputmode="decimal" id="cubDiametroPonta1" class="form-control calc-trigger" placeholder="Ex: 38">
                   <span class="helper">Ponta fina</span>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" for="cubDiametroPonta2">Diâmetro Ponta 2 (cm) <span class="required">*</span></label>
+                  <label class="form-label" for="cubDiametroPonta2">Diâm. Ponta 2 (cm) <span class="required">*</span></label>
                   <input type="text" inputmode="decimal" id="cubDiametroPonta2" class="form-control calc-trigger" placeholder="Ex: 46">
                   <span class="helper">Ponta grossa</span>
                 </div>
