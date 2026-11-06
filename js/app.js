@@ -26,8 +26,8 @@ class CubagemApp {
     // Filtros no histórico
     this.historyFilterTipo = 'todos';
 
-    // Versão oficial do aplicativo e gestão de atualizações (esquema decimal: 10=1.0, 11=1.1, 20=2.0, 21=2.1, 22=2.2, 23=2.3, 24=2.4)
-    this.appVersion = '2.4';
+    // Versão oficial do aplicativo e gestão de atualizações (2.4, 2.5)
+    this.appVersion = '2.5';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
