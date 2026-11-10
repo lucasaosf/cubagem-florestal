@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v2.7.7';
+const CACHE_NAME = 'cubagem-florestal-v2.7.8';
 const CORE = [
   './',
   './index.html',
@@ -17,6 +17,9 @@ const CORE = [
   './icons/favicon.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-maskable-192.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon.png',
   './icons/logo-creme.png',
   './icons/logo-verde.png',
   './icons/logo-planilha.png',

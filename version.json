@@ -1,12 +1,12 @@
 {
-  "v": "2.7.7",
-  "nome": "2.7.7",
+  "v": "2.7.8",
+  "nome": "2.7.8",
   "data": "2026-11-10",
   "novidades": [
+    "Ícone oficial 100% verde (#0E2515) para todos os celulares (Android Samsung, Xiaomi, Motorola e iOS)",
+    "Tela de abertura (Splash Screen) verde oficial da BIOKURI, eliminando a tela azul ao tocar no ícone",
+    "Ícones adaptativos (maskable) com zona de segurança completa sem bordas ou fundos transparentes",
     "Planilha Excel (.xlsx) com Total Geral da Cubagem do dia em destaque na primeira aba e em cada modalidade",
-    "Consolidado diário de toras: soma oficial do volume de todas as medições do dia na planilha e na tela",
-    "Edição completa de cubagens salvas com recálculo imediato e atualização no histórico",
-    "Geração e exportação de planilha Excel contendo dados de múltiplas cubagens selecionadas",
-    "Ferramenta de Mesclagem: unifique 2 ou mais cubagens em uma única medição definitiva do dia todo"
+    "Consolidado diário de toras e mesclagem de medições em 1 única cubagem definitiva"
   ]
 }
