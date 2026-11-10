@@ -120,7 +120,7 @@ class CubagemExcelExport {
     const perStr = isSingleDay
       ? `Data: ${dayStr}  •  Volume Total Consolidado do Dia: ${vTot.toFixed(2)} m³`
       : (startDate && endDate ? `${this.formatDateBR(startDate)} a ${this.formatDateBR(endDate)}` : 'Período Completo');
-    r2.value = `Empresa: BIOKURI Pesquisa e Soluções Ambientais  •  Período: ${perStr}  •  ${CONTATO}`;
+    r2.value = `BIOKURI Pesquisa e Soluções Ambientais  •  Período: ${perStr}  •  Resp. Técnico: ${responsavel || 'Lucas Aøsf'} (CRBio 127233/01-D)`;
     r2.font = { name: FONT_NAME, size: 9, italic: true, color: { argb: C.creme2 } };
     r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
     r2.alignment = { vertical: 'middle', horizontal: 'center' };
