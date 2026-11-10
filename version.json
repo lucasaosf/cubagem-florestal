@@ -1,12 +1,12 @@
 {
-  "v": "2.7.9",
-  "nome": "2.7.9",
+  "v": "2.8.0",
+  "nome": "2.8.0",
   "data": "2026-11-10",
   "novidades": [
-    "Correção crítica na exportação de planilhas Excel (.xlsx) com total consolidado do dia",
-    "Download estável e sem erros ao gerar planilha de cubagens selecionadas no histórico",
-    "Ícone oficial 100% verde (#0E2515) para todos os celulares (Android Samsung, Xiaomi, Motorola e iOS)",
-    "Tela de abertura (Splash Screen) verde oficial da BIOKURI",
+    "Nome oficial da empresa BIOKURI Pesquisa e Soluções Ambientais inserido em todas as planilhas Excel (.xlsx)",
+    "Correção completa de codificação de acentos e caracteres especiais (sem símbolos estranhos nas planilhas)",
+    "Cabeçalhos institucionais oficiais BIOKURI no Resumo Geral, Toras, Pilhas e Caminhões",
+    "Ícone e tela de abertura 100% verde oficial BIOKURI (#0E2515)",
     "Consolidado diário de toras e mesclagem de medições em 1 única cubagem definitiva"
   ]
 }

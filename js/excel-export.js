@@ -1,7 +1,7 @@
 /**
- * excel-export.js - GeraÃ§Ã£o de planilha Excel multipasta personalizada via ExcelJS
- * Suporte a Cargas de CaminhÃ£o, Pilhas de Madeira e Toras RoliÃ§as (Smalian)
- * Identidade Visual Oficial: Pesquisa & SoluÃ§Ãµes Ambientais â€” Lucas AÃ¸sf
+ * excel-export.js - Geração de planilha Excel multipasta personalizada via ExcelJS
+ * Suporte a Cargas de Caminhão, Pilhas de Madeira e Toras Roliças (Smalian)
+ * Identidade Visual Oficial: Pesquisa & Soluções Ambientais — Lucas Aøsf
  */
 
 const LOGO_PLANILHA_B64 = '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';
@@ -16,7 +16,7 @@ class CubagemExcelExport {
 
   static async exportWorkbook(records, options = {}) {
     if (!window.ExcelJS) {
-      throw new Error('Biblioteca ExcelJS nÃ£o carregada.');
+      throw new Error('Biblioteca ExcelJS não carregada.');
     }
 
     const {
@@ -27,8 +27,9 @@ class CubagemExcelExport {
     } = options;
 
     const workbook = new window.ExcelJS.Workbook();
-    workbook.creator = 'Lucas AÃ¸sf - Pesquisa & SoluÃ§Ãµes Ambientais';
-    workbook.lastModifiedBy = responsavel || 'Lucas AÃ¸sf';
+    workbook.creator = 'BIOKURI Pesquisa e Soluções Ambientais — Lucas Aøsf';
+    workbook.lastModifiedBy = responsavel || 'BIOKURI';
+    workbook.company = 'BIOKURI Pesquisa e Soluções Ambientais';
     workbook.created = new Date();
     workbook.modified = new Date();
 
@@ -48,7 +49,7 @@ class CubagemExcelExport {
     };
 
     const FONT_NAME = 'Century Gothic';
-    const CONTATO = 'Desenvolvido por Lucas AÃ¸sf  â€¢  (12) 99182-1729  â€¢  lucasaosf@gmail.com  â€¢  CRBio 127233/01-D';
+    const CONTATO = 'BIOKURI Pesquisa e Soluções Ambientais  •  Lucas Aøsf (CRBio 127233/01-D)  •  (12) 99182-1729  •  lucasaosf@gmail.com';
 
     const thinBorder = {
       top: { style: 'thin', color: { argb: C.linha } },
@@ -107,9 +108,9 @@ class CubagemExcelExport {
     wsResumo.mergeCells('A1:D1');
     const r1 = wsResumo.getCell('A1');
     r1.value = isSingleDay
-      ? `   CUBAGEM FLORESTAL — CONSOLIDADO DIÁRIO OFICIAL (${dayStr})`
-      : '   CUBAGEM FLORESTAL — RELATÓRIO TÉCNICO GERAL';
-    r1.font = { name: FONT_NAME, size: 14, bold: true, color: { argb: C.creme } };
+      ? `   BIOKURI — CONSOLIDADO DIÁRIO DE CUBAGEM FLORESTAL (${dayStr})`
+      : '   BIOKURI — RELATÓRIO TÉCNICO DE CUBAGEM FLORESTAL';
+    r1.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
     r1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
     r1.alignment = { vertical: 'middle', horizontal: 'center' };
     wsResumo.getRow(1).height = 36;
@@ -119,7 +120,7 @@ class CubagemExcelExport {
     const perStr = isSingleDay
       ? `Data: ${dayStr}  •  Volume Total Consolidado do Dia: ${vTot.toFixed(2)} m³`
       : (startDate && endDate ? `${this.formatDateBR(startDate)} a ${this.formatDateBR(endDate)}` : 'Período Completo');
-    r2.value = `Período: ${perStr}  •  ${CONTATO}`;
+    r2.value = `Empresa: BIOKURI Pesquisa e Soluções Ambientais  •  Período: ${perStr}  •  ${CONTATO}`;
     r2.font = { name: FONT_NAME, size: 9, italic: true, color: { argb: C.creme2 } };
     r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
     r2.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -282,10 +283,10 @@ class CubagemExcelExport {
     }
 
     // =========================================================================
-    // ABA 2: CARGAS DE CAMINHÃ•ES
+    // ABA 2: CARGAS DE CAMINHÕES
     // =========================================================================
     if (caminhoes.length > 0 || records.length === 0) {
-      const wsCam = workbook.addWorksheet('CaminhÃµes', { views: [{ showGridLines: true }] });
+      const wsCam = workbook.addWorksheet('Caminhões', { views: [{ showGridLines: true }] });
       wsCam.columns = [
         { key: 'num', width: 6 },
         { key: 'id', width: 22 },
@@ -309,13 +310,13 @@ class CubagemExcelExport {
 
       wsCam.mergeCells('A1:R1');
       const hCam = wsCam.getCell('A1');
-      hCam.value = '   CUBAGEM DE CARGAS DE CAMINHÃ•ES (LADO ESQUERDO E DIREITO)';
+      hCam.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE CARGAS DE CAMINHÕES';
       hCam.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
       hCam.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
       hCam.alignment = { vertical: 'middle', horizontal: 'center' };
       wsCam.getRow(1).height = 32;
 
-      const camCols = ['#', 'ID Registro', 'Data', 'HorÃ¡rio', 'Local / PÃ¡tio', 'Km', 'Coordenada UTM', 'ResponsÃ¡vel', 'Placa', 'Origem da Madeira', 'Alturas LE (m)', 'Alturas LD (m)', 'Soma Alt. (m)', 'Hm MÃ©dia (m)', 'Comp. (m)', 'Larg. (m)', 'Vol. GeomÃ©trico (mÂ³)', 'ObservaÃ§Ãµes'];
+      const camCols = ['#', 'ID Registro', 'Data', 'Horário', 'Local / Pátio', 'Km', 'Coordenada UTM', 'Responsável', 'Placa', 'Origem da Madeira', 'Alturas LE (m)', 'Alturas LD (m)', 'Soma Alt. (m)', 'Hm Média (m)', 'Comp. (m)', 'Larg. (m)', 'Vol. Geométrico (m³)', 'Observações'];
       const rCamH = wsCam.getRow(2);
       rCamH.height = 24;
       camCols.forEach((col, i) => {
@@ -417,13 +418,13 @@ class CubagemExcelExport {
 
       wsPil.mergeCells('A1:Q1');
       const hPil = wsPil.getCell('A1');
-      hPil.value = '   CUBAGEM DE PILHAS DE MADEIRA (MEDIÃ‡ÃƒO EM UMA FACE)';
+      hPil.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE PILHAS DE MADEIRA';
       hPil.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
       hPil.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
       hPil.alignment = { vertical: 'middle', horizontal: 'center' };
       wsPil.getRow(1).height = 32;
 
-      const pilCols = ['#', 'ID Registro', 'Data', 'HorÃ¡rio', 'Local / PÃ¡tio', 'Km', 'Coordenada UTM', 'IdentificaÃ§Ã£o Pilha', 'Origem da Madeira', 'ResponsÃ¡vel', 'Alturas Medidas na Face (m)', 'Soma Alt. (m)', 'Hm MÃ©dia (m)', 'Comprimento (m)', 'Profundidade (m)', 'Vol. EstÃ©reo (mÂ³)', 'ObservaÃ§Ãµes'];
+      const pilCols = ['#', 'ID Registro', 'Data', 'Horário', 'Local / Pátio', 'Km', 'Coordenada UTM', 'Identificação Pilha', 'Origem da Madeira', 'Responsável', 'Alturas Medidas na Face (m)', 'Soma Alt. (m)', 'Hm Média (m)', 'Comprimento (m)', 'Profundidade (m)', 'Vol. Estéreo (m³)', 'Observações'];
       const rPilH = wsPil.getRow(2);
       rPilH.height = 24;
       pilCols.forEach((col, i) => {
@@ -496,10 +497,10 @@ class CubagemExcelExport {
     }
 
     // =========================================================================
-    // ABA 4: TORAS ROLIÃ‡AS (Smalian)
+    // ABA 4: TORAS ROLIÇAS (Smalian)
     // =========================================================================
     if (toras.length > 0) {
-      const wsTor = workbook.addWorksheet('Toras RoliÃ§as', { views: [{ showGridLines: true }] });
+      const wsTor = workbook.addWorksheet('Toras Roliças', { views: [{ showGridLines: true }] });
       wsTor.columns = [
         { key: 'num', width: 6 },
         { key: 'id', width: 22 },
@@ -521,17 +522,17 @@ class CubagemExcelExport {
 
       wsTor.mergeCells('A1:P1');
       const hTor = wsTor.getCell('A1');
-      hTor.value = '   CUBAGEM DE TORAS ROLIÃ‡AS INDIVIDUAIS (FÃ“RMULA DE SMALIAN)';
+      hTor.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE TORAS ROLIÇAS (SMALIAN)';
       hTor.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
       hTor.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
       hTor.alignment = { vertical: 'middle', horizontal: 'center' };
       wsTor.getRow(1).height = 32;
 
       const torCols = [
-        '#', 'IdentificaÃ§Ã£o Individual', 'Data', 'HorÃ¡rio', 'NÂº Plaqueta', 'EspÃ©cie Florestal',
-        'Local / PÃ¡tio', 'Km', 'Coordenada UTM', 'ResponsÃ¡vel',
-        'DiÃ¢m. Ponta 1 (cm)', 'DiÃ¢m. Ponta 2 (cm)', 'DiÃ¢m. MÃ©dio (cm)', 'Comprimento (m)',
-        'Vol. Smalian (mÂ³)', 'ObservaÃ§Ãµes'
+        '#', 'Identificação Individual', 'Data', 'Horário', 'Nº Plaqueta', 'Espécie Florestal',
+        'Local / Pátio', 'Km', 'Coordenada UTM', 'Responsável',
+        'Diâm. Ponta 1 (cm)', 'Diâm. Ponta 2 (cm)', 'Diâm. Médio (cm)', 'Comprimento (m)',
+        'Vol. Smalian (m³)', 'Observações'
       ];
       const rTorH = wsTor.getRow(2);
       rTorH.height = 24;
@@ -572,8 +573,8 @@ class CubagemExcelExport {
             this.formatDateBR(pileItem.data),
             pileItem.horario,
             item.plaqueta || 'S/P',
-            item.especie || pileItem.especie || 'NÃ£o informada',
-            pileItem.rodovia || 'PÃ¡tio',
+            item.especie || pileItem.especie || 'Não informada',
+            pileItem.rodovia || 'Pátio',
             pileItem.km || '',
             pileItem.utm || '',
             pileItem.responsavel,
@@ -605,16 +606,16 @@ class CubagemExcelExport {
           rTorIdx++;
         });
 
-        // Se a pilha tiver mais de 1 indivÃ­duo, adiciona linha de subtotal da pilha
+        // Se a pilha tiver mais de 1 indivíduo, adiciona linha de subtotal da pilha
         if (torasIndiv.length > 1) {
           const subRow = wsTor.getRow(rTorIdx);
           subRow.height = 22;
           const avgDm = subtotalDmPilha / torasIndiv.length;
 
-          // Mescla colunas 1 a 10 para o tÃ­tulo do subtotal
+          // Mescla colunas 1 a 10 para o título do subtotal
           wsTor.mergeCells(`A${rTorIdx}:J${rTorIdx}`);
           const cTit = subRow.getCell(1);
-          cTit.value = `SUBTOTAL DA PILHA (${torasIndiv.length} toras) â€” ${pileItem.identificacao || pileItem.id}`;
+          cTit.value = `SUBTOTAL DA PILHA (${torasIndiv.length} toras) — ${pileItem.identificacao || pileItem.id}`;
           cTit.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
           cTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
           cTit.alignment = { horizontal: 'right', vertical: 'middle' };

@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7.9';
+    this.appVersion = '2.8.0';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -3189,8 +3189,8 @@ class CubagemApp {
     const isSingleDay = Boolean(dataPrimeira && dataPrimeira === dataUltima);
     const periodoStr = isSingleDay ? dataPrimeira : `${dataPrimeira} a ${dataUltima}`;
     const titPrincipal = isSingleDay
-      ? `BIOKURI · SOLUÇÕES AMBIENTAIS — CONSOLIDADO DIÁRIO DE CUBAGEM (${dataPrimeira})`
-      : 'BIOKURI · SOLUÇÕES AMBIENTAIS — PLANILHA CONSOLIDADA DE CUBAGEM';
+      ? `BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CONSOLIDADO DIÁRIO DE CUBAGEM (${dataPrimeira})`
+      : 'BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — PLANILHA CONSOLIDADA DE CUBAGEM';
     const titTotal = isSingleDay
       ? `TOTAL GERAL DA CUBAGEM DO DIA (${records.length} MEDIÇÕES CONSOLIDADAS):`
       : `TOTAL GERAL CONSOLIDADO (${records.length} CUBAGENS):`;
@@ -3390,7 +3390,7 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">1</td>
               <td colspan="7" class="excel-brand-title-cell">
-                BIOKURI · SOLUÇÕES AMBIENTAIS — MEMÓRIA TÉCNICA DE CÁLCULO
+                BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — MEMÓRIA TÉCNICA DE CÁLCULO
               </td>
             </tr>
             <tr>
@@ -3494,7 +3494,7 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">1</td>
               <td colspan="11" class="excel-brand-title-cell">
-                BIOKURI · SOLUÇÕES AMBIENTAIS — CUBAGEM DE CARGA DE CAMINHÃO
+                BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE CARGA DE CAMINHÃO
               </td>
             </tr>
             <tr>
@@ -3590,7 +3590,7 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">1</td>
               <td colspan="10" class="excel-brand-title-cell">
-                BIOKURI · SOLUÇÕES AMBIENTAIS — CUBAGEM DE PILHA DE MADEIRA
+                BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE PILHA DE MADEIRA
               </td>
             </tr>
             <tr>
@@ -3730,7 +3730,7 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">1</td>
               <td colspan="10" class="excel-brand-title-cell">
-                BIOKURI · SOLUÇÕES AMBIENTAIS — CUBAGEM DE TORAS ROLIÇAS (MÉTODO SMALIAN)
+                BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE TORAS ROLIÇAS (MÉTODO SMALIAN)
               </td>
             </tr>
             <tr>
