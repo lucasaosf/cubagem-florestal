@@ -36,10 +36,23 @@ class CubagemAuth {
 
     const loadScript = (src) => {
       return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) {
+          if (existing.getAttribute('data-loaded') === 'true' || (window.firebase && window.firebase.auth)) {
+            return resolve();
+          }
+          existing.remove();
+        }
         const s = document.createElement('script');
         s.src = src;
-        s.onload = () => resolve();
-        s.onerror = (e) => reject(e);
+        s.onload = () => {
+          s.setAttribute('data-loaded', 'true');
+          resolve();
+        };
+        s.onerror = (e) => {
+          s.remove();
+          reject(e);
+        };
         document.head.appendChild(s);
       });
     };
@@ -173,12 +186,25 @@ class CubagemAuth {
    * Abre o modal de autenticação ou perfil
    */
   abrirModalAuth() {
-    if (this.user) {
-      // Usuário já conectado: exibe card de perfil e sincronização
-      this.exibirPerfilConectado();
-    } else {
-      // Usuário não conectado: exibe opções de login
-      this.exibirFormularioLogin();
+    try {
+      if (this.user) {
+        // Usuário já conectado: exibe card de perfil e sincronização
+        this.exibirPerfilConectado();
+      } else {
+        // Usuário não conectado: exibe opções de login
+        this.exibirFormularioLogin('login');
+      }
+    } catch (e) {
+      console.error('[Auth] Erro ao renderizar tela de autenticação:', e);
+      const container = document.getElementById('authModalBody');
+      if (container) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
+            <p style="color: var(--ink); margin-bottom: 8px;">Erro ao carregar o formulário de login.</p>
+            <button class="btn btn-primary" onclick="app.abrirModalAuth()">Tentar novamente</button>
+          </div>
+        `;
+      }
     }
     const modal = document.getElementById('modalAuth');
     if (modal) modal.classList.add('open');
@@ -320,15 +346,7 @@ class CubagemAuth {
       const provider = new fb.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      // Em dispositivos móveis ou ambientes PWA onde popups são bloqueados
-      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent);
       let res = null;
-
-      if (isMobile) {
-        await fb.auth().signInWithRedirect(provider);
-        return;
-      }
-
       try {
         res = await fb.auth().signInWithPopup(provider);
       } catch (popupErr) {

@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7.2';
+    this.appVersion = '2.7.3';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1944,9 +1944,27 @@ class CubagemApp {
   }
 
   abrirModalAuth() {
+    if (!this.auth && window.CubagemAuth) {
+      try {
+        this.auth = new window.CubagemAuth();
+        this.auth.init().catch((e) => console.warn('[Auth] Init:', e));
+      } catch (e) {
+        console.error('[Auth] Erro ao instanciar CubagemAuth:', e);
+      }
+    }
+
     if (this.auth && typeof this.auth.abrirModalAuth === 'function') {
       this.auth.abrirModalAuth();
     } else {
+      const body = document.getElementById('authModalBody');
+      if (body) {
+        body.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
+            <p style="color: var(--ink); margin-bottom: 8px;">Sistema de autenticação temporariamente indisponível.</p>
+            <p style="font-size: 0.85rem; color: var(--muted);">Verifique sua conexão ou tente novamente mais tarde.</p>
+          </div>
+        `;
+      }
       this.abrirModal('modalAuth');
     }
   }
@@ -2360,10 +2378,6 @@ class CubagemApp {
 
   abrirPreviaLiveFixada() {
     const itemLive = this.obterRegistroLiveAtual();
-    if (itemLive) {
-      this.mostrarPreviaPlanilha(itemLive);
-    }
-  }
     if (itemLive) {
       this.mostrarPreviaPlanilha(itemLive);
     }

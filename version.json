@@ -1,11 +1,11 @@
 {
-  "v": "2.7.2",
-  "nome": "2.7.2",
-  "data": "2026-11-09",
+  "v": "2.7.3",
+  "nome": "2.7.3",
+  "data": "2026-11-10",
   "novidades": [
-    "Ajuste visual no topo da tela inicial: remoção do botão do meio",
-    "Correção completa e otimização no fluxo de login com Google e E-mail",
-    "Carregamento estável do Firebase SDK com suporte a redirecionamento no celular",
-    "Pop-up moderno de atualização de versão do aplicativo"
+    "Restauração do carregamento ultrarrápido e resposta imediata de todos os botões",
+    "Abertura instantânea do modal de login e sincronização de conta",
+    "Carregamento desacoplado e resiliente do Firebase sem travar o aplicativo",
+    "Topo da tela inicial limpo (apenas modo escuro e perfil/login)"
   ]
 }
