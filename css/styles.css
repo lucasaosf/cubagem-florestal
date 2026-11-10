@@ -3067,9 +3067,10 @@ body:not([data-active-tab="inicio"]) .install-balloon {
 }
 
 /* =========================================================================
-   SISTEMA DUPLO TOQUE (2 TOQUES): PRÉVIA DA PLANILHA EXCEL
+   SISTEMA DE ABERTURA DA PLANILHA EXCEL (1 TOQUE OU BOTÃO)
    ========================================================================= */
 
+.clickable-sheet-card,
 .double-tap-card,
 .holdable-card {
   user-select: none;
@@ -3079,50 +3080,76 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   position: relative;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-.double-tap-card:active {
-  transform: scale(0.99);
-}
-
-.double-tapped-card {
-  transform: scale(0.975) !important;
+.clickable-sheet-card:hover,
+.double-tap-card:hover {
   border-color: var(--gold, #96784A) !important;
-  box-shadow: 0 0 16px rgba(150, 120, 74, 0.45) !important;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 16px rgba(150, 120, 74, 0.25) !important;
 }
 
-.card-double-tap-hint,
-.card-hold-peek-hint {
+.clickable-sheet-card:active,
+.double-tap-card:active {
+  transform: scale(0.985);
+}
+
+.card-sheet-action-banner {
+  background: linear-gradient(135deg, rgba(14, 37, 21, 0.08) 0%, rgba(150, 120, 74, 0.18) 100%);
+  border: 1px solid rgba(150, 120, 74, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
-  color: var(--gold, #96784A);
-  opacity: 0.9;
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 1px dashed rgba(150, 120, 74, 0.28);
-  letter-spacing: 0.2px;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.card-double-tap-hint .hint-icon,
-.card-hold-peek-hint .peek-icon {
+.card-sheet-action-banner:hover,
+.card-sheet-action-banner:active {
+  background: linear-gradient(135deg, rgba(14, 37, 21, 0.16) 0%, rgba(150, 120, 74, 0.32) 100%);
+  border-color: var(--gold, #96784A);
+  transform: translateY(-1px);
+}
+
+.card-sheet-action-banner .sheet-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.card-sheet-action-banner .sheet-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink, #0E2515);
+  flex: 1;
+  letter-spacing: 0.2px;
+}
+
+[data-theme="dark"] .card-sheet-action-banner .sheet-label {
+  color: #F2EBDD;
+}
+
+.card-sheet-action-banner .sheet-arrow {
   font-size: 0.85rem;
-  animation: peekPulse 1.8s infinite ease-in-out;
+  color: var(--gold, #96784A);
+  font-weight: 700;
+  transition: transform 0.2s ease;
 }
 
-@keyframes peekPulse {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.18); }
+.card-sheet-action-banner:hover .sheet-arrow,
+.card-sheet-action-banner:active .sheet-arrow {
+  transform: translateX(3px);
 }
 
 .btn-action-small.preview-btn {
-  background: rgba(150, 120, 74, 0.15);
+  background: rgba(150, 120, 74, 0.18);
   color: var(--gold, #96784A);
-  border: 1px solid rgba(150, 120, 74, 0.4);
-  font-weight: 600;
+  border: 1px solid rgba(150, 120, 74, 0.45);
+  font-weight: 700;
 }
 
 .btn-action-small.preview-btn:hover {
@@ -3134,17 +3161,17 @@ body:not([data-active-tab="inicio"]) .install-balloon {
 .modal-excel-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(10, 20, 13, 0.82);
+  background: rgba(10, 20, 13, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 12px;
   animation: excelFadeIn 0.18s ease-out;
   touch-action: pan-x pan-y;
-  pointer-events: auto;
+  pointer-events: auto !important;
 }
 
 @keyframes excelFadeIn {

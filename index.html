@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=2.6.0">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -476,7 +476,7 @@
               </div>
 
               <!-- Resumo Acumulado da Pilha -->
-              <div id="toraPileTotalSummary" class="double-tap-card" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold); cursor: pointer;" onclick="app.tratarToqueLive(event)" ondblclick="app.abrirPreviaLiveFixada()">
+              <div id="toraPileTotalSummary" class="clickable-sheet-card" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold); cursor: pointer;" onclick="app.abrirPreviaLiveFixada()">
                 <div style="display: flex; justify-content: space-between; align-items: baseline;">
                   <span style="font-weight: 700; color: var(--gold); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">Volume Total da Pilha</span>
                   <span style="font-size: 1.45rem; font-family: var(--display); font-weight: 700; color: var(--ink);" id="toraPileTotalVolDisplay">0,000 m³</span>
@@ -484,15 +484,17 @@
                 <div style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;" id="toraPileTotalStats">
                   0 toras • Dm Médio: 0,0 cm • Comp. Médio: 0,00 m
                 </div>
-                <div class="card-double-tap-hint">
-                  <span class="hint-icon">⚡</span> <strong>2 toques:</strong> ver planilha da pilha
+                <div class="card-sheet-action-banner" style="margin-top: 10px;" onclick="event.stopPropagation(); app.abrirPreviaLiveFixada()">
+                  <span class="sheet-icon">📊</span>
+                  <span class="sheet-label">Toque para ver a Planilha da Pilha</span>
+                  <span class="sheet-arrow">➔</span>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Card de Cálculo em Tempo Real -->
-          <div class="calc-result-card double-tap-card" id="liveCalcCard" onclick="app.tratarToqueLive(event)" ondblclick="app.abrirPreviaLiveFixada()">
+          <div class="calc-result-card clickable-sheet-card" id="liveCalcCard" onclick="app.abrirPreviaLiveFixada()">
             <div class="calc-result-header">
               <span class="calc-result-tag" id="liveCalcTag">Cálculo Automático</span>
               <span class="calc-result-type-badge" id="liveTypeBadge">Carga de Caminhão</span>
@@ -522,8 +524,10 @@
               Preencha os dados da medição para visualizar o cálculo de volume.
             </div>
 
-            <div class="card-double-tap-hint">
-              <span class="hint-icon">⚡</span> <strong>2 toques:</strong> ver prévia da planilha
+            <div class="card-sheet-action-banner" onclick="event.stopPropagation(); app.abrirPreviaLiveFixada()">
+              <span class="sheet-icon">📊</span>
+              <span class="sheet-label">Toque para ver a Prévia da Planilha Excel</span>
+              <span class="sheet-arrow">➔</span>
             </div>
           </div>
 
@@ -1310,6 +1314,6 @@
   <script src="js/auth.js"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=2.6.0"></script>
 </body>
 </html>

@@ -26,8 +26,8 @@ class CubagemApp {
     // Filtros no histórico
     this.historyFilterTipo = 'todos';
 
-    // Versão oficial do aplicativo e gestão de atualizações (2.4, 2.5)
-    this.appVersion = '2.5';
+    // Versão oficial do aplicativo e gestão de atualizações
+    this.appVersion = '2.6';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1358,9 +1358,8 @@ class CubagemApp {
     }
 
     return `
-      <div class="history-item-card double-tap-card"
-           onclick="app.tratarToqueItem(event, '${item.id}')"
-           ondblclick="app.abrirPreviaFixada('${item.id}')">
+      <div class="history-item-card clickable-sheet-card"
+           onclick="app.abrirPreviaDoCard(event, '${item.id}')">
         <div class="history-card-top">
           <span class="badge-type ${tipo}">${tagTipo}</span>
           <span class="history-tag-date">${dataBR} • ${item.horario || ''}</span>
@@ -1376,13 +1375,15 @@ class CubagemApp {
             <div class="history-vol-unit">m³ geom.</div>
           </div>
         </div>
-        <div class="card-double-tap-hint">
-          <span class="hint-icon">⚡</span> <strong>2 toques:</strong> ver planilha completa
+        <div class="card-sheet-action-banner">
+          <span class="sheet-icon">📊</span>
+          <span class="sheet-label">Toque para ver a Planilha Excel</span>
+          <span class="sheet-arrow">➔</span>
         </div>
         <div class="history-card-actions">
-          <button type="button" class="btn-action-small preview-btn" onclick="app.abrirPreviaFixada('${item.id}')" title="Ver planilha completa">📊 Planilha</button>
-          <button type="button" class="btn-action-small" onclick="app.abrirDetalhes('${item.id}')">Detalhes</button>
-          <button type="button" class="btn-action-small danger" onclick="app.abrirModalExcluir('${item.id}')">Excluir</button>
+          <button type="button" class="btn-action-small preview-btn" onclick="event.stopPropagation(); app.abrirPreviaFixada('${item.id}')" title="Ver planilha completa">📊 Planilha</button>
+          <button type="button" class="btn-action-small" onclick="event.stopPropagation(); app.abrirDetalhes('${item.id}')">Detalhes</button>
+          <button type="button" class="btn-action-small danger" onclick="event.stopPropagation(); app.abrirModalExcluir('${item.id}')">Excluir</button>
         </div>
       </div>
     `;
@@ -2274,69 +2275,38 @@ class CubagemApp {
   }
 
   // =========================================================================
-  // SISTEMA DUPLO TOQUE (2 TOQUES): PRÉVIA DA PLANILHA EXCEL
+  // SISTEMA DE ABERTURA DIRETA DA PLANILHA EXCEL (1 TOQUE OU BOTÃO)
   // =========================================================================
-  tratarToqueItem(e, id) {
+  abrirPreviaDoCard(e, id) {
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) {
       return;
     }
-
-    const now = Date.now();
-    const diff = now - this.lastTapTime;
-
-    // Detecta 2 toques rápidos (entre 40ms e 450ms) no mesmo item
-    if (diff > 40 && diff < 450 && this.lastTapTargetId === id) {
-      this.lastTapTime = 0;
-      this.lastTapTargetId = null;
-
-      if (typeof navigator.vibrate === 'function') {
-        try { navigator.vibrate([35, 45]); } catch (_) {}
-      }
-
-      const card = e.currentTarget;
-      if (card) {
-        card.classList.add('double-tapped-card');
-        setTimeout(() => card.classList.remove('double-tapped-card'), 300);
-      }
-
-      this.abrirPreviaFixada(id);
-    } else {
-      this.lastTapTime = now;
-      this.lastTapTargetId = id;
+    if (typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate(35); } catch (_) {}
     }
+    this.abrirPreviaFixada(id);
+  }
+
+  tratarToqueItem(e, id) {
+    this.abrirPreviaDoCard(e, id);
   }
 
   tratarToqueLive(e) {
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) {
       return;
     }
-
-    const now = Date.now();
-    const diff = now - this.lastTapTime;
-
-    if (diff > 40 && diff < 450 && this.lastTapTargetId === 'live') {
-      this.lastTapTime = 0;
-      this.lastTapTargetId = null;
-
-      if (typeof navigator.vibrate === 'function') {
-        try { navigator.vibrate([35, 45]); } catch (_) {}
-      }
-
-      const card = e.currentTarget;
-      if (card) {
-        card.classList.add('double-tapped-card');
-        setTimeout(() => card.classList.remove('double-tapped-card'), 300);
-      }
-
-      this.abrirPreviaLiveFixada();
-    } else {
-      this.lastTapTime = now;
-      this.lastTapTargetId = 'live';
+    if (typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate(35); } catch (_) {}
     }
+    this.abrirPreviaLiveFixada();
   }
 
   abrirPreviaLiveFixada() {
     const itemLive = this.obterRegistroLiveAtual();
+    if (itemLive) {
+      this.mostrarPreviaPlanilha(itemLive);
+    }
+  }
     if (itemLive) {
       this.mostrarPreviaPlanilha(itemLive);
     }

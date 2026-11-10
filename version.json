@@ -1,14 +1,11 @@
 {
-  "v": "2.5",
-  "nome": "2.5",
-  "data": "2026-11-05",
+  "v": "2.6",
+  "nome": "2.6",
+  "data": "2026-11-09",
   "novidades": [
-    "Guia Botânico de Campo Integrado com 315 Pranchas Ilustradas em Alta Resolução (Modo Campeiro - Norberto Simões)",
-    "Base botânica expandida com 500 Espécies da Vegetação do Cerrado (MMA / João de Deus Medeiros)",
-    "Visualizador Lightbox de Pranchas com Zoom Interativo (+/-), Arraste/Pan e Download da Prancha",
-    "Filtros inteligentes por categoria: Modo Campeiro, Cerrado, Ameaçadas (Portaria MMA nº 148/2022), Nativas e Silvicultura",
-    "Busca por caracteres morfológicos diagnósticos (folha composta/simples, filotaxia, látex/exsudação, fruto e biomas)",
-    "Seleção de espécie com 1 clique direto para o formulário de cubagem individual de toras",
-    "Badges oficiais de conservação e ameaça de extinção (CR, EN, VU, Imune de Corte em MG)"
+    "Abertura instantânea da Planilha Excel com 1 toque no card ou botão direto",
+    "Visualização fluida de planilha completa no celular com rolagem de colunas e dados",
+    "Exportação .xlsx com 1 toque direto da prévia da cubagem",
+    "Guia Botânico de Campo Integrado com 315 Pranchas Ilustradas em Alta Resolução (Modo Campeiro)"
   ]
 }
