@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.6';
+    this.appVersion = '2.7';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -122,9 +122,9 @@ class CubagemApp {
             this.swRegistration = reg;
             console.log('[Service Worker] Ativo:', reg.scope);
 
-            // Se já houver um Service Worker novo aguardando para ativar
+            // Se já houver um Service Worker novo aguardando para ativar, ativa silenciosamente
             if (reg.waiting) {
-              this.notificarAtualizacaoDisponivel({ nome: 'Atualização pronta' });
+              reg.waiting.postMessage({ action: 'skipWaiting', type: 'SKIP_WAITING' });
             }
 
             // Escuta novas instalações de Service Worker
@@ -133,15 +133,16 @@ class CubagemApp {
               if (!newWorker) return;
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  this.notificarAtualizacaoDisponivel({ nome: 'Nova versão' });
+                  this.checkUpdate(false);
                 }
               });
             });
 
-            // Monitor de visibilidade: verifica atualizações ao reabrir a aba
+            // Monitor de visibilidade: verifica silenciosamente com intervalo mínimo de 12 horas
+            let lastVisCheck = Date.now();
             document.addEventListener('visibilitychange', () => {
-              if (document.visibilityState === 'visible') {
-                reg.update().catch(() => {});
+              if (document.visibilityState === 'visible' && (Date.now() - lastVisCheck > 12 * 3600000)) {
+                lastVisCheck = Date.now();
                 this.checkUpdate(false);
               }
             });
@@ -192,11 +193,6 @@ class CubagemApp {
       if (this.swRegistration) {
         try {
           await this.swRegistration.update();
-          if (this.swRegistration.waiting) {
-            this.notificarAtualizacaoDisponivel({ nome: 'Nova versão' });
-            this.updateChecking = false;
-            return;
-          }
         } catch (e) {}
       }
 
@@ -302,6 +298,41 @@ class CubagemApp {
     } else {
       recarregar();
     }
+  }
+
+  async forcarAtualizacaoApp() {
+    this.showToast('Limpando cache e atualizando o aplicativo...', 'info');
+
+    try {
+      localStorage.removeItem('cubagem.update_dismissed');
+    } catch (_) {}
+
+    // Limpa os caches offline locais
+    if ('caches' in window) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch (_) {}
+    }
+
+    // Solicita atualização do Service Worker
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          if (reg.waiting) {
+            reg.waiting.postMessage({ action: 'skipWaiting' });
+          }
+          await reg.update();
+        }
+      } catch (_) {}
+    }
+
+    // Recarrega o app forçando URL sem cache
+    setTimeout(() => {
+      const target = window.location.origin + window.location.pathname + '?reload=' + Date.now();
+      window.location.replace(target);
+    }, 450);
   }
 
   configurarMonitorRede() {

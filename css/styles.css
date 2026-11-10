@@ -2083,6 +2083,55 @@ body[data-active-tab="inicio"] .cover-screen,
   opacity: 0.85;
 }
 
+.cover-top-btn.cover-update-top-btn {
+  border-color: var(--gold, #B08854);
+  font-size: 1.15rem;
+}
+
+.cover-top-btn.cover-update-top-btn:hover {
+  transform: rotate(30deg) scale(1.05);
+}
+
+.cover-action-btn.update-app {
+  border-color: var(--gold, #B08854);
+  color: var(--gold, #B08854);
+  background: rgba(14, 37, 21, 0.72);
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  font-size: 16px;
+}
+
+:root[data-theme="light"] .cover-action-btn.update-app {
+  background: rgba(242, 235, 221, 0.95);
+  color: #0E2515;
+  border-color: #96784A;
+  box-shadow: 0 4px 14px rgba(14, 37, 21, 0.15);
+}
+
+.cover-action-btn.update-app:active {
+  transform: scale(0.97);
+  background: var(--gold, #96784A);
+  color: #0E2515;
+}
+
+.header-chip.header-chip-update {
+  border-color: var(--gold, #B08854);
+  color: var(--gold, #B08854);
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(150, 120, 74, 0.12);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.header-chip.header-chip-update:active {
+  transform: scale(0.95);
+  background: var(--gold, #96784A);
+  color: #0E2515;
+}
+
 /* Modal de Instalação Universal */
 .install-detected-bar {
   display: flex;
@@ -2450,14 +2499,42 @@ body:not([data-active-tab="inicio"]) .install-balloon {
 .modal-header-guia {
   background: linear-gradient(135deg, #092011 0%, #0e2e1a 100%);
   color: #F2EBDD;
-  padding: 16px 20px !important;
+  padding: 14px 20px !important;
   border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
 }
 
-.modal-header-guia .modal-title {
-  color: #F2EBDD !important;
-  font-size: 1.25rem !important;
-  margin: 0 0 2px 0 !important;
+.guia-header-brand-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.guia-header-pill {
+  display: inline-block;
+  align-self: flex-start;
+  background: #0E2515;
+  color: #FFFFFF;
+  font-family: var(--serif, 'Cinzel', 'Playfair Display', Georgia, serif);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 14px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.guia-header-title {
+  font-family: var(--serif, 'Cinzel', 'Playfair Display', Georgia, serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #F2EBDD;
+  margin: 3px 0 0 0;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
 }
 
 .guia-header-subtitle {
@@ -2465,6 +2542,54 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   color: #B2C2A5;
   font-weight: 500;
   letter-spacing: 0.3px;
+}
+
+/* Banner Oficial Ilustrado */
+.guia-official-banner-card {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(150, 120, 74, 0.25);
+  overflow: hidden;
+}
+
+.guia-official-banner-img {
+  max-width: 100%;
+  max-height: 90px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+}
+
+.lightbox-badge-campeiro {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(14, 37, 21, 0.85);
+  color: #D4AF37;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+
+.cover-btn-guia {
+  border-color: rgba(212, 175, 55, 0.4) !important;
+  color: #F2EBDD !important;
+  font-weight: 600;
+}
+
+.cover-btn-guia:hover {
+  border-color: var(--gold, #96784A) !important;
+  background: rgba(14, 37, 21, 0.85) !important;
 }
 
 .modal-body-guia {

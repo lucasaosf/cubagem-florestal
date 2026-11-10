@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css?v=2.6.0">
+  <link rel="stylesheet" href="css/styles.css?v=2.7.0">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -78,6 +78,11 @@
       </div>
 
       <div class="header-tools">
+        <!-- Botão de Atualizar Sempre Presente -->
+        <button type="button" class="header-chip header-chip-update" onclick="app.forcarAtualizacaoApp()" title="Atualizar versão do aplicativo">
+          <span>🔄</span><span class="update-chip-text">Atualizar</span>
+        </button>
+
         <!-- Botão de Conta / Login do Usuário -->
         <button class="header-chip" id="authHeaderBtn" onclick="app.auth.abrirModalAuth()" title="Minha Conta">
           <span class="dot-status" id="authHeaderDot" style="display: none; background-color: var(--sage);"></span>
@@ -106,11 +111,15 @@
       <!-- ========================================== -->
       <section id="view-inicio" class="view-section active cover-screen">
         
-        <!-- Topo: Modo Claro/Escuro na esquerda e Perfil na direita -->
+        <!-- Topo: Modo Claro/Escuro na esquerda, Atualizar no meio e Perfil na direita -->
         <div class="cover-top">
           <button type="button" class="cover-top-btn" id="coverThemeBtn" onclick="app.toggleTheme()" aria-label="Trocar modo claro ou escuro" title="Alternar Modo Claro / Escuro">
             <span class="t-sun" aria-hidden="true">☀️</span>
             <span class="t-moon" aria-hidden="true">🌙</span>
+          </button>
+
+          <button type="button" class="cover-top-btn cover-update-top-btn" onclick="app.forcarAtualizacaoApp()" aria-label="Atualizar Aplicativo" title="Atualizar Aplicativo para a versão mais recente">
+            <span class="t-update-icon">🔄</span>
           </button>
           
           <button type="button" class="cover-top-btn cover-avatar-btn" id="coverAcctBtn" onclick="app.auth.abrirModalAuth()" aria-label="Conta e perfil" title="Minha Conta / Login">
@@ -169,8 +178,13 @@
             📊 Relatório &amp; Planilha Excel
           </button>
 
-          <button type="button" class="cover-action-btn ghost" onclick="app.abrirModalGuiaEspecies()">
-            🌿 Guia de Espécies do Brasil
+          <button type="button" class="cover-action-btn ghost cover-btn-guia" onclick="app.abrirModalGuiaEspecies('campeiro')">
+            🌿 Guia de Campo • Modo Campeiro
+          </button>
+
+          <!-- Botão de Atualizar ao Abrir o App -->
+          <button type="button" class="cover-action-btn update-app" onclick="app.forcarAtualizacaoApp()">
+            🔄 Atualizar Aplicativo
           </button>
 
           <button type="button" class="cover-action-btn install" id="coverBtnInstallApp" onclick="app.iniciarInstalacaoApp()">
@@ -183,7 +197,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill">Versão 2.5</span>
+            <button type="button" class="cover-ver-pill" onclick="app.forcarAtualizacaoApp()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para atualizar o aplicativo">Versão 2.7 🔄</button>
             <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
@@ -425,7 +439,7 @@
               <div class="form-group form-group-species-wide" style="margin-bottom: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                   <label class="form-label" for="cubEspecieTora" style="margin-bottom: 0;">Espécie Individual da Tora <span class="helper">(Opcional - Busca Botânica)</span></label>
-                  <button type="button" class="btn-guia-inline" onclick="app.abrirModalGuiaEspecies('campeiro')">🌿 Guia Botânico &amp; Pranchas</button>
+                  <button type="button" class="btn-guia-inline" onclick="app.abrirModalGuiaEspecies('campeiro')">🌿 Guia de Campo (Modo Campeiro)</button>
                 </div>
                 <input type="text" id="cubEspecieTora" class="form-control input-species-wide" placeholder="Digite para buscar espécie desta tora (ex: eucalipto, pinus, ipê, cedro...)">
               </div>
@@ -1142,16 +1156,22 @@
   <div id="modalGuiaEspecies" class="modal-overlay modal-guia-overlay" onclick="if(event.target===this) app.fecharModal('modalGuiaEspecies')">
     <div class="modal-dialog modal-dialog-guia">
       <div class="modal-header modal-header-guia">
-        <div class="guia-header-left">
-          <h3 class="modal-title">🌿 Guia Botânico de Campo &amp; Pranchas de Identificação</h3>
+        <div class="guia-header-brand-wrap">
+          <div class="guia-header-pill">GUIA DE CAMPO</div>
+          <h3 class="guia-header-title">APLICADO A IDENTIFICAÇÃO BOTÂNICA NO MODO CAMPEIRO</h3>
           <div class="guia-header-subtitle">
-            Base Integrada • 315 Pranchas Modo Campeiro • Vegetação do Cerrado (MMA) • Flora Nativa &amp; Silvicultura
+            Base Oficial • 315 Pranchas Ilustradas • Vegetação do Cerrado (MMA) • Flora Nativa &amp; Silvicultura
           </div>
         </div>
-        <button class="modal-close-btn" onclick="app.fecharModal('modalGuiaEspecies')">&times;</button>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalGuiaEspecies')" aria-label="Fechar Guia">&times;</button>
       </div>
 
       <div class="modal-body modal-body-guia">
+        <!-- Banner Oficial do Guia de Campo -->
+        <div class="guia-official-banner-card">
+          <img src="img/guia-campo-banner.png" alt="Guia de Campo - Aplicado à Identificação Botânica no Modo Campeiro" class="guia-official-banner-img">
+        </div>
+
         <!-- Barra de Busca -->
         <div class="guia-search-wrapper">
           <div class="guia-search-input-box">
@@ -1204,6 +1224,7 @@
       <!-- Barra Superior de Ferramentas -->
       <div class="lightbox-toolbar">
         <div class="lightbox-info">
+          <span class="lightbox-badge-campeiro">🌿 Guia de Campo (Modo Campeiro)</span>
           <span class="lightbox-badge-prancha" id="lbPranchaNum">Prancha nº --</span>
           <div class="lightbox-titles">
             <span class="lightbox-sci-title" id="lbSciTitle">Nome Científico</span>
@@ -1226,6 +1247,9 @@
 
       <!-- Barra de Chaves Diagnósticas no Rodapé -->
       <div class="lightbox-footer-card" id="lbFooterCard">
+        <div class="lb-footer-item" style="color: var(--gold); font-weight: 700; border-right: 1px solid rgba(255,255,255,0.15); padding-right: 12px;">
+          📖 Guia de Campo (Modo Campeiro)
+        </div>
         <div class="lb-footer-item">
           <strong>🌿 Família:</strong> <span id="lbFamTxt">--</span>
         </div>
@@ -1314,6 +1338,6 @@
   <script src="js/auth.js"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js?v=2.6.0"></script>
+  <script src="js/app.js?v=2.7.0"></script>
 </body>
 </html>

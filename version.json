@@ -1,11 +1,11 @@
 {
-  "v": "2.6",
-  "nome": "2.6",
+  "v": "2.7",
+  "nome": "2.7",
   "data": "2026-11-09",
   "novidades": [
-    "Abertura instantânea da Planilha Excel com 1 toque no card ou botão direto",
-    "Visualização fluida de planilha completa no celular com rolagem de colunas e dados",
-    "Exportação .xlsx com 1 toque direto da prévia da cubagem",
-    "Guia Botânico de Campo Integrado com 315 Pranchas Ilustradas em Alta Resolução (Modo Campeiro)"
+    "Integração da identidade oficial do Guia de Campo Aplicado à Identificação Botânica no Modo Campeiro",
+    "Banner oficial ilustrado e navegação otimizada para as 315 pranchas botânicas",
+    "Correção de notificações repetitivas de atualização ao trocar de abas",
+    "Abertura instantânea da Planilha Excel com 1 toque no card e exportação direta"
   ]
 }

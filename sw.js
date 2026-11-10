@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v2.6.0';
+const CACHE_NAME = 'cubagem-florestal-v2.7.0';
 const CORE = [
   './',
   './index.html',
@@ -22,6 +22,8 @@ const CORE = [
   './icons/logo-planilha.png',
   './icons/biokuri-light.png',
   './icons/biokuri-dark.png',
+  './img/guia-campo-banner.png',
+  './img/guia-campo-banner.jpg',
   './capa.jpg',
   './capa-clara.jpg'
 ];
@@ -51,7 +53,7 @@ self.addEventListener('activate', (event) => {
 
 // Ativação imediata sob comando
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.action === 'skipWaiting') {
+  if (event.data && (event.data.action === 'skipWaiting' || event.data.type === 'SKIP_WAITING')) {
     self.skipWaiting();
   }
 });
