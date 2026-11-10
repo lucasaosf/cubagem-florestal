@@ -37,6 +37,18 @@ class CubagemApp {
 
     // Lista dinâmica de toras para cubagem de pilhas de toras
     this.torasPilha = [];
+
+    // Sistema Hold-to-Preview de Planilha Excel (Espiar ao segurar)
+    this.holdTimer = null;
+    this.isHolding = false;
+    this.holdTriggered = false;
+    this.isPinned = false;
+    this.previaAberta = false;
+    this.previaAtivaItem = null;
+    this.abaAtivaPrevia = 'medicao'; // 'medicao' | 'memoria'
+    this.holdStartX = 0;
+    this.holdStartY = 0;
+    this.holdTargetEl = null;
   }
 
   async init() {
@@ -74,6 +86,17 @@ class CubagemApp {
     }
 
     this.setReportPeriod('mes-atual', false);
+
+    // Listeners globais para Hold-to-Preview de Planilha (Espiar ao Segurar)
+    window.addEventListener('pointerup', (e) => this.finalizarSegurarPrevia(e));
+    window.addEventListener('pointercancel', (e) => this.cancelarSegurarPrevia(e));
+    window.addEventListener('touchend', (e) => this.finalizarSegurarPrevia(e));
+    window.addEventListener('pointermove', (e) => this.verificarMovimentoSegurar(e), { passive: true });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.previaAberta) {
+        this.fecharPreviaPlanilha(true);
+      }
+    });
 
     // Verifica por novas atualizações em segundo plano
     setTimeout(() => this.checkUpdate(false), 2500);
@@ -1344,7 +1367,9 @@ class CubagemApp {
     }
 
     return `
-      <div class="history-item-card">
+      <div class="history-item-card holdable-card"
+           onpointerdown="app.iniciarSegurarPrevia(event, '${item.id}')"
+           oncontextmenu="event.preventDefault()">
         <div class="history-card-top">
           <span class="badge-type ${tipo}">${tagTipo}</span>
           <span class="history-tag-date">${dataBR} • ${item.horario || ''}</span>
@@ -1360,9 +1385,13 @@ class CubagemApp {
             <div class="history-vol-unit">m³ geom.</div>
           </div>
         </div>
+        <div class="card-hold-peek-hint">
+          <span class="peek-icon">👁️</span> Segure para ver a planilha
+        </div>
         <div class="history-card-actions">
-          <button class="btn-action-small" onclick="app.abrirDetalhes('${item.id}')">Detalhes</button>
-          <button class="btn-action-small danger" onclick="app.abrirModalExcluir('${item.id}')">Excluir</button>
+          <button type="button" class="btn-action-small preview-btn" onclick="app.abrirPreviaFixada('${item.id}')" title="Ver planilha completa">📊 Planilha</button>
+          <button type="button" class="btn-action-small" onclick="app.abrirDetalhes('${item.id}')">Detalhes</button>
+          <button type="button" class="btn-action-small danger" onclick="app.abrirModalExcluir('${item.id}')">Excluir</button>
         </div>
       </div>
     `;
@@ -2251,6 +2280,866 @@ class CubagemApp {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // =========================================================================
+  // SISTEMA HOLD-TO-PREVIEW: ESPIAR PLANILHA EXCEL AO SEGURAR
+  // =========================================================================
+  async iniciarSegurarPrevia(e, id) {
+    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) {
+      return;
+    }
+
+    this.holdStartX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    this.holdStartY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    this.isHolding = true;
+    this.holdTriggered = false;
+    this.holdTargetEl = e.currentTarget;
+
+    if (this.holdTargetEl) {
+      this.holdTargetEl.classList.add('holding-card');
+    }
+
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+
+    this.holdTimer = setTimeout(async () => {
+      if (!this.isHolding) return;
+      this.holdTriggered = true;
+
+      if (typeof navigator.vibrate === 'function') {
+        try { navigator.vibrate(35); } catch (_) {}
+      }
+
+      let item = null;
+      if (typeof id === 'string') {
+        item = await window.cubagemDB.get(id);
+      } else if (typeof id === 'object' && id !== null) {
+        item = id;
+      }
+
+      if (item) {
+        this.mostrarPreviaPlanilha(item, { isHoldMode: true });
+      } else {
+        this.cancelarSegurarPrevia();
+      }
+    }, 280);
+  }
+
+  iniciarSegurarPreviaLive(e) {
+    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) {
+      return;
+    }
+
+    this.holdStartX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    this.holdStartY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    this.isHolding = true;
+    this.holdTriggered = false;
+    this.holdTargetEl = e.currentTarget;
+
+    if (this.holdTargetEl) {
+      this.holdTargetEl.classList.add('holding-card');
+    }
+
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+
+    this.holdTimer = setTimeout(() => {
+      if (!this.isHolding) return;
+      this.holdTriggered = true;
+
+      if (typeof navigator.vibrate === 'function') {
+        try { navigator.vibrate(35); } catch (_) {}
+      }
+
+      const itemLive = this.obterRegistroLiveAtual();
+      if (itemLive) {
+        this.mostrarPreviaPlanilha(itemLive, { isHoldMode: true });
+      } else {
+        this.cancelarSegurarPrevia();
+      }
+    }, 280);
+  }
+
+  verificarMovimentoSegurar(e) {
+    if (!this.isHolding || this.holdTriggered) return;
+    const curX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    const curY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    const dist = Math.hypot(curX - this.holdStartX, curY - this.holdStartY);
+
+    // Se moveu mais que 14px antes de disparar o timer, é uma rolagem normal do usuário
+    if (dist > 14) {
+      this.cancelarSegurarPrevia();
+    }
+  }
+
+  finalizarSegurarPrevia(e) {
+    if (this.holdTimer) {
+      clearTimeout(this.holdTimer);
+      this.holdTimer = null;
+    }
+    if (this.holdTargetEl) {
+      this.holdTargetEl.classList.remove('holding-card');
+      this.holdTargetEl = null;
+    }
+    this.isHolding = false;
+
+    // Se o modal de prévia foi aberto em modo segurar (peek) e NÃO foi fixado, fecha ao soltar
+    if (this.previaAberta && !this.isPinned) {
+      this.fecharPreviaPlanilha(false);
+    }
+  }
+
+  cancelarSegurarPrevia() {
+    if (this.holdTimer) {
+      clearTimeout(this.holdTimer);
+      this.holdTimer = null;
+    }
+    if (this.holdTargetEl) {
+      this.holdTargetEl.classList.remove('holding-card');
+      this.holdTargetEl = null;
+    }
+    this.isHolding = false;
+    this.holdTriggered = false;
+  }
+
+  obterRegistroLiveAtual() {
+    const data = (document.getElementById('cubData')?.value) || new Date().toISOString().split('T')[0];
+    const horario = (document.getElementById('cubHorario')?.value) || new Date().toTimeString().slice(0, 5);
+    const rodovia = (document.getElementById('cubRodovia')?.value?.trim()) || 'Pátio / Rodovia';
+    const km = (document.getElementById('cubKm')?.value?.trim()) || '';
+    const utm = (document.getElementById('cubUtm')?.value?.trim()) || '';
+    const responsavel = (document.getElementById('cubResponsavel')?.value?.trim()) || 'Responsável Técnico';
+    const observacoes = (document.getElementById('cubObservacoes')?.value?.trim()) || '';
+
+    if (this.tipoCubagem === 'caminhao') {
+      const comp = document.getElementById('cubComprimentoCam')?.value || '0';
+      const larg = document.getElementById('cubLarguraCam')?.value || '0';
+      const placa = (document.getElementById('cubPlaca')?.value?.trim().toUpperCase()) || 'EM MEDIÇÃO';
+      const calc = window.CubagemCalculator.calculateCaminhao({
+        alturasLE: this.alturasLE,
+        alturasLD: this.alturasLD,
+        comprimentoRaw: comp,
+        larguraRaw: larg
+      });
+
+      return {
+        id: 'LIVE-CAMINHAO',
+        tipo: 'caminhao',
+        origemMadeira: this.origemMadeira || 'Nativa',
+        especie: '',
+        data, horario, rodovia, km, utm, responsavel,
+        placa,
+        observacoes,
+        alturasLE: calc.alturasLE || [],
+        alturasLD: calc.alturasLD || [],
+        somaAlturas: calc.somaAlturas || 0,
+        totalAlturas: calc.totalAlturas || 0,
+        alturaMedia: calc.alturaMedia || 0,
+        comprimento: calc.comprimento || 0,
+        largura: calc.largura || 0,
+        volumeGeometrico: calc.volumeGeometrico || 0,
+        tipoVolume: calc.tipoVolume || 'Volume Geométrico',
+        memoriaCalculo: calc.memoriaCalculo || 'Fórmula: Hm = (LE + LD) / n; V = C × L × Hm'
+      };
+    } else if (this.tipoCubagem === 'pilha') {
+      const comp = document.getElementById('cubComprimentoPilha')?.value || '0';
+      const larg = document.getElementById('cubLarguraPilha')?.value || '0';
+      const identPilha = (document.getElementById('cubIdentPilha')?.value?.trim()) || 'PILHA EM MEDIÇÃO';
+      const calc = window.CubagemCalculator.calculatePilha({
+        alturas: this.alturasPilha,
+        comprimentoRaw: comp,
+        larguraRaw: larg
+      });
+
+      return {
+        id: 'LIVE-PILHA',
+        tipo: 'pilha',
+        origemMadeira: this.origemMadeira || 'Nativa',
+        especie: '',
+        data, horario, rodovia, km, utm, responsavel,
+        identificacao: identPilha,
+        placa: identPilha,
+        observacoes,
+        alturas: calc.alturas || [],
+        somaAlturas: calc.somaAlturas || 0,
+        totalAlturas: calc.totalAlturas || 0,
+        alturaMedia: calc.alturaMedia || 0,
+        comprimento: calc.comprimento || 0,
+        largura: calc.largura || 0,
+        volumeGeometrico: calc.volumeGeometrico || 0,
+        tipoVolume: calc.tipoVolume || 'Volume de Pilha',
+        memoriaCalculo: calc.memoriaCalculo || 'Fórmula: V = Comp × Prof × Hm'
+      };
+    } else if (this.tipoCubagem === 'tora') {
+      if (this.torasPilha.length > 0) {
+        const lote = window.CubagemCalculator.calculateLoteToras(this.torasPilha);
+        const identInput = document.getElementById('cubIdentPilhaTora');
+        const plaquetasList = this.torasPilha.map(t => t.plaqueta).filter(Boolean);
+        const identIndividualVal = (identInput ? identInput.value.trim() : '');
+        const identPilhaTora = identIndividualVal || (plaquetasList.length > 0 ? `Pilha com ${lote.totalToras} toras` : 'Pilha de Toras');
+
+        return {
+          id: 'LIVE-PILHA-TORA',
+          tipo: 'tora',
+          especie: this.torasPilha[0]?.especie || '',
+          data, horario, rodovia, km, utm, responsavel,
+          identificacao: identPilhaTora,
+          placa: identPilhaTora,
+          plaqueta: plaquetasList.join(', '),
+          observacoes,
+          totalToras: lote.totalToras,
+          diametroMedio_cm: lote.diametroMedio_cm,
+          comprimentoMedio: lote.comprimentoMedio,
+          volumeGeometrico: lote.volumeTotal,
+          tipoVolume: `Pilha de Toras Roliças (${lote.totalToras} toras - Smalian)`,
+          memoriaCalculo: lote.memoriaCalculo,
+          toras: [...this.torasPilha]
+        };
+      } else {
+        const d1 = document.getElementById('cubDiametroPonta1')?.value || '0';
+        const d2 = document.getElementById('cubDiametroPonta2')?.value || '0';
+        const comp = document.getElementById('cubComprimentoTora')?.value || '0';
+        const plaqueta = (document.getElementById('cubPlaqueta')?.value?.trim()) || 'S/P';
+        const espToraInp = document.getElementById('cubEspecieTora');
+        const espAuto = (espToraInp && espToraInp.value.trim()) || '';
+        const calc = window.CubagemCalculator.calculateTora({
+          diametroPonta1Raw: d1,
+          diametroPonta2Raw: d2,
+          comprimentoRaw: comp,
+          plaqueta: plaqueta
+        });
+
+        return {
+          id: 'LIVE-TORA-INDIVIDUAL',
+          tipo: 'tora',
+          especie: espAuto,
+          data, horario, rodovia, km, utm, responsavel,
+          identificacao: `Tora Plaqueta ${plaqueta}`,
+          placa: `Plaqueta ${plaqueta}`,
+          plaqueta: plaqueta,
+          observacoes,
+          diametroPonta1_cm: calc.diametroPonta1_cm || 0,
+          diametroPonta2_cm: calc.diametroPonta2_cm || 0,
+          diametroMedio_cm: calc.diametroMedio_cm || 0,
+          comprimento: calc.comprimento || 0,
+          volumeGeometrico: calc.volumeGeometrico || 0,
+          tipoVolume: 'Tora Roliça Individual (Smalian)',
+          memoriaCalculo: calc.memoriaCalculo || 'Fórmula Smalian: V = ((g1 + g2) / 2) × L',
+          toras: [{
+            numero: 1,
+            plaqueta,
+            especie: espAuto,
+            diametroPonta1_cm: calc.diametroPonta1_cm || 0,
+            diametroPonta2_cm: calc.diametroPonta2_cm || 0,
+            diametroMedio_cm: calc.diametroMedio_cm || 0,
+            comprimento: calc.comprimento || 0,
+            volumeGeometrico: calc.volumeGeometrico || 0
+          }]
+        };
+      }
+    }
+    return null;
+  }
+
+  mostrarPreviaPlanilha(item, { isHoldMode = true } = {}) {
+    if (!item) return;
+
+    this.previaAtivaItem = item;
+    this.abaAtivaPrevia = 'medicao';
+    this.isPinned = !isHoldMode;
+
+    const modal = document.getElementById('modalPreviaPlanilha');
+    const filenameEl = document.getElementById('prevExcelFilename');
+    const holdIndEl = document.getElementById('prevHoldIndicator');
+    const holdTextEl = document.getElementById('prevHoldText');
+    const pinBtn = document.getElementById('prevBtnPin');
+    const pinLabel = document.getElementById('prevBtnPinLabel');
+    const cellRefEl = document.getElementById('prevCellRef');
+    const formulaTextEl = document.getElementById('prevFormulaText');
+    const viewportGrid = document.getElementById('prevSheetGrid');
+    const tabMedicao = document.getElementById('prevTabMedicao');
+    const tabMemoria = document.getElementById('prevTabMemoria');
+
+    if (!modal || !viewportGrid) return;
+
+    const tipo = item.tipo || 'caminhao';
+    let nomeArquivo = 'Cubagem_Florestal.xlsx';
+    if (tipo === 'caminhao') {
+      nomeArquivo = `Planilha_Caminhao_${(item.placa || 'Medicao').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
+      if (cellRefEl) cellRefEl.textContent = 'K6';
+      if (formulaTextEl) formulaTextEl.textContent = '=(G6 * H6 * F6) * J6';
+    } else if (tipo === 'pilha') {
+      nomeArquivo = `Planilha_Pilha_${(item.identificacao || item.placa || 'Pilha').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
+      if (cellRefEl) cellRefEl.textContent = 'J6';
+      if (formulaTextEl) formulaTextEl.textContent = '=(E6 * F6 * G6) * I6';
+    } else if (tipo === 'tora') {
+      nomeArquivo = `Planilha_Toras_${(item.plaqueta || item.identificacao || 'Lote').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
+      if (cellRefEl) cellRefEl.textContent = 'J6';
+      if (formulaTextEl) formulaTextEl.textContent = '=((PI()*(D6/200)^2 + PI()*(E6/200)^2)/2) * G6';
+    }
+
+    if (filenameEl) filenameEl.textContent = nomeArquivo;
+
+    if (this.isPinned) {
+      if (holdIndEl) holdIndEl.style.display = 'inline-flex';
+      if (holdTextEl) holdTextEl.textContent = '📌 Modo Fixo: Aberto para inspeção';
+      if (pinBtn) pinBtn.classList.add('active-pinned');
+      if (pinLabel) pinLabel.textContent = 'Desafixar';
+    } else {
+      if (holdIndEl) holdIndEl.style.display = 'inline-flex';
+      if (holdTextEl) holdTextEl.textContent = '👆 Segurando: Solte para fechar';
+      if (pinBtn) pinBtn.classList.remove('active-pinned');
+      if (pinLabel) pinLabel.textContent = 'Fixar';
+    }
+
+    if (tabMedicao) tabMedicao.classList.add('active');
+    if (tabMemoria) tabMemoria.classList.remove('active');
+
+    viewportGrid.innerHTML = this.gerarHtmlPlanilhaPrevia(item, 'medicao');
+
+    modal.style.display = 'flex';
+    this.previaAberta = true;
+  }
+
+  async abrirPreviaFixada(id) {
+    let item = null;
+    if (typeof id === 'string') {
+      item = await window.cubagemDB.get(id);
+    } else if (typeof id === 'object' && id !== null) {
+      item = id;
+    }
+    if (!item && this.currentDetailItem) {
+      item = this.currentDetailItem;
+    }
+    if (!item) {
+      item = this.obterRegistroLiveAtual();
+    }
+    if (item) {
+      this.mostrarPreviaPlanilha(item, { isHoldMode: false });
+    }
+  }
+
+  alternarFixarPrevia() {
+    this.isPinned = !this.isPinned;
+    const holdTextEl = document.getElementById('prevHoldText');
+    const pinBtn = document.getElementById('prevBtnPin');
+    const pinLabel = document.getElementById('prevBtnPinLabel');
+
+    if (this.isPinned) {
+      if (holdTextEl) holdTextEl.textContent = '📌 Modo Fixo: Aberto para inspeção';
+      if (pinBtn) pinBtn.classList.add('active-pinned');
+      if (pinLabel) pinLabel.textContent = 'Desafixar';
+      this.showToast('Planilha fixada na tela. Use o botão Fechar para sair.', 'info');
+    } else {
+      if (holdTextEl) holdTextEl.textContent = '👆 Modo Espiar: Solte para fechar';
+      if (pinBtn) pinBtn.classList.remove('active-pinned');
+      if (pinLabel) pinLabel.textContent = 'Fixar';
+    }
+  }
+
+  fecharPreviaPlanilha(forcar = false) {
+    if (this.isPinned && !forcar) return;
+    const modal = document.getElementById('modalPreviaPlanilha');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+    this.previaAberta = false;
+    this.isPinned = false;
+    this.previaAtivaItem = null;
+    if (this.holdTimer) {
+      clearTimeout(this.holdTimer);
+      this.holdTimer = null;
+    }
+    if (this.holdTargetEl) {
+      this.holdTargetEl.classList.remove('holding-card');
+      this.holdTargetEl = null;
+    }
+  }
+
+  alternarAbaPrevia(aba) {
+    this.abaAtivaPrevia = aba;
+    const tabMedicao = document.getElementById('prevTabMedicao');
+    const tabMemoria = document.getElementById('prevTabMemoria');
+    const viewportGrid = document.getElementById('prevSheetGrid');
+    const cellRefEl = document.getElementById('prevCellRef');
+    const formulaTextEl = document.getElementById('prevFormulaText');
+
+    if (aba === 'medicao') {
+      if (tabMedicao) tabMedicao.classList.add('active');
+      if (tabMemoria) tabMemoria.classList.remove('active');
+      const tipo = this.previaAtivaItem?.tipo || 'caminhao';
+      if (cellRefEl) cellRefEl.textContent = tipo === 'caminhao' ? 'K6' : 'J6';
+      if (formulaTextEl) {
+        formulaTextEl.textContent = tipo === 'tora'
+          ? '=((PI()*(D6/200)^2 + PI()*(E6/200)^2)/2) * G6'
+          : '=(G6 * H6 * F6) * J6';
+      }
+    } else {
+      if (tabMedicao) tabMedicao.classList.remove('active');
+      if (tabMemoria) tabMemoria.classList.add('active');
+      if (cellRefEl) cellRefEl.textContent = 'fx';
+      if (formulaTextEl) formulaTextEl.textContent = '=MEMORIA_DE_CALCULO_OFICIAL(SISTAXON, IBAMA, CRBio)';
+    }
+
+    if (viewportGrid && this.previaAtivaItem) {
+      viewportGrid.innerHTML = this.gerarHtmlPlanilhaPrevia(this.previaAtivaItem, aba);
+    }
+  }
+
+  async baixarExcelDaPrevia() {
+    if (!this.previaAtivaItem) return;
+    const item = this.previaAtivaItem;
+    const items = Array.isArray(item.toras) && item.toras.length > 1
+      ? item.toras.map((t, idx) => ({
+          ...item,
+          id: `${item.id}-${idx + 1}`,
+          plaqueta: t.plaqueta,
+          especie: t.especie || item.especie,
+          diametroPonta1_cm: t.diametroPonta1_cm,
+          diametroPonta2_cm: t.diametroPonta2_cm,
+          diametroMedio_cm: t.diametroMedio_cm,
+          comprimento: t.comprimento,
+          volumeGeometrico: t.volumeGeometrico
+        }))
+      : [item];
+
+    const tag = (item.placa || item.identificacao || item.plaqueta || 'Medicao').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `Planilha_${tag}_${item.data || 'cubagem'}.xlsx`;
+
+    try {
+      this.showToast('Gerando arquivo Excel (.xlsx)...', 'info');
+      await window.CubagemExcelExport.exportWorkbook(items, {
+        fileName,
+        responsavel: item.responsavel || 'BioKuri Soluções Ambientais',
+        startDate: item.data || '',
+        endDate: item.data || ''
+      });
+      this.showToast(`Planilha ${fileName} baixada com sucesso!`, 'success');
+    } catch (err) {
+      console.error('Erro ao baixar planilha da prévia:', err);
+      this.showToast('Erro ao exportar planilha Excel.', 'danger');
+    }
+  }
+
+  gerarHtmlPlanilhaPrevia(item, aba = 'medicao') {
+    if (!item) return '';
+
+    const tipo = item.tipo || 'caminhao';
+    const isTora = tipo === 'tora';
+    const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
+    const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+    const volStr = fNum(item.volumeGeometrico, isTora ? 3 : 2);
+
+    if (aba === 'memoria') {
+      return `
+        <table class="excel-grid-table">
+          <thead>
+            <tr>
+              <th class="excel-row-num"></th>
+              <th class="excel-col-head" style="width: 50px;">A</th>
+              <th class="excel-col-head" style="width: 220px;">B</th>
+              <th class="excel-col-head" colspan="5">C</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="excel-row-num">1</td>
+              <td colspan="7" class="excel-brand-title-cell">
+                BIOKURI · SOLUÇÕES AMBIENTAIS — MEMÓRIA TÉCNICA DE CÁLCULO
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">2</td>
+              <td colspan="7" class="excel-brand-sub-cell">
+                Auditoria Numérica e Paramétrica Conforme Diretrizes Sistaxon / Sinaflor (IBAMA)
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">3</td>
+              <td colspan="7" class="excel-meta-cell">
+                <strong>Responsável:</strong> ${item.responsavel || 'Lucas Aøsf'} &bull; 
+                <strong>Registro:</strong> CRBio 127233/01-D &bull; 
+                <strong>Data:</strong> ${dataBR} às ${item.horario || '--:--'} &bull; 
+                <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">4</td>
+              <td class="excel-cell-center font-mono">1</td>
+              <td style="font-weight: 700; background: #F9FAFB;">Modalidade</td>
+              <td colspan="5" class="excel-cell-text" style="font-weight: 600; color: #0E2515;">
+                ${item.tipoVolume || (tipo === 'caminhao' ? 'Carga de Caminhão' : tipo === 'pilha' ? 'Pilha de Madeira' : 'Toras Roliças (Smalian)')}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">5</td>
+              <td class="excel-cell-center font-mono">2</td>
+              <td style="font-weight: 700; background: #F9FAFB;">Identificação</td>
+              <td colspan="5" class="excel-cell-text font-mono" style="font-weight: 700;">
+                ${item.placa || item.identificacao || item.plaqueta || 'S/ID'}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">6</td>
+              <td class="excel-cell-center font-mono">3</td>
+              <td style="font-weight: 700; background: #F9FAFB;">Origem da Madeira</td>
+              <td colspan="5" class="excel-cell-text">
+                ${item.origemMadeira || 'Nativa'} ${item.especie ? ' &bull; <em>' + item.especie + '</em>' : ''}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">7</td>
+              <td class="excel-cell-center font-mono">4</td>
+              <td style="font-weight: 700; background: #F9FAFB;">Equação Aplicada</td>
+              <td colspan="5" class="excel-cell-text" style="font-family: Consolas, monospace; background: #FEFCE8; color: #854D0E;">
+                ${tipo === 'caminhao' ? 'Hm = (Σ LE + Σ LD) / TotalAlturas  |  Vol = Comprimento × Largura × Hm' : tipo === 'pilha' ? 'Hm = (Σ Alturas) / TotalAlturas  |  Vol = Comprimento × Largura × Hm' : 'Smalian: V = ((g1 + g2) / 2) × L, onde g = π × (D/2)²'}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">8</td>
+              <td class="excel-cell-center font-mono">5</td>
+              <td style="font-weight: 700; background: #F9FAFB;">Memória Detalhada</td>
+              <td colspan="5" class="excel-cell-text" style="white-space: pre-line; line-height: 1.5;">
+                ${item.memoriaCalculo || 'Cálculo geométrico validado.'}
+              </td>
+            </tr>
+            <tr class="excel-total-row">
+              <td class="excel-row-num">9</td>
+              <td class="excel-cell-center font-mono">✓</td>
+              <td style="color: #0E2515; text-transform: uppercase;">Volume Final Homologado</td>
+              <td colspan="5" class="excel-cell-num" style="font-size: 1.05rem; color: #0E2515; font-weight: 800;">
+                ${volStr} m³ geométrico
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    // ABA: MEDIÇÃO TÉCNICA (Planilha Excel Principal)
+    if (tipo === 'caminhao') {
+      const leArray = Array.isArray(item.alturasLE) ? item.alturasLE : [];
+      const ldArray = Array.isArray(item.alturasLD) ? item.alturasLD : [];
+      const leStr = leArray.length > 0 ? leArray.map(v => fNum(v)).join(' | ') : '-';
+      const ldStr = ldArray.length > 0 ? ldArray.map(v => fNum(v)).join(' | ') : '-';
+      const comp = item.comprimento || 0;
+      const larg = item.largura || 0;
+      const hm = item.alturaMedia || 0;
+      const volEstereo = comp * larg * hm;
+
+      return `
+        <table class="excel-grid-table">
+          <thead>
+            <tr>
+              <th class="excel-row-num"></th>
+              <th class="excel-col-head" style="width: 35px;">A</th>
+              <th class="excel-col-head" style="width: 95px;">B</th>
+              <th class="excel-col-head" style="width: 70px;">C</th>
+              <th class="excel-col-head" style="width: 140px;">D</th>
+              <th class="excel-col-head" style="width: 140px;">E</th>
+              <th class="excel-col-head" style="width: 80px;">F</th>
+              <th class="excel-col-head" style="width: 80px;">G</th>
+              <th class="excel-col-head" style="width: 80px;">H</th>
+              <th class="excel-col-head" style="width: 95px;">I</th>
+              <th class="excel-col-head" style="width: 60px;">J</th>
+              <th class="excel-col-head" style="width: 100px;">K</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="excel-row-num">1</td>
+              <td colspan="11" class="excel-brand-title-cell">
+                BIOKURI · SOLUÇÕES AMBIENTAIS — CUBAGEM DE CARGA DE CAMINHÃO
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">2</td>
+              <td colspan="11" class="excel-brand-sub-cell">
+                Planilha Oficial de Medição de Volume em Transporte Florestal
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">3</td>
+              <td colspan="11" class="excel-meta-cell">
+                <strong>Data:</strong> ${dataBR} &bull; 
+                <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
+                <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
+                <strong>UTM:</strong> ${item.utm || 'Não reg.'} &bull; 
+                <strong>Resp:</strong> ${item.responsavel || '-'}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">4</td>
+              <td colspan="11" style="background: #FAFAFA; height: 6px; padding: 0;"></td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">5</td>
+              <th class="excel-header-col">Nº</th>
+              <th class="excel-header-col">Placa</th>
+              <th class="excel-header-col">Origem</th>
+              <th class="excel-header-col">LE Alturas (m)</th>
+              <th class="excel-header-col">LD Alturas (m)</th>
+              <th class="excel-header-col">Hm (m)</th>
+              <th class="excel-header-col">Comp. (m)</th>
+              <th class="excel-header-col">Larg. (m)</th>
+              <th class="excel-header-col">Vol. Estéreo (st)</th>
+              <th class="excel-header-col">F.E.</th>
+              <th class="excel-header-col">Vol. Sólido (m³)</th>
+            </tr>
+            <tr>
+              <td class="excel-row-num">6</td>
+              <td class="excel-cell-center font-mono">1</td>
+              <td class="excel-cell-center font-mono" style="font-weight: 700;">${item.placa || 'SEM PLACA'}</td>
+              <td class="excel-cell-center">${item.origemMadeira || 'Nativa'}</td>
+              <td class="excel-cell-center font-mono">${leStr}</td>
+              <td class="excel-cell-center font-mono">${ldStr}</td>
+              <td class="excel-cell-num">${fNum(hm)}</td>
+              <td class="excel-cell-num">${fNum(comp)}</td>
+              <td class="excel-cell-num">${fNum(larg)}</td>
+              <td class="excel-cell-num">${fNum(volEstereo)}</td>
+              <td class="excel-cell-center">1,00</td>
+              <td class="excel-cell-num" style="font-weight: 700; color: #0E2515;">${volStr}</td>
+            </tr>
+            <tr class="excel-total-row">
+              <td class="excel-row-num">7</td>
+              <td colspan="3" class="excel-cell-text" style="font-weight: 700;">TOTAL DA CARGA</td>
+              <td colspan="2" class="excel-cell-center" style="font-size: 0.74rem;">${leArray.length + ldArray.length} Tomadas de Altura</td>
+              <td class="excel-cell-num">${fNum(hm)}</td>
+              <td class="excel-cell-num">${fNum(comp)}</td>
+              <td class="excel-cell-num">${fNum(larg)}</td>
+              <td class="excel-cell-num">${fNum(volEstereo)} st</td>
+              <td class="excel-cell-center">-</td>
+              <td class="excel-cell-num" style="font-size: 0.96rem; font-weight: 800; color: #0E2515;">${volStr} m³</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    if (tipo === 'pilha') {
+      const altArray = Array.isArray(item.alturas) ? item.alturas : [];
+      const altStr = altArray.length > 0 ? altArray.map(v => fNum(v)).join(' | ') : '-';
+      const comp = item.comprimento || 0;
+      const larg = item.largura || 0;
+      const hm = item.alturaMedia || 0;
+      const volEstereo = comp * larg * hm;
+
+      return `
+        <table class="excel-grid-table">
+          <thead>
+            <tr>
+              <th class="excel-row-num"></th>
+              <th class="excel-col-head" style="width: 35px;">A</th>
+              <th class="excel-col-head" style="width: 120px;">B</th>
+              <th class="excel-col-head" style="width: 70px;">C</th>
+              <th class="excel-col-head" style="width: 200px;">D</th>
+              <th class="excel-col-head" style="width: 80px;">E</th>
+              <th class="excel-col-head" style="width: 80px;">F</th>
+              <th class="excel-col-head" style="width: 80px;">G</th>
+              <th class="excel-col-head" style="width: 95px;">H</th>
+              <th class="excel-col-head" style="width: 60px;">I</th>
+              <th class="excel-col-head" style="width: 100px;">J</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="excel-row-num">1</td>
+              <td colspan="10" class="excel-brand-title-cell">
+                BIOKURI · SOLUÇÕES AMBIENTAIS — CUBAGEM DE PILHA DE MADEIRA
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">2</td>
+              <td colspan="10" class="excel-brand-sub-cell">
+                Planilha Oficial de Medição de Pilhas no Pátio / Campo
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">3</td>
+              <td colspan="10" class="excel-meta-cell">
+                <strong>Data:</strong> ${dataBR} &bull; 
+                <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
+                <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
+                <strong>Resp:</strong> ${item.responsavel || '-'}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">4</td>
+              <td colspan="10" style="background: #FAFAFA; height: 6px; padding: 0;"></td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">5</td>
+              <th class="excel-header-col">Nº</th>
+              <th class="excel-header-col">Identificação</th>
+              <th class="excel-header-col">Origem</th>
+              <th class="excel-header-col">Alturas Verticais (m)</th>
+              <th class="excel-header-col">Hm (m)</th>
+              <th class="excel-header-col">Comp. (m)</th>
+              <th class="excel-header-col">Profund. (m)</th>
+              <th class="excel-header-col">Vol. Estéreo (st)</th>
+              <th class="excel-header-col">F.E.</th>
+              <th class="excel-header-col">Vol. Sólido (m³)</th>
+            </tr>
+            <tr>
+              <td class="excel-row-num">6</td>
+              <td class="excel-cell-center font-mono">1</td>
+              <td class="excel-cell-center font-mono" style="font-weight: 700;">${item.identificacao || item.placa || 'PILHA'}</td>
+              <td class="excel-cell-center">${item.origemMadeira || 'Nativa'}</td>
+              <td class="excel-cell-center font-mono">${altStr}</td>
+              <td class="excel-cell-num">${fNum(hm)}</td>
+              <td class="excel-cell-num">${fNum(comp)}</td>
+              <td class="excel-cell-num">${fNum(larg)}</td>
+              <td class="excel-cell-num">${fNum(volEstereo)}</td>
+              <td class="excel-cell-center">1,00</td>
+              <td class="excel-cell-num" style="font-weight: 700; color: #0E2515;">${volStr}</td>
+            </tr>
+            <tr class="excel-total-row">
+              <td class="excel-row-num">7</td>
+              <td colspan="3" class="excel-cell-text" style="font-weight: 700;">TOTAL DA PILHA</td>
+              <td class="excel-cell-center" style="font-size: 0.74rem;">${altArray.length} Alturas tomadas</td>
+              <td class="excel-cell-num">${fNum(hm)}</td>
+              <td class="excel-cell-num">${fNum(comp)}</td>
+              <td class="excel-cell-num">${fNum(larg)}</td>
+              <td class="excel-cell-num">${fNum(volEstereo)} st</td>
+              <td class="excel-cell-center">-</td>
+              <td class="excel-cell-num" style="font-size: 0.96rem; font-weight: 800; color: #0E2515;">${volStr} m³</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    if (tipo === 'tora') {
+      const listaToras = Array.isArray(item.toras) && item.toras.length > 0
+        ? item.toras
+        : [{
+            numero: 1,
+            plaqueta: item.plaqueta || 'S/P',
+            especie: item.especie || '',
+            diametroPonta1_cm: item.diametroPonta1_cm || (Number(item.diametroMedio_cm) || 0),
+            diametroPonta2_cm: item.diametroPonta2_cm || (Number(item.diametroMedio_cm) || 0),
+            diametroMedio_cm: item.diametroMedio_cm || 0,
+            comprimento: item.comprimento || 0,
+            volumeGeometrico: item.volumeGeometrico || 0
+          }];
+
+      const totalToras = listaToras.length;
+      let somaDm = 0;
+      let somaComp = 0;
+      let somaVol = 0;
+
+      const rowsHtml = listaToras.map((t, idx) => {
+        const rowNum = 6 + idx;
+        const d1 = Number(t.diametroPonta1_cm) || 0;
+        const d2 = Number(t.diametroPonta2_cm) || 0;
+        const dm = Number(t.diametroMedio_cm) || ((d1 + d2) / 2);
+        const comp = Number(t.comprimento) || 0;
+        const vol = Number(t.volumeGeometrico) || 0;
+
+        const g1 = Math.PI * Math.pow(d1 / 200, 2);
+        const g2 = Math.PI * Math.pow(d2 / 200, 2);
+
+        somaDm += dm;
+        somaComp += comp;
+        somaVol += vol;
+
+        return `
+          <tr>
+            <td class="excel-row-num">${rowNum}</td>
+            <td class="excel-cell-center font-mono">${idx + 1}</td>
+            <td class="excel-cell-center font-mono" style="font-weight: 700;">${t.plaqueta || 'S/P'}</td>
+            <td class="excel-cell-text" style="font-style: italic;">${t.especie || item.especie || '-'}</td>
+            <td class="excel-cell-num">${fNum(d1, 1)}</td>
+            <td class="excel-cell-num">${fNum(d2, 1)}</td>
+            <td class="excel-cell-num font-mono" style="font-weight: 600;">${fNum(dm, 1)}</td>
+            <td class="excel-cell-num">${fNum(comp, 2)}</td>
+            <td class="excel-cell-num" style="color: #6B7280;">${fNum(g1, 4)}</td>
+            <td class="excel-cell-num" style="color: #6B7280;">${fNum(g2, 4)}</td>
+            <td class="excel-cell-num" style="font-weight: 700; color: #0E2515;">${fNum(vol, 3)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const dmMedio = totalToras > 0 ? (somaDm / totalToras) : 0;
+      const compMedio = totalToras > 0 ? (somaComp / totalToras) : 0;
+      const totalVolFinal = somaVol > 0 ? somaVol : (Number(item.volumeGeometrico) || 0);
+
+      return `
+        <table class="excel-grid-table">
+          <thead>
+            <tr>
+              <th class="excel-row-num"></th>
+              <th class="excel-col-head" style="width: 35px;">A</th>
+              <th class="excel-col-head" style="width: 85px;">B</th>
+              <th class="excel-col-head" style="width: 150px;">C</th>
+              <th class="excel-col-head" style="width: 70px;">D</th>
+              <th class="excel-col-head" style="width: 70px;">E</th>
+              <th class="excel-col-head" style="width: 75px;">F</th>
+              <th class="excel-col-head" style="width: 75px;">G</th>
+              <th class="excel-col-head" style="width: 85px;">H</th>
+              <th class="excel-col-head" style="width: 85px;">I</th>
+              <th class="excel-col-head" style="width: 100px;">J</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="excel-row-num">1</td>
+              <td colspan="10" class="excel-brand-title-cell">
+                BIOKURI · SOLUÇÕES AMBIENTAIS — CUBAGEM DE TORAS ROLIÇAS (MÉTODO SMALIAN)
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">2</td>
+              <td colspan="10" class="excel-brand-sub-cell">
+                Romaneio Analítico de Medição com Rastreabilidade de Plaqueta
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">3</td>
+              <td colspan="10" class="excel-meta-cell">
+                <strong>Data:</strong> ${dataBR} &bull; 
+                <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
+                <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
+                <strong>Resp:</strong> ${item.responsavel || '-'} &bull; 
+                <strong>Lote:</strong> ${item.identificacao || item.placa || 'Pilha de Toras'}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">4</td>
+              <td colspan="10" style="background: #FAFAFA; height: 6px; padding: 0;"></td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">5</td>
+              <th class="excel-header-col">Nº</th>
+              <th class="excel-header-col">Plaqueta</th>
+              <th class="excel-header-col">Espécie</th>
+              <th class="excel-header-col">D1 (cm)</th>
+              <th class="excel-header-col">D2 (cm)</th>
+              <th class="excel-header-col">Dm (cm)</th>
+              <th class="excel-header-col">Comp. L (m)</th>
+              <th class="excel-header-col">g1 (m²)</th>
+              <th class="excel-header-col">g2 (m²)</th>
+              <th class="excel-header-col">Vol. Smalian (m³)</th>
+            </tr>
+            ${rowsHtml}
+            <tr class="excel-total-row">
+              <td class="excel-row-num">${6 + totalToras}</td>
+              <td colspan="3" class="excel-cell-text" style="font-weight: 700;">
+                TOTAL DO LOTE: ${totalToras} ${totalToras === 1 ? 'tora' : 'toras'}
+              </td>
+              <td colspan="2" class="excel-cell-center" style="font-size: 0.74rem;">Médias:</td>
+              <td class="excel-cell-num font-mono" style="font-weight: 700;">${fNum(dmMedio, 1)} cm</td>
+              <td class="excel-cell-num font-mono" style="font-weight: 700;">${fNum(compMedio, 2)} m</td>
+              <td colspan="2" class="excel-cell-center" style="font-size: 0.72rem; color: #6B7280;">Σ Seções</td>
+              <td class="excel-cell-num" style="font-size: 0.98rem; font-weight: 800; color: #0E2515;">
+                ${fNum(totalVolFinal, 3)} m³
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    return '<div style="padding: 20px; text-align: center; color: #666;">Nenhum dado para exibir.</div>';
   }
 
   showToast(message, type = 'info') {

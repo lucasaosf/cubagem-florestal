@@ -476,7 +476,7 @@
               </div>
 
               <!-- Resumo Acumulado da Pilha -->
-              <div id="toraPileTotalSummary" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold);">
+              <div id="toraPileTotalSummary" class="holdable-card" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold); cursor: pointer;" onpointerdown="app.iniciarSegurarPreviaLive(event)" oncontextmenu="event.preventDefault()">
                 <div style="display: flex; justify-content: space-between; align-items: baseline;">
                   <span style="font-weight: 700; color: var(--gold); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">Volume Total da Pilha</span>
                   <span style="font-size: 1.45rem; font-family: var(--display); font-weight: 700; color: var(--ink);" id="toraPileTotalVolDisplay">0,000 m³</span>
@@ -484,12 +484,15 @@
                 <div style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;" id="toraPileTotalStats">
                   0 toras • Dm Médio: 0,0 cm • Comp. Médio: 0,00 m
                 </div>
+                <div class="card-hold-peek-hint">
+                  <span class="peek-icon">👁️</span> Segure para ver a planilha da pilha
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Card de Cálculo em Tempo Real -->
-          <div class="calc-result-card" id="liveCalcCard">
+          <div class="calc-result-card holdable-card" id="liveCalcCard" onpointerdown="app.iniciarSegurarPreviaLive(event)" oncontextmenu="event.preventDefault()">
             <div class="calc-result-header">
               <span class="calc-result-tag" id="liveCalcTag">Cálculo Automático</span>
               <span class="calc-result-type-badge" id="liveTypeBadge">Carga de Caminhão</span>
@@ -517,6 +520,10 @@
 
             <div class="calc-memory-text" id="liveMemoryText">
               Preencha os dados da medição para visualizar o cálculo de volume.
+            </div>
+
+            <div class="card-hold-peek-hint">
+              <span class="peek-icon">👁️</span> Segure este card para ver a prévia da planilha
             </div>
           </div>
 
@@ -830,7 +837,8 @@
       </div>
       <div class="modal-body" id="detalheModalConteudo"></div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="app.fecharModal('modalDetalhes')">Fechar</button>
+        <button type="button" class="btn btn-secondary" onclick="app.fecharModal('modalDetalhes')">Fechar</button>
+        <button type="button" class="btn btn-primary" onclick="if(app.currentDetailItem) { app.fecharModal('modalDetalhes'); app.abrirPreviaFixada(app.currentDetailItem.id); }">📊 Ver Planilha Excel</button>
       </div>
     </div>
   </div>
@@ -1228,6 +1236,67 @@
         </div>
         <div class="lb-footer-actions">
           <button type="button" class="btn btn-sm btn-primary" id="lbBtnUsarCubagem" onclick="app.usarPranchaAtivaNaCubagem()">🪵 Usar esta Espécie na Cubagem</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PRÉVIA DA PLANILHA EXCEL AO SEGURAR (PEEK ON HOLD) -->
+  <div id="modalPreviaPlanilha" class="modal-overlay modal-excel-overlay" style="display: none;" aria-hidden="true" onclick="if(event.target===this && app.isPinned) app.fecharPreviaPlanilha(true)">
+    <div class="excel-preview-window" onclick="event.stopPropagation()">
+      <!-- Barra Superior Estilo Excel -->
+      <div class="excel-title-bar">
+        <div class="excel-title-left">
+          <span class="excel-logo-icon">📊</span>
+          <div class="excel-title-text">
+            <span class="excel-filename" id="prevExcelFilename">Cubagem_Florestal.xlsx</span>
+            <span class="excel-badge-brand">BIOKURI · Soluções Ambientais</span>
+          </div>
+        </div>
+        <div class="excel-hold-indicator" id="prevHoldIndicator">
+          <span class="pulse-dot"></span>
+          <span id="prevHoldText">👆 Segurando: Solte para fechar</span>
+        </div>
+        <div class="excel-title-actions">
+          <button type="button" class="btn-excel-tool" id="prevBtnPin" onclick="app.alternarFixarPrevia()" title="Fixar prévia para poder rolar e inspecionar">
+            📌 <span class="btn-tool-label" id="prevBtnPinLabel">Fixar</span>
+          </button>
+          <button type="button" class="btn-excel-tool export" id="prevBtnDownload" onclick="app.baixarExcelDaPrevia()" title="Baixar esta medição em formato Excel (.xlsx)">
+            ⬇️ <span class="btn-tool-label">Baixar .xlsx</span>
+          </button>
+          <button type="button" class="btn-excel-tool close" onclick="app.fecharPreviaPlanilha(true)" title="Fechar prévia">&times;</button>
+        </div>
+      </div>
+
+      <!-- Barra de Abas Ribbon do Excel -->
+      <div class="excel-ribbon-bar">
+        <span class="ribbon-tab active">Página Inicial</span>
+        <span class="ribbon-tab">Fórmulas Florestais</span>
+        <span class="ribbon-tab">Dados Oficiais</span>
+        <span class="ribbon-tab">Sistaxon/Sinaflor</span>
+      </div>
+
+      <!-- Barra de Fórmulas fx -->
+      <div class="excel-formula-bar">
+        <div class="excel-name-box" id="prevCellRef">fx</div>
+        <div class="excel-formula-input" id="prevFormulaText">=(COMPRIMENTO × LARGURA × Hm_MEDIA)</div>
+      </div>
+
+      <!-- Área de Visualização da Grade da Planilha -->
+      <div class="excel-sheet-viewport" id="prevSheetViewport">
+        <div class="excel-sheet-grid" id="prevSheetGrid">
+          <!-- Conteúdo gerado dinamicamente via JS -->
+        </div>
+      </div>
+
+      <!-- Rodapé com Abas da Planilha -->
+      <div class="excel-bottom-bar">
+        <div class="excel-sheet-tabs" id="prevSheetTabs">
+          <button type="button" class="sheet-tab active" id="prevTabMedicao" onclick="app.alternarAbaPrevia('medicao')">📋 Medição Técnica</button>
+          <button type="button" class="sheet-tab" id="prevTabMemoria" onclick="app.alternarAbaPrevia('memoria')">📐 Memória de Cálculo</button>
+        </div>
+        <div class="excel-status-right">
+          <span class="excel-ready-tag">✓ VALIDADO BIOKURI · CRBio 127233/01-D</span>
         </div>
       </div>
     </div>

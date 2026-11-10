@@ -3066,4 +3066,450 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   }
 }
 
+/* =========================================================================
+   SISTEMA HOLD-TO-PREVIEW: ESPIAR PLANILHA EXCEL AO SEGURAR
+   ========================================================================= */
+
+.holdable-card {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.holdable-card:active,
+.holdable-card.holding-card {
+  transform: scale(0.985);
+  border-color: var(--gold, #96784A) !important;
+  box-shadow: 0 0 16px rgba(150, 120, 74, 0.4) !important;
+}
+
+.card-hold-peek-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--gold, #96784A);
+  opacity: 0.88;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(150, 120, 74, 0.28);
+  letter-spacing: 0.2px;
+  user-select: none;
+  pointer-events: none;
+}
+
+.card-hold-peek-hint .peek-icon {
+  font-size: 0.85rem;
+  animation: peekPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes peekPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+
+.btn-action-small.preview-btn {
+  background: rgba(150, 120, 74, 0.15);
+  color: var(--gold, #96784A);
+  border: 1px solid rgba(150, 120, 74, 0.4);
+  font-weight: 600;
+}
+
+.btn-action-small.preview-btn:hover {
+  background: var(--gold, #96784A);
+  color: #0E2515;
+}
+
+/* MODAL OVERLAY: ESTILO PLANILHA EXCEL */
+.modal-excel-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10, 20, 13, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: excelFadeIn 0.18s ease-out;
+  touch-action: pan-x pan-y;
+}
+
+@keyframes excelFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.excel-preview-window {
+  background: #FFFFFF;
+  color: #1F2421;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1.5px #0E2515;
+  width: 100%;
+  max-width: 1080px;
+  max-height: 90vh;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+}
+
+.excel-title-bar {
+  background: #0E2515;
+  color: #FFFFFF;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 2px solid #96784A;
+  flex-shrink: 0;
+}
+
+.excel-title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.excel-logo-icon {
+  font-size: 1.35rem;
+}
+
+.excel-title-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.excel-filename {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #F2EBDD;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.3px;
+}
+
+.excel-badge-brand {
+  font-size: 0.68rem;
+  color: #96784A;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.excel-hold-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(150, 120, 74, 0.22);
+  border: 1px solid rgba(150, 120, 74, 0.6);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  color: #F2EBDD;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.excel-hold-indicator .pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+  animation: dotBlink 1.2s infinite ease-in-out;
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
+}
+
+.excel-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-excel-tool {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-excel-tool:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: #96784A;
+}
+
+.btn-excel-tool.export {
+  background: #173A1E;
+  border-color: #96784A;
+  color: #F2EBDD;
+  font-weight: 600;
+}
+
+.btn-excel-tool.export:hover {
+  background: #96784A;
+  color: #0E2515;
+}
+
+.btn-excel-tool.close {
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 4px 8px;
+}
+
+.btn-excel-tool.active-pinned {
+  background: #96784A !important;
+  color: #0E2515 !important;
+  font-weight: 700;
+}
+
+/* BARRA DE ABAS RIBBON */
+.excel-ribbon-bar {
+  background: #F3F4F6;
+  border-bottom: 1px solid #D1D5DB;
+  padding: 4px 16px;
+  display: flex;
+  gap: 16px;
+  font-size: 0.74rem;
+  color: #4B5563;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.excel-ribbon-bar .ribbon-tab {
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.excel-ribbon-bar .ribbon-tab.active {
+  background: #FFFFFF;
+  color: #0E2515;
+  font-weight: 700;
+  border-bottom: 2px solid #0E2515;
+}
+
+/* BARRA DE FÓRMULAS FX */
+.excel-formula-bar {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.excel-name-box {
+  min-width: 44px;
+  padding: 2px 6px;
+  background: #F9FAFB;
+  border: 1px solid #D1D5DB;
+  border-radius: 3px;
+  text-align: center;
+  font-weight: 700;
+  color: #0E2515;
+  font-size: 0.78rem;
+}
+
+.excel-formula-input {
+  flex: 1;
+  color: #1F2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* VIEWPORT E GRADE DA PLANILHA */
+.excel-sheet-viewport {
+  flex: 1;
+  overflow: auto;
+  background: #FAFAFA;
+  padding: 0;
+  max-height: calc(90vh - 180px);
+  min-height: 260px;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+
+.excel-grid-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+  font-size: 0.8rem;
+  color: #1F2937;
+  background: #FFFFFF;
+  font-variant-numeric: tabular-nums;
+}
+
+.excel-grid-table th,
+.excel-grid-table td {
+  border: 1px solid #D1D5DB;
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.excel-row-num,
+.excel-col-head {
+  background: #F3F4F6 !important;
+  color: #6B7280 !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  font-size: 0.72rem !important;
+  user-select: none;
+  border: 1px solid #D1D5DB !important;
+}
+
+.excel-row-num {
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+}
+
+.excel-brand-title-cell {
+  background: #0E2515 !important;
+  color: #F2EBDD !important;
+  font-weight: 700 !important;
+  font-size: 0.96rem !important;
+  letter-spacing: 0.5px;
+  padding: 10px 14px !important;
+}
+
+.excel-brand-sub-cell {
+  background: #173A1E !important;
+  color: #E2D6BC !important;
+  font-size: 0.75rem !important;
+  padding: 5px 14px !important;
+}
+
+.excel-meta-cell {
+  background: #FBF8F1 !important;
+  color: #3B3F3A !important;
+  font-size: 0.76rem !important;
+  border-bottom: 2px solid #A88552 !important;
+  padding: 6px 14px !important;
+}
+
+.excel-header-col {
+  background: #173A1E !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  border: 1px solid #A88552 !important;
+  padding: 7px 10px !important;
+  font-size: 0.76rem !important;
+}
+
+.excel-cell-text {
+  text-align: left;
+}
+
+.excel-cell-num {
+  text-align: right;
+  font-family: Consolas, 'Courier New', monospace;
+}
+
+.excel-cell-center {
+  text-align: center;
+}
+
+.excel-total-row td {
+  background: #FBF8F1 !important;
+  font-weight: 700 !important;
+  color: #0E2515 !important;
+  border-top: 1.5px solid #A88552 !important;
+  border-bottom: 3px double #0E2515 !important;
+  padding: 8px 10px !important;
+}
+
+/* RODAPÉ DA PLANILHA (ABAS) */
+.excel-bottom-bar {
+  background: #E5E7EB;
+  border-top: 1px solid #D1D5DB;
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.excel-sheet-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.sheet-tab {
+  background: #D1D5DB;
+  border: 1px solid #9CA3AF;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 5px 14px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sheet-tab.active {
+  background: #FFFFFF;
+  color: #0E2515;
+  border-color: #9CA3AF #9CA3AF #FFFFFF #9CA3AF;
+  font-weight: 700;
+}
+
+.excel-ready-tag {
+  font-size: 0.7rem;
+  color: #065f46;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+@media (max-width: 640px) {
+  .excel-preview-window {
+    max-height: 94vh;
+    border-radius: 8px;
+  }
+  .excel-hold-indicator span#prevHoldText {
+    display: inline-block;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .btn-tool-label {
+    display: none;
+  }
+  .excel-ready-tag {
+    display: none;
+  }
+}
+
+
 
