@@ -1,10 +1,11 @@
 {
-  "v": "2.7.4",
-  "nome": "2.7.4",
+  "v": "2.7.5",
+  "nome": "2.7.5",
   "data": "2026-11-10",
   "novidades": [
-    "Abertura da prévia da planilha acionada exclusivamente pelo botão dedicado 'Ver Planilha'",
-    "Remoção de duplo clique e toque prolongado para maior estabilidade no celular",
-    "Interface mais limpa e direta nos cards de medições e cálculo em tempo real"
+    "Fixação e estabilidade total da tela da planilha Excel (permanece visível sem fechar sozinha)",
+    "Visualização em tela cheia no celular para navegação confortável pelas colunas e linhas",
+    "Botões fixos de fechamento no topo e rodapé para controle total pelo usuário",
+    "Abertura rápida e direta exclusivamente pelo botão 'Ver Planilha'"
   ]
 }

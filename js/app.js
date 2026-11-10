@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7.4';
+    this.appVersion = '2.7.5';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -2539,7 +2539,10 @@ class CubagemApp {
 
     viewportGrid.innerHTML = this.gerarHtmlPlanilhaPrevia(item, 'medicao');
 
+    // Abre o modal de forma 100% visível, fixa e persistente
     modal.style.display = 'flex';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
     this.previaAberta = true;
   }
 
@@ -2565,7 +2568,9 @@ class CubagemApp {
     const modal = document.getElementById('modalPreviaPlanilha');
     if (modal) {
       modal.style.display = 'none';
+      modal.classList.remove('open');
       modal.classList.remove('peek-mode');
+      modal.setAttribute('aria-hidden', 'true');
     }
     this.previaAberta = false;
     this.previaAtivaItem = null;

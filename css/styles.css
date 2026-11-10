@@ -3246,23 +3246,25 @@ body:not([data-active-tab="inicio"]) .install-balloon {
 /* MODAL OVERLAY: ESTILO PLANILHA EXCEL */
 .modal-excel-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(10, 20, 13, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  inset: 0;
+  background: rgba(10, 20, 13, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   z-index: 9999;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 12px;
-  animation: excelFadeIn 0.18s ease-out;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
   touch-action: pan-x pan-y;
-  pointer-events: auto !important;
 }
 
-@keyframes excelFadeIn {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
+.modal-excel-overlay.open {
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .excel-preview-window {
@@ -3272,12 +3274,14 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1.5px #0E2515;
   width: 100%;
   max-width: 1080px;
-  max-height: 90vh;
-  height: auto;
+  max-height: 92vh;
+  height: 92vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  pointer-events: auto !important;
+  position: relative;
 }
 
 .excel-title-bar {
@@ -3612,10 +3616,44 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   letter-spacing: 0.4px;
 }
 
+.btn-sheet-close-bottom {
+  background: #0E2515;
+  color: #F2EBDD;
+  border: 1px solid #96784A;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-sheet-close-bottom:hover,
+.btn-sheet-close-bottom:active {
+  background: #96784A;
+  color: #0E2515;
+}
+
 @media (max-width: 640px) {
+  .modal-excel-overlay {
+    padding: 0 !important;
+  }
   .excel-preview-window {
-    max-height: 94vh;
-    border-radius: 8px;
+    width: 100vw !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .excel-title-bar {
+    padding: 10px 12px;
+  }
+  .excel-sheet-viewport {
+    max-height: calc(100vh - 165px) !important;
+    min-height: calc(100vh - 165px) !important;
   }
   .excel-hold-indicator span#prevHoldText {
     display: inline-block;
@@ -3628,6 +3666,14 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   }
   .excel-ready-tag {
     display: none;
+  }
+  .btn-excel-tool.close {
+    font-size: 1.5rem;
+    min-width: 38px;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 

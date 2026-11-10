@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css?v=2.7.4">
+  <link rel="stylesheet" href="css/styles.css?v=2.7.5">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -189,7 +189,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <button type="button" class="cover-ver-pill" onclick="app.verificarOuAbrirPopUpAtualizacao()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para verificar atualizações">Versão 2.7.4 🔄</button>
+            <button type="button" class="cover-ver-pill" onclick="app.verificarOuAbrirPopUpAtualizacao()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para verificar atualizações">Versão 2.7.5 🔄</button>
             <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
@@ -1258,7 +1258,7 @@
   </div>
 
   <!-- MODAL: PRÉVIA DA PLANILHA EXCEL -->
-  <div id="modalPreviaPlanilha" class="modal-overlay modal-excel-overlay" style="display: none;" aria-hidden="true" onclick="if(event.target===this) app.fecharPreviaPlanilha(true)">
+  <div id="modalPreviaPlanilha" class="modal-overlay modal-excel-overlay" style="display: none;" aria-hidden="true">
     <div class="excel-preview-window" onclick="event.stopPropagation()">
       <!-- Barra Superior Estilo Excel -->
       <div class="excel-title-bar">
@@ -1277,7 +1277,7 @@
           <button type="button" class="btn-excel-tool export" id="prevBtnDownload" onclick="app.baixarExcelDaPrevia()" title="Baixar esta medição em formato Excel (.xlsx)">
             ⬇️ <span class="btn-tool-label">Baixar .xlsx</span>
           </button>
-          <button type="button" class="btn-excel-tool close" onclick="app.fecharPreviaPlanilha(true)" title="Fechar prévia">&times;</button>
+          <button type="button" class="btn-excel-tool close" onclick="app.fecharPreviaPlanilha(true)" title="Fechar prévia" aria-label="Fechar planilha">&times;</button>
         </div>
       </div>
 
@@ -1308,8 +1308,9 @@
           <button type="button" class="sheet-tab active" id="prevTabMedicao" onclick="app.alternarAbaPrevia('medicao')">📋 Medição Técnica</button>
           <button type="button" class="sheet-tab" id="prevTabMemoria" onclick="app.alternarAbaPrevia('memoria')">📐 Memória de Cálculo</button>
         </div>
-        <div class="excel-status-right">
+        <div class="excel-status-right" style="display: flex; align-items: center; gap: 10px;">
           <span class="excel-ready-tag">✓ VALIDADO BIOKURI · CRBio 127233/01-D</span>
+          <button type="button" class="btn-sheet-close-bottom" onclick="app.fecharPreviaPlanilha(true)">✕ Fechar</button>
         </div>
       </div>
     </div>
@@ -1364,9 +1365,9 @@
   <script src="js/db.js"></script>
   <script src="js/calculator.js"></script>
   <script src="js/excel-export.js"></script>
-  <script src="js/auth.js?v=2.7.4"></script>
+  <script src="js/auth.js?v=2.7.5"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js?v=2.7.4"></script>
+  <script src="js/app.js?v=2.7.5"></script>
 </body>
 </html>
