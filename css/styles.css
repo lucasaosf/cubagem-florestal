@@ -3856,6 +3856,240 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   background: rgba(0, 0, 0, 0.05);
 }
 
+/* ==========================================================================
+   EDIÇÃO DE CUBAGEM, MULTI-SELEÇÃO E MESCLAGEM (v2.7.6)
+   ========================================================================== */
+
+/* Banner de Modo de Edição */
+.edit-mode-banner {
+  background: linear-gradient(135deg, rgba(150, 120, 74, 0.18) 0%, rgba(14, 37, 21, 0.25) 100%);
+  border: 1.5px solid var(--gold);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.edit-mode-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.edit-mode-info {
+  flex: 1;
+}
+
+.edit-mode-title {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 2px;
+}
+
+.edit-mode-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.btn-cancel-edit {
+  background: transparent;
+  color: var(--rec, #A8402E);
+  border: 1px solid var(--rec, #A8402E);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-cancel-edit:hover,
+.btn-cancel-edit:active {
+  background: var(--rec, #A8402E);
+  color: #FFFFFF;
+}
+
+/* Barra de Ações em Massa (Histórico) */
+.history-bulk-actions-bar {
+  position: sticky;
+  top: 10px;
+  z-index: 90;
+  background: var(--surface);
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: slideDownBulk 0.2s ease-out;
+}
+
+@keyframes slideDownBulk {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bulk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bulk-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+.bulk-badge-num {
+  background: var(--gold);
+  color: #0E2515;
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 2px 9px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.btn-bulk-clear {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-bulk-clear:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.bulk-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-bulk {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 12px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-bulk-excel {
+  background: linear-gradient(135deg, #107C41 0%, #0B5C30 100%);
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(16, 124, 65, 0.3);
+}
+
+.btn-bulk-excel:hover,
+.btn-bulk-excel:active {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.btn-bulk-preview {
+  background: rgba(150, 120, 74, 0.18);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+
+.btn-bulk-preview:hover,
+.btn-bulk-preview:active {
+  background: var(--gold);
+  color: #0E2515;
+}
+
+.btn-bulk-merge {
+  background: linear-gradient(135deg, #B28F59 0%, #8A6D3B 100%);
+  color: #0E2515;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(150, 120, 74, 0.3);
+}
+
+.btn-bulk-merge:hover,
+.btn-bulk-merge:active {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Checkbox no Card do Histórico */
+.hist-card-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--gold);
+  border-radius: 4px;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.history-item-card.selected-card {
+  border: 2px solid var(--gold) !important;
+  background: var(--surface-2) !important;
+  box-shadow: 0 4px 14px rgba(150, 120, 74, 0.25) !important;
+}
+
+/* Botão Editar no Card */
+.btn-action-small.edit-btn {
+  background: rgba(150, 120, 74, 0.14);
+  color: var(--gold, #96784A);
+  border: 1px solid rgba(150, 120, 74, 0.45);
+  font-weight: 700;
+}
+
+.btn-action-small.edit-btn:hover,
+.btn-action-small.edit-btn:active {
+  background: var(--gold, #96784A);
+  color: #0E2515;
+  border-color: var(--gold, #96784A);
+}
+
+/* Botão Warning para Modais */
+.btn-warning {
+  background: linear-gradient(135deg, #B28F59 0%, #8A6D3B 100%);
+  color: #0E2515;
+  font-weight: 700;
+  border: 1px solid var(--gold);
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-warning:hover,
+.btn-warning:active {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+
 
 
 

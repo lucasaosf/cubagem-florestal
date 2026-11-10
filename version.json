@@ -1,11 +1,12 @@
 {
-  "v": "2.7.5",
-  "nome": "2.7.5",
+  "v": "2.7.6",
+  "nome": "2.7.6",
   "data": "2026-11-10",
   "novidades": [
-    "Fixação e estabilidade total da tela da planilha Excel (permanece visível sem fechar sozinha)",
-    "Visualização em tela cheia no celular para navegação confortável pelas colunas e linhas",
-    "Botões fixos de fechamento no topo e rodapé para controle total pelo usuário",
-    "Abertura rápida e direta exclusivamente pelo botão 'Ver Planilha'"
+    "Edição completa de cubagens salvas com recálculo imediato e atualização no histórico",
+    "Geração e exportação de planilha Excel (.xlsx) contendo dados de múltiplas cubagens selecionadas",
+    "Ferramenta de Mesclagem: unifique medições separadas em 1 única cubagem consolidada do dia todo",
+    "Filtros rápidos 'Hoje' e 'Esta Semana' na tela de relatórios e exportação Excel",
+    "Prévia consolidada na tela para visualizar todas as cubagens selecionadas antes de baixar"
   ]
 }

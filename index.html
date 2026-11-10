@@ -189,7 +189,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <button type="button" class="cover-ver-pill" onclick="app.verificarOuAbrirPopUpAtualizacao()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para verificar atualizações">Versão 2.7.5 🔄</button>
+            <button type="button" class="cover-ver-pill" onclick="app.verificarOuAbrirPopUpAtualizacao()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para verificar atualizações">Versão 2.7.6 🔄</button>
             <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
@@ -207,6 +207,16 @@
         <div class="section-header">
           <h2 class="section-title">Registro de Cubagem</h2>
           <p class="section-desc">Selecione a modalidade e insira as medidas para cálculo imediato.</p>
+        </div>
+
+        <!-- Banner de Edição / Mesclagem -->
+        <div id="editBannerNova" class="edit-mode-banner" style="display: none;">
+          <div class="edit-mode-icon">✏️</div>
+          <div class="edit-mode-info">
+            <div class="edit-mode-title" id="editBannerTitle">Modo de Edição Ativo</div>
+            <div class="edit-mode-sub" id="editBannerSub">Modificando cubagem salva. Altere as medidas e clique em salvar.</div>
+          </div>
+          <button type="button" class="btn-cancel-edit" onclick="app.cancelarEdicao()">✕ Cancelar</button>
         </div>
 
         <!-- Seletor de Tipo / Modalidade -->
@@ -543,7 +553,7 @@
                 <polyline points="17 21 17 13 7 13 7 21"/>
                 <polyline points="7 3 7 8 15 8"/>
               </svg>
-              Salvar Cubagem
+              <span id="btnSalvarTexto">Salvar Cubagem</span>
             </button>
           </div>
         </form>
@@ -559,6 +569,11 @@
         </div>
 
         <div class="history-controls">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 0.82rem; color: var(--muted); font-weight: 600;" id="histTotalCountLabel">Medições salvas</span>
+            <button type="button" class="btn-action-small" id="btnMarcarTodasHist" onclick="app.toggleMarcarTodasHistorico()" title="Selecionar ou desmarcar todas as medições">☑️ Selecionar</button>
+          </div>
+
           <div class="search-input-wrapper">
             <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
@@ -572,6 +587,28 @@
             <button class="btn-action-small" data-hfilter="caminhao" onclick="app.filtrarHistoricoTipo('caminhao')">🚚 Caminhões</button>
             <button class="btn-action-small" data-hfilter="pilha" onclick="app.filtrarHistoricoTipo('pilha')">🪵 Pilhas</button>
             <button class="btn-action-small" data-hfilter="tora" onclick="app.filtrarHistoricoTipo('tora')">🌲 Toras</button>
+          </div>
+        </div>
+
+        <!-- Barra de Ações em Massa (Multi-Seleção) -->
+        <div id="historyBulkBar" class="history-bulk-actions-bar" style="display: none;">
+          <div class="bulk-header">
+            <div class="bulk-count">
+              <span class="bulk-badge-num" id="bulkCountBadge">0</span>
+              <span id="bulkCountText">medições selecionadas</span>
+            </div>
+            <button type="button" class="btn-bulk-clear" onclick="app.desmarcarTodasHistorico()" title="Desmarcar todas">✕ Desmarcar</button>
+          </div>
+          <div class="bulk-buttons">
+            <button type="button" class="btn-bulk btn-bulk-excel" onclick="app.exportarSelecionadasExcel()" title="Exportar planilha Excel com todos os registros selecionados">
+              📊 Gerar Planilha (.xlsx)
+            </button>
+            <button type="button" class="btn-bulk btn-bulk-preview" onclick="app.preverSelecionadas()" title="Visualizar planilha consolidada">
+              👁️ Ver Prévia
+            </button>
+            <button type="button" class="btn-bulk btn-bulk-merge" id="btnBulkMerge" onclick="app.mesclarSelecionadas()" title="Unificar medições em 1 cubagem do dia todo">
+              🔄 Mesclar em 1 Só
+            </button>
           </div>
         </div>
 
@@ -602,6 +639,8 @@
           </div>
 
           <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+            <button type="button" class="btn-action-small" onclick="app.setReportPeriod('hoje')">📅 Hoje</button>
+            <button type="button" class="btn-action-small" onclick="app.setReportPeriod('esta-semana')">📅 Esta Semana</button>
             <button type="button" class="btn-action-small" onclick="app.setReportPeriod('mes-atual')">Mês Atual</button>
             <button type="button" class="btn-action-small" onclick="app.setReportPeriod('mes-anterior')">Mês Anterior</button>
             <button type="button" class="btn-action-small" onclick="app.setReportPeriod('ultimos-30')">Últimos 30 Dias</button>
@@ -844,6 +883,7 @@
       <div class="modal-body" id="detalheModalConteudo"></div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="app.fecharModal('modalDetalhes')">Fechar</button>
+        <button type="button" class="btn btn-warning" onclick="if(app.currentDetailItem) { const id = app.currentDetailItem.id; app.fecharModal('modalDetalhes'); app.iniciarEdicaoCubagem(id); }">✏️ Editar Cubagem</button>
         <button type="button" class="btn btn-primary" onclick="if(app.currentDetailItem) { app.fecharModal('modalDetalhes'); app.abrirPreviaFixada(app.currentDetailItem.id); }">📊 Ver Planilha Excel</button>
       </div>
     </div>
@@ -1365,9 +1405,9 @@
   <script src="js/db.js"></script>
   <script src="js/calculator.js"></script>
   <script src="js/excel-export.js"></script>
-  <script src="js/auth.js?v=2.7.5"></script>
+  <script src="js/auth.js?v=2.7.6"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js?v=2.7.5"></script>
+  <script src="js/app.js?v=2.7.6"></script>
 </body>
 </html>

@@ -27,10 +27,16 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7.5';
+    this.appVersion = '2.7.6';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
+
+    // Estado de Edição e Seleção Múltipla
+    this.editingRecordId = null;
+    this.mergedSourceRecordIds = [];
+    this.selectedHistoryIds = new Set();
+    this.modoSelecaoAtivo = false;
 
     // Sistema de Autenticação e Nuvem
     this.auth = window.CubagemAuth ? new window.CubagemAuth() : null;
@@ -1211,19 +1217,52 @@ class CubagemApp {
       };
     }
 
+    const isEditing = Boolean(this.editingRecordId);
+    if (isEditing) {
+      record.id = this.editingRecordId;
+      record.updatedAt = Date.now();
+    }
+
     try {
-      await window.cubagemDB.add(record);
+      if (isEditing) {
+        await window.cubagemDB.update(record);
+
+        // Se veio de mesclagem de cubagens, remove os registros secundários consolidados
+        if (this.mergedSourceRecordIds && this.mergedSourceRecordIds.length > 0) {
+          for (const extraId of this.mergedSourceRecordIds) {
+            await window.cubagemDB.delete(extraId);
+            if (this.auth) {
+              this.auth.deleteRecordFromCloud(extraId).catch(() => {});
+            }
+          }
+        }
+      } else {
+        await window.cubagemDB.add(record);
+      }
 
       if (this.auth) {
         this.auth.syncRecordToCloud(record);
       }
 
       const vFmt = window.CubagemCalculator.formatNumber(record.volumeGeometrico, record.tipo === 'tora' ? 3 : 2);
-      this.showToast(`Cubagem de ${record.tipo.toUpperCase()} salva com sucesso! Volume Total: ${vFmt} m³`, 'success');
+      this.showToast(
+        isEditing
+          ? `Cubagem atualizada com sucesso! Volume Total: ${vFmt} m³`
+          : `Cubagem de ${record.tipo.toUpperCase()} salva com sucesso! Volume Total: ${vFmt} m³`,
+        'success'
+      );
+
+      this.editingRecordId = null;
+      this.mergedSourceRecordIds = [];
+      const editBanner = document.getElementById('editBannerNova');
+      if (editBanner) editBanner.style.display = 'none';
+      const btnText = document.getElementById('btnSalvarTexto');
+      if (btnText) btnText.textContent = 'Salvar Cubagem';
 
       this.limparApenasMedidas();
       this.resetarDataHoraAtual();
       await this.atualizarDashboard();
+      this.navigate('historico');
     } catch (err) {
       console.error('Erro ao salvar cubagem:', err);
       this.showToast('Erro ao gravar registro.', 'danger');
@@ -1263,6 +1302,13 @@ class CubagemApp {
   }
 
   limparFormularioNova() {
+    this.editingRecordId = null;
+    this.mergedSourceRecordIds = [];
+    const editBanner = document.getElementById('editBannerNova');
+    if (editBanner) editBanner.style.display = 'none';
+    const btnText = document.getElementById('btnSalvarTexto');
+    if (btnText) btnText.textContent = 'Salvar Cubagem';
+
     document.getElementById('formNovaCubagem').reset();
     this.setOrigemMadeira('Nativa');
     const espTora = document.getElementById('cubEspecieTora');
@@ -1276,6 +1322,377 @@ class CubagemApp {
     this.carregarPreferenciasIniciais();
     this.executarCalculoTempoReal();
     this.showToast('Formulário limpo.', 'warning');
+  }
+
+  // =========================================================================
+  // EDIÇÃO DE CUBAGEM, MULTI-SELEÇÃO E MESCLAGEM
+  // =========================================================================
+
+  async iniciarEdicaoCubagem(id) {
+    try {
+      const item = await window.cubagemDB.get(id);
+      if (!item) {
+        this.showToast('Cubagem não encontrada.', 'warning');
+        return;
+      }
+
+      this.editingRecordId = item.id;
+      this.mergedSourceRecordIds = [];
+
+      const tipo = item.tipo || 'caminhao';
+      this.setTipoCubagem(tipo);
+
+      const elData = document.getElementById('cubData');
+      const elHora = document.getElementById('cubHorario');
+      const elRod = document.getElementById('cubRodovia');
+      const elKm = document.getElementById('cubKm');
+      const elUtm = document.getElementById('cubUtm');
+      const elResp = document.getElementById('cubResponsavel');
+      const elObs = document.getElementById('cubObservacoes');
+
+      if (elData && item.data) elData.value = item.data;
+      if (elHora && item.horario) elHora.value = item.horario;
+      if (elRod && item.rodovia) elRod.value = item.rodovia;
+      if (elKm) elKm.value = item.km || '';
+      if (elUtm) elUtm.value = item.utm || '';
+      if (elResp && item.responsavel) elResp.value = item.responsavel;
+      if (elObs) elObs.value = item.observacoes || '';
+
+      this.setOrigemMadeira(item.origemMadeira || 'Nativa');
+
+      if (tipo === 'caminhao') {
+        const elPlaca = document.getElementById('cubPlaca');
+        const elComp = document.getElementById('cubComprimentoCam');
+        const elLarg = document.getElementById('cubLarguraCam');
+
+        if (elPlaca) elPlaca.value = item.placa || '';
+        if (elComp) elComp.value = item.comprimento || '';
+        if (elLarg) elLarg.value = item.largura || '';
+
+        this.alturasLE = Array.isArray(item.alturasLE) && item.alturasLE.length > 0 ? [...item.alturasLE] : ['', '', ''];
+        this.alturasLD = Array.isArray(item.alturasLD) && item.alturasLD.length > 0 ? [...item.alturasLD] : ['', '', ''];
+        this.renderizarGridsAlturas();
+      } else if (tipo === 'pilha') {
+        const elIdent = document.getElementById('cubIdentPilha');
+        const elComp = document.getElementById('cubComprimentoPilha');
+        const elLarg = document.getElementById('cubLarguraPilha');
+
+        if (elIdent) elIdent.value = item.identificacao || item.placa || '';
+        if (elComp) elComp.value = item.comprimento || '';
+        if (elLarg) elLarg.value = item.largura || '';
+
+        this.alturasPilha = Array.isArray(item.alturas) && item.alturas.length > 0 ? [...item.alturas] : ['', '', '', ''];
+        this.renderizarGridsAlturas();
+      } else if (tipo === 'tora') {
+        const elIdent = document.getElementById('cubIdentPilhaTora');
+        const elPlaq = document.getElementById('cubPlaqueta');
+        const elEsp = document.getElementById('cubEspecieTora');
+
+        if (elIdent) elIdent.value = item.identificacao || item.placa || '';
+        if (elPlaq) elPlaq.value = item.plaqueta || '';
+        if (elEsp) elEsp.value = item.especie || '';
+
+        if (Array.isArray(item.toras) && item.toras.length > 0) {
+          this.torasPilha = JSON.parse(JSON.stringify(item.toras));
+        } else if (item.diametroPonta1_cm) {
+          this.torasPilha = [{
+            numero: 1,
+            plaqueta: item.plaqueta || '1',
+            especie: item.especie || '',
+            diametroPonta1_cm: item.diametroPonta1_cm,
+            diametroPonta2_cm: item.diametroPonta2_cm,
+            diametroPonta1_m: item.diametroPonta1_m || (item.diametroPonta1_cm / 100),
+            diametroPonta2_m: item.diametroPonta2_m || (item.diametroPonta2_cm / 100),
+            diametroMedio_cm: item.diametroMedio_cm || ((item.diametroPonta1_cm + item.diametroPonta2_cm) / 2),
+            comprimento: item.comprimento,
+            volumeGeometrico: item.volumeGeometrico
+          }];
+        } else {
+          this.torasPilha = [];
+        }
+        this.renderizarListaTorasPilha();
+      }
+
+      this.executarCalculoTempoReal();
+
+      const banner = document.getElementById('editBannerNova');
+      const titleEl = document.getElementById('editBannerTitle');
+      const subEl = document.getElementById('editBannerSub');
+      const btnTxt = document.getElementById('btnSalvarTexto');
+
+      if (banner) {
+        banner.style.display = 'flex';
+        const idVisual = item.placa || item.identificacao || item.plaqueta || item.id;
+        if (titleEl) titleEl.textContent = `Editando Cubagem: ${idVisual}`;
+        if (subEl) {
+          const dtFmt = window.CubagemExcelExport.formatDateBR(item.data);
+          subEl.textContent = `Registrada em ${dtFmt} às ${item.horario || ''} (${item.rodovia || 'Pátio'}). Altere os dados e salve.`;
+        }
+      }
+
+      if (btnTxt) {
+        btnTxt.textContent = 'Salvar Alterações na Cubagem';
+      }
+
+      this.navigate('nova');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.showToast('Cubagem carregada para edição. Modifique os dados e clique em salvar.', 'info');
+    } catch (err) {
+      console.error('Erro ao iniciar edição:', err);
+      this.showToast('Erro ao carregar dados da cubagem para edição.', 'danger');
+    }
+  }
+
+  cancelarEdicao() {
+    this.editingRecordId = null;
+    this.mergedSourceRecordIds = [];
+
+    const banner = document.getElementById('editBannerNova');
+    if (banner) banner.style.display = 'none';
+
+    const btnTxt = document.getElementById('btnSalvarTexto');
+    if (btnTxt) btnTxt.textContent = 'Salvar Cubagem';
+
+    this.limparFormularioNova();
+    this.showToast('Edição cancelada.', 'info');
+  }
+
+  toggleItemSelecionado(id, isChecked) {
+    if (isChecked) {
+      this.selectedHistoryIds.add(id);
+    } else {
+      this.selectedHistoryIds.delete(id);
+    }
+    this.atualizarBarraSelecao();
+
+    const card = document.querySelector(`.history-item-card[data-id="${id}"]`);
+    if (card) {
+      if (isChecked) card.classList.add('selected-card');
+      else card.classList.remove('selected-card');
+    }
+  }
+
+  atualizarBarraSelecao() {
+    const bar = document.getElementById('historyBulkBar');
+    const badgeNum = document.getElementById('bulkCountBadge');
+    const countText = document.getElementById('bulkCountText');
+    const btnMerge = document.getElementById('btnBulkMerge');
+    const btnToggleAll = document.getElementById('btnMarcarTodasHist');
+
+    const totalSelected = this.selectedHistoryIds.size;
+
+    if (!bar) return;
+
+    if (totalSelected > 0) {
+      bar.style.display = 'flex';
+      if (badgeNum) badgeNum.textContent = totalSelected;
+      if (countText) countText.textContent = totalSelected === 1 ? 'medição selecionada' : 'medições selecionadas';
+      if (btnMerge) {
+        btnMerge.style.display = totalSelected >= 2 ? 'inline-flex' : 'none';
+      }
+      if (btnToggleAll) {
+        btnToggleAll.textContent = '✕ Desmarcar';
+      }
+    } else {
+      bar.style.display = 'none';
+      if (btnToggleAll) {
+        btnToggleAll.textContent = '☑️ Selecionar';
+      }
+    }
+  }
+
+  desmarcarTodasHistorico() {
+    this.selectedHistoryIds.clear();
+    document.querySelectorAll('.hist-card-checkbox').forEach(cb => {
+      cb.checked = false;
+    });
+    document.querySelectorAll('.history-item-card.selected-card').forEach(card => {
+      card.classList.remove('selected-card');
+    });
+    this.atualizarBarraSelecao();
+  }
+
+  marcarTodasHistorico() {
+    const checkboxes = document.querySelectorAll('.hist-card-checkbox');
+    checkboxes.forEach(cb => {
+      cb.checked = true;
+      this.selectedHistoryIds.add(cb.value);
+    });
+    document.querySelectorAll('.history-item-card').forEach(card => {
+      card.classList.add('selected-card');
+    });
+    this.atualizarBarraSelecao();
+  }
+
+  toggleMarcarTodasHistorico() {
+    if (this.selectedHistoryIds.size > 0) {
+      this.desmarcarTodasHistorico();
+    } else {
+      this.marcarTodasHistorico();
+    }
+  }
+
+  async exportarSelecionadasExcel() {
+    if (this.selectedHistoryIds.size === 0) {
+      this.showToast('Selecione ao menos uma cubagem para exportar.', 'warning');
+      return;
+    }
+
+    const ids = [...this.selectedHistoryIds];
+    const records = (await Promise.all(ids.map(id => window.cubagemDB.get(id)))).filter(Boolean);
+    if (records.length === 0) return;
+
+    records.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    const dataPrimeira = records[0].data || '';
+    const dataUltima = records[records.length - 1].data || '';
+    const dateRangeStr = dataPrimeira === dataUltima ? dataPrimeira : `${dataPrimeira}_a_${dataUltima}`;
+    const fileName = `Planilha_${records.length}_Cubagens_${dateRangeStr}.xlsx`;
+
+    try {
+      this.showToast(`Exportando ${records.length} cubagens para Excel (.xlsx)...`, 'info');
+      await window.CubagemExcelExport.exportWorkbook(records, {
+        fileName,
+        responsavel: records[0].responsavel || 'BioKuri Soluções Ambientais',
+        startDate: dataPrimeira,
+        endDate: dataUltima
+      });
+      this.showToast(`Planilha com ${records.length} cubagens baixada com sucesso!`, 'success');
+    } catch (err) {
+      console.error('Erro ao exportar selecionadas:', err);
+      this.showToast('Erro ao exportar planilha Excel.', 'danger');
+    }
+  }
+
+  async preverSelecionadas() {
+    if (this.selectedHistoryIds.size === 0) {
+      this.showToast('Selecione ao menos uma cubagem para visualizar.', 'warning');
+      return;
+    }
+
+    const ids = [...this.selectedHistoryIds];
+    const records = (await Promise.all(ids.map(id => window.cubagemDB.get(id)))).filter(Boolean);
+    if (records.length === 0) return;
+
+    records.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    if (records.length === 1) {
+      this.mostrarPreviaPlanilha(records[0]);
+    } else {
+      this.mostrarPreviaPlanilha(records);
+    }
+  }
+
+  async mesclarSelecionadas() {
+    if (this.selectedHistoryIds.size < 2) {
+      this.showToast('Selecione ao menos 2 cubagens para mesclar.', 'warning');
+      return;
+    }
+
+    const ids = [...this.selectedHistoryIds];
+    const records = (await Promise.all(ids.map(id => window.cubagemDB.get(id)))).filter(Boolean);
+    if (records.length < 2) return;
+
+    const tipos = [...new Set(records.map(r => r.tipo || 'caminhao'))];
+    if (tipos.length > 1) {
+      this.showToast('Para mesclar, selecione cubagens da mesma modalidade (ex: apenas caminhões ou apenas pilhas).', 'warning');
+      return;
+    }
+
+    const tipo = tipos[0];
+    records.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    const principal = records[0];
+    const secundarias = records.slice(1);
+    const secundariasIds = secundarias.map(r => r.id);
+
+    this.editingRecordId = principal.id;
+    this.mergedSourceRecordIds = secundariasIds;
+
+    this.setTipoCubagem(tipo);
+
+    const elData = document.getElementById('cubData');
+    const elHora = document.getElementById('cubHorario');
+    const elRod = document.getElementById('cubRodovia');
+    const elKm = document.getElementById('cubKm');
+    const elUtm = document.getElementById('cubUtm');
+    const elResp = document.getElementById('cubResponsavel');
+    const elObs = document.getElementById('cubObservacoes');
+
+    if (elData) elData.value = principal.data;
+    if (elHora) elHora.value = principal.horario;
+    if (elRod) elRod.value = principal.rodovia;
+    if (elKm) elKm.value = principal.km || secundarias.find(s => s.km)?.km || '';
+    if (elUtm) elUtm.value = principal.utm || secundarias.find(s => s.utm)?.utm || '';
+    if (elResp) elResp.value = principal.responsavel;
+
+    const horasJuntas = records.map(r => r.horario).filter(Boolean).join(', ');
+    const placasJuntas = [...new Set(records.map(r => r.placa || r.identificacao).filter(Boolean))].join(' / ');
+    const obsMesclada = `Cubagem unificada do dia todo (${records.length} medições: ${horasJuntas}). ${principal.observacoes || ''}`;
+    if (elObs) elObs.value = obsMesclada.trim();
+
+    if (tipo === 'caminhao') {
+      const elPlaca = document.getElementById('cubPlaca');
+      const elComp = document.getElementById('cubComprimentoCam');
+      const elLarg = document.getElementById('cubLarguraCam');
+
+      if (elPlaca) elPlaca.value = placasJuntas || principal.placa || '';
+      if (elComp) elComp.value = principal.comprimento || secundarias[0]?.comprimento || '';
+      if (elLarg) elLarg.value = principal.largura || secundarias[0]?.largura || '';
+
+      const todasLE = records.flatMap(r => Array.isArray(r.alturasLE) ? r.alturasLE : [r.alturasLE]).filter(v => v !== '' && !isNaN(v));
+      const todasLD = records.flatMap(r => Array.isArray(r.alturasLD) ? r.alturasLD : [r.alturasLD]).filter(v => v !== '' && !isNaN(v));
+
+      this.alturasLE = todasLE.length > 0 ? todasLE : ['', '', ''];
+      this.alturasLD = todasLD.length > 0 ? todasLD : ['', '', ''];
+      this.renderizarGridsAlturas();
+    } else if (tipo === 'pilha') {
+      const elIdent = document.getElementById('cubIdentPilha');
+      const elComp = document.getElementById('cubComprimentoPilha');
+      const elLarg = document.getElementById('cubLarguraPilha');
+
+      if (elIdent) elIdent.value = placasJuntas || principal.identificacao || '';
+      if (elComp) elComp.value = principal.comprimento || '';
+      if (elLarg) elLarg.value = principal.largura || '';
+
+      const todasAlt = records.flatMap(r => Array.isArray(r.alturas) ? r.alturas : [r.alturas]).filter(v => v !== '' && !isNaN(v));
+      this.alturasPilha = todasAlt.length > 0 ? todasAlt : ['', '', '', ''];
+      this.renderizarGridsAlturas();
+    } else if (tipo === 'tora') {
+      const elIdent = document.getElementById('cubIdentPilhaTora');
+      if (elIdent) elIdent.value = placasJuntas || principal.identificacao || '';
+
+      const todasToras = [];
+      records.forEach(r => {
+        if (Array.isArray(r.toras)) {
+          todasToras.push(...r.toras);
+        }
+      });
+      todasToras.forEach((t, i) => { t.numero = i + 1; });
+      this.torasPilha = todasToras;
+      this.renderizarListaTorasPilha();
+    }
+
+    this.executarCalculoTempoReal();
+
+    const banner = document.getElementById('editBannerNova');
+    const titleEl = document.getElementById('editBannerTitle');
+    const subEl = document.getElementById('editBannerSub');
+    const btnTxt = document.getElementById('btnSalvarTexto');
+
+    if (banner) {
+      banner.style.display = 'flex';
+      if (titleEl) titleEl.textContent = `Mesclando ${records.length} Cubagens em 1 Só`;
+      if (subEl) subEl.textContent = `Ao salvar, estas medições serão unificadas nesta cubagem definitiva do dia.`;
+    }
+    if (btnTxt) {
+      btnTxt.textContent = 'Salvar e Unificar Cubagem';
+    }
+
+    this.desmarcarTodasHistorico();
+    this.navigate('nova');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.showToast(`Dados das ${records.length} cubagens unidos no formulário! Revise e clique em Salvar.`, 'success');
   }
 
   // =========================================================================
@@ -1343,6 +1760,11 @@ class CubagemApp {
       const searchVal = document.getElementById('historySearchInput').value;
       const items = await window.cubagemDB.search(searchVal, this.historyFilterTipo);
 
+      const countLabel = document.getElementById('histTotalCountLabel');
+      if (countLabel) {
+        countLabel.textContent = `${items.length} mediç${items.length === 1 ? 'ão salva' : 'ões salvas'}`;
+      }
+
       const container = document.getElementById('historyListContainer');
       if (!container) return;
 
@@ -1353,10 +1775,12 @@ class CubagemApp {
             <div class="empty-state-desc">Tente ajustar o termo de pesquisa ou os filtros de tipo.</div>
           </div>
         `;
+        this.atualizarBarraSelecao();
         return;
       }
 
       container.innerHTML = items.map((item) => this.gerarCardItemHTML(item)).join('');
+      this.atualizarBarraSelecao();
     } catch (err) {
       console.error('Erro no histórico:', err);
     }
@@ -1375,6 +1799,7 @@ class CubagemApp {
     const isTora = tipo === 'tora';
     const volFormatado = window.CubagemCalculator.formatNumber(item.volumeGeometrico, isTora ? 3 : 2);
     const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
+    const isSelected = this.selectedHistoryIds.has(item.id);
 
     let tagTipo = '🚚 Caminhão';
     let tituloItem = item.placa || 'SEM PLACA';
@@ -1397,9 +1822,12 @@ class CubagemApp {
     }
 
     return `
-      <div class="history-item-card">
+      <div class="history-item-card ${isSelected ? 'selected-card' : ''}" data-id="${item.id}">
         <div class="history-card-top">
-          <span class="badge-type ${tipo}">${tagTipo}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" class="hist-card-checkbox" value="${item.id}" ${isSelected ? 'checked' : ''} onchange="app.toggleItemSelecionado('${item.id}', this.checked)" title="Selecionar cubagem">
+            <span class="badge-type ${tipo}">${tagTipo}</span>
+          </div>
           <span class="history-tag-date">${dataBR} • ${item.horario || ''}</span>
         </div>
         <div class="history-card-body">
@@ -1414,6 +1842,7 @@ class CubagemApp {
           </div>
         </div>
         <div class="history-card-actions">
+          <button type="button" class="btn-action-small edit-btn" onclick="app.iniciarEdicaoCubagem('${item.id}')" title="Editar medidas e dados desta cubagem">✏️ Editar</button>
           <button type="button" class="btn-action-small preview-btn" onclick="app.abrirPreviaFixada('${item.id}')" title="Ver planilha completa desta cubagem">📊 Ver Planilha</button>
           <button type="button" class="btn-action-small" onclick="app.abrirDetalhes('${item.id}')">Detalhes</button>
           <button type="button" class="btn-action-small danger" onclick="app.abrirModalExcluir('${item.id}')">Excluir</button>
@@ -1599,7 +2028,20 @@ class CubagemApp {
     let start = '';
     let end = '';
 
-    if (tipo === 'mes-atual') {
+    if (tipo === 'hoje') {
+      const hojeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      start = hojeStr;
+      end = hojeStr;
+    } else if (tipo === 'esta-semana') {
+      const diaSemana = now.getDay();
+      const diffSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+      const segunda = new Date(now);
+      segunda.setDate(now.getDate() + diffSegunda);
+      const domingo = new Date(segunda);
+      domingo.setDate(segunda.getDate() + 6);
+      start = `${segunda.getFullYear()}-${pad(segunda.getMonth() + 1)}-${pad(segunda.getDate())}`;
+      end = `${domingo.getFullYear()}-${pad(domingo.getMonth() + 1)}-${pad(domingo.getDate())}`;
+    } else if (tipo === 'mes-atual') {
       start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       end = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(lastDay)}`;
@@ -2494,10 +2936,10 @@ class CubagemApp {
     return null;
   }
 
-  mostrarPreviaPlanilha(item) {
-    if (!item) return;
+  mostrarPreviaPlanilha(itemOrItems) {
+    if (!itemOrItems) return;
 
-    this.previaAtivaItem = item;
+    this.previaAtivaItem = itemOrItems;
     this.abaAtivaPrevia = 'medicao';
 
     const modal = document.getElementById('modalPreviaPlanilha');
@@ -2514,30 +2956,59 @@ class CubagemApp {
 
     modal.classList.remove('peek-mode');
 
-    const tipo = item.tipo || 'caminhao';
-    let nomeArquivo = 'Cubagem_Florestal.xlsx';
-    if (tipo === 'caminhao') {
-      nomeArquivo = `Planilha_Caminhao_${(item.placa || 'Medicao').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
-      if (cellRefEl) cellRefEl.textContent = 'K6';
-      if (formulaTextEl) formulaTextEl.textContent = '=(G6 * H6 * F6) * J6';
-    } else if (tipo === 'pilha') {
-      nomeArquivo = `Planilha_Pilha_${(item.identificacao || item.placa || 'Pilha').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
-      if (cellRefEl) cellRefEl.textContent = 'J6';
-      if (formulaTextEl) formulaTextEl.textContent = '=(E6 * F6 * G6) * I6';
-    } else if (tipo === 'tora') {
-      nomeArquivo = `Planilha_Toras_${(item.plaqueta || item.identificacao || 'Lote').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
-      if (cellRefEl) cellRefEl.textContent = 'J6';
-      if (formulaTextEl) formulaTextEl.textContent = '=((PI()*(D6/200)^2 + PI()*(E6/200)^2)/2) * G6';
+    const isMulti = Array.isArray(itemOrItems) && itemOrItems.length > 1;
+
+    if (isMulti) {
+      const nomeArquivo = `Planilha_Consolidada_${itemOrItems.length}_Cubagens.xlsx`;
+      if (filenameEl) filenameEl.textContent = nomeArquivo;
+      if (holdIndEl) holdIndEl.style.display = 'inline-flex';
+      if (holdTextEl) holdTextEl.textContent = `📋 ${itemOrItems.length} Cubagens`;
+      if (cellRefEl) cellRefEl.textContent = 'FX';
+      if (formulaTextEl) formulaTextEl.textContent = `=SOMA(VOLUMES_GEOMETRICOS) [${itemOrItems.length} Medições Consolidadas]`;
+
+      if (tabMedicao) {
+        tabMedicao.classList.add('active');
+        tabMedicao.textContent = `📋 Medições (${itemOrItems.length})`;
+      }
+      if (tabMemoria) {
+        tabMemoria.classList.remove('active');
+        tabMemoria.textContent = '📐 Memórias de Cálculo';
+      }
+
+      viewportGrid.innerHTML = this.gerarHtmlPlanilhaConsolidada(itemOrItems, 'medicao');
+    } else {
+      const item = Array.isArray(itemOrItems) ? itemOrItems[0] : itemOrItems;
+      const tipo = item.tipo || 'caminhao';
+      let nomeArquivo = 'Cubagem_Florestal.xlsx';
+      if (tipo === 'caminhao') {
+        nomeArquivo = `Planilha_Caminhao_${(item.placa || 'Medicao').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
+        if (cellRefEl) cellRefEl.textContent = 'K6';
+        if (formulaTextEl) formulaTextEl.textContent = '=(G6 * H6 * F6) * J6';
+      } else if (tipo === 'pilha') {
+        nomeArquivo = `Planilha_Pilha_${(item.identificacao || item.placa || 'Pilha').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
+        if (cellRefEl) cellRefEl.textContent = 'J6';
+        if (formulaTextEl) formulaTextEl.textContent = '=(E6 * F6 * G6) * I6';
+      } else if (tipo === 'tora') {
+        nomeArquivo = `Planilha_Toras_${(item.plaqueta || item.identificacao || 'Lote').replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
+        if (cellRefEl) cellRefEl.textContent = 'J6';
+        if (formulaTextEl) formulaTextEl.textContent = '=((PI()*(D6/200)^2 + PI()*(E6/200)^2)/2) * G6';
+      }
+
+      if (filenameEl) filenameEl.textContent = nomeArquivo;
+      if (holdIndEl) holdIndEl.style.display = 'inline-flex';
+      if (holdTextEl) holdTextEl.textContent = '📋 Planilha Excel';
+
+      if (tabMedicao) {
+        tabMedicao.classList.add('active');
+        tabMedicao.textContent = '📋 Medição Técnica';
+      }
+      if (tabMemoria) {
+        tabMemoria.classList.remove('active');
+        tabMemoria.textContent = '📐 Memória de Cálculo';
+      }
+
+      viewportGrid.innerHTML = this.gerarHtmlPlanilhaPrevia(item, 'medicao');
     }
-
-    if (filenameEl) filenameEl.textContent = nomeArquivo;
-    if (holdIndEl) holdIndEl.style.display = 'inline-flex';
-    if (holdTextEl) holdTextEl.textContent = '📋 Planilha Excel';
-
-    if (tabMedicao) tabMedicao.classList.add('active');
-    if (tabMemoria) tabMemoria.classList.remove('active');
-
-    viewportGrid.innerHTML = this.gerarHtmlPlanilhaPrevia(item, 'medicao');
 
     // Abre o modal de forma 100% visível, fixa e persistente
     modal.style.display = 'flex';
@@ -2574,6 +3045,11 @@ class CubagemApp {
     }
     this.previaAberta = false;
     this.previaAtivaItem = null;
+
+    const tabMedicao = document.getElementById('prevTabMedicao');
+    const tabMemoria = document.getElementById('prevTabMemoria');
+    if (tabMedicao) tabMedicao.textContent = '📋 Medição Técnica';
+    if (tabMemoria) tabMemoria.textContent = '📐 Memória de Cálculo';
   }
 
   alternarAbaPrevia(aba) {
@@ -2584,31 +3060,75 @@ class CubagemApp {
     const cellRefEl = document.getElementById('prevCellRef');
     const formulaTextEl = document.getElementById('prevFormulaText');
 
+    if (!this.previaAtivaItem || !viewportGrid) return;
+
+    const isMulti = Array.isArray(this.previaAtivaItem) && this.previaAtivaItem.length > 1;
+
     if (aba === 'medicao') {
       if (tabMedicao) tabMedicao.classList.add('active');
       if (tabMemoria) tabMemoria.classList.remove('active');
-      const tipo = this.previaAtivaItem?.tipo || 'caminhao';
-      if (cellRefEl) cellRefEl.textContent = tipo === 'caminhao' ? 'K6' : 'J6';
-      if (formulaTextEl) {
-        formulaTextEl.textContent = tipo === 'tora'
-          ? '=((PI()*(D6/200)^2 + PI()*(E6/200)^2)/2) * G6'
-          : '=(G6 * H6 * F6) * J6';
+
+      if (isMulti) {
+        if (cellRefEl) cellRefEl.textContent = 'FX';
+        if (formulaTextEl) formulaTextEl.textContent = `=SOMA(VOLUMES_GEOMETRICOS) [${this.previaAtivaItem.length} Medições Consolidadas]`;
+        viewportGrid.innerHTML = this.gerarHtmlPlanilhaConsolidada(this.previaAtivaItem, 'medicao');
+      } else {
+        const item = Array.isArray(this.previaAtivaItem) ? this.previaAtivaItem[0] : this.previaAtivaItem;
+        const tipo = item?.tipo || 'caminhao';
+        if (cellRefEl) cellRefEl.textContent = tipo === 'caminhao' ? 'K6' : 'J6';
+        if (formulaTextEl) {
+          formulaTextEl.textContent = tipo === 'tora'
+            ? '=((PI()*(D6/200)^2 + PI()*(E6/200)^2)/2) * G6'
+            : '=(G6 * H6 * F6) * J6';
+        }
+        viewportGrid.innerHTML = this.gerarHtmlPlanilhaPrevia(item, 'medicao');
       }
     } else {
       if (tabMedicao) tabMedicao.classList.remove('active');
       if (tabMemoria) tabMemoria.classList.add('active');
-      if (cellRefEl) cellRefEl.textContent = 'fx';
-      if (formulaTextEl) formulaTextEl.textContent = '=MEMORIA_DE_CALCULO_OFICIAL(SISTAXON, IBAMA, CRBio)';
-    }
 
-    if (viewportGrid && this.previaAtivaItem) {
-      viewportGrid.innerHTML = this.gerarHtmlPlanilhaPrevia(this.previaAtivaItem, aba);
+      if (isMulti) {
+        if (cellRefEl) cellRefEl.textContent = 'FX';
+        if (formulaTextEl) formulaTextEl.textContent = `=MEMORIA_CONSOLIDADA(${this.previaAtivaItem.length}_CUBAGENS)`;
+        viewportGrid.innerHTML = this.gerarHtmlPlanilhaConsolidada(this.previaAtivaItem, 'memoria');
+      } else {
+        const item = Array.isArray(this.previaAtivaItem) ? this.previaAtivaItem[0] : this.previaAtivaItem;
+        if (cellRefEl) cellRefEl.textContent = 'fx';
+        if (formulaTextEl) formulaTextEl.textContent = (item && item.memoriaCalculo) ? item.memoriaCalculo : '=MEMORIA_DE_CALCULO_OFICIAL(SISTAXON, IBAMA, CRBio)';
+        viewportGrid.innerHTML = this.gerarHtmlPlanilhaPrevia(item, 'memoria');
+      }
     }
   }
 
   async baixarExcelDaPrevia() {
     if (!this.previaAtivaItem) return;
-    const item = this.previaAtivaItem;
+
+    // Se a prévia ativa for uma lista consolidada de múltiplas cubagens
+    if (Array.isArray(this.previaAtivaItem) && this.previaAtivaItem.length > 1) {
+      const items = this.previaAtivaItem;
+      const dataPri = items[0].data || '';
+      const dataUlt = items[items.length - 1].data || '';
+      const dateTag = dataPri === dataUlt ? dataPri : `${dataPri}_a_${dataUlt}`;
+      const fileName = `Planilha_Consolidada_${items.length}_Cubagens_${dateTag}.xlsx`;
+
+      try {
+        this.showToast(`Exportando ${items.length} cubagens para Excel (.xlsx)...`, 'info');
+        await window.CubagemExcelExport.exportWorkbook(items, {
+          fileName,
+          responsavel: items[0].responsavel || 'BioKuri Soluções Ambientais',
+          startDate: dataPri,
+          endDate: dataUlt
+        });
+        this.showToast(`Planilha ${fileName} baixada com sucesso!`, 'success');
+      } catch (err) {
+        console.error('Erro ao baixar planilha consolidada da prévia:', err);
+        this.showToast('Erro ao exportar planilha Excel.', 'danger');
+      }
+      return;
+    }
+
+    // Prévia de um único item
+    const item = Array.isArray(this.previaAtivaItem) ? this.previaAtivaItem[0] : this.previaAtivaItem;
     const items = Array.isArray(item.toras) && item.toras.length > 1
       ? item.toras.map((t, idx) => ({
           ...item,
@@ -2639,6 +3159,183 @@ class CubagemApp {
       console.error('Erro ao baixar planilha da prévia:', err);
       this.showToast('Erro ao exportar planilha Excel.', 'danger');
     }
+  }
+
+  gerarHtmlPlanilhaConsolidada(records, aba = 'medicao') {
+    const totalVol = records.reduce((acc, r) => acc + (Number(r.volumeGeometrico) || 0), 0);
+    const dataPrimeira = records[0]?.data ? window.CubagemExcelExport.formatDateBR(records[0].data) : '';
+    const dataUltima = records[records.length - 1]?.data ? window.CubagemExcelExport.formatDateBR(records[records.length - 1].data) : '';
+    const periodoStr = dataPrimeira === dataUltima ? dataPrimeira : `${dataPrimeira} a ${dataUltima}`;
+    const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+
+    if (aba === 'memoria') {
+      return `
+        <table class="excel-grid-table">
+          <thead>
+            <tr>
+              <th class="excel-row-num"></th>
+              <th class="excel-col-head" style="width: 45px;">A</th>
+              <th class="excel-col-head" style="width: 95px;">B</th>
+              <th class="excel-col-head" style="width: 140px;">C</th>
+              <th class="excel-col-head" style="width: 320px;">D</th>
+              <th class="excel-col-head" style="width: 120px;">E</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="excel-row-num">1</td>
+              <td colspan="5" class="excel-brand-title-cell">
+                BIOKURI · SOLUÇÕES AMBIENTAIS — MEMÓRIA TÉCNICA CONSOLIDADA
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">2</td>
+              <td colspan="5" class="excel-brand-sub-cell">
+                Auditoria Numérica de ${records.length} Medições Técnicas no Período ${periodoStr}
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">3</td>
+              <td colspan="5" class="excel-meta-cell">
+                <strong>Responsável:</strong> ${records[0]?.responsavel || 'Lucas Aøsf'} &bull; 
+                <strong>Registro:</strong> CRBio 127233/01-D &bull; 
+                <strong>Total de Cubagens:</strong> ${records.length} &bull; 
+                <strong>Volume Total Consolidado:</strong> ${fNum(totalVol, 2)} m³
+              </td>
+            </tr>
+            <tr>
+              <td class="excel-row-num">4</td>
+              <td class="excel-header-col">#</td>
+              <td class="excel-header-col">Data/Hora</td>
+              <td class="excel-header-col">Identificação</td>
+              <td class="excel-header-col">Memória de Cálculo Individual</td>
+              <td class="excel-header-col">Volume (m³)</td>
+            </tr>
+            ${records.map((r, idx) => {
+              const dtBR = window.CubagemExcelExport.formatDateBR(r.data);
+              const ident = r.placa || r.identificacao || r.plaqueta || `Medição ${idx + 1}`;
+              const mem = r.memoriaCalculo || `V = C × L × Hm (${r.volumeGeometrico} m³)`;
+              const vol = fNum(r.volumeGeometrico, r.tipo === 'tora' ? 3 : 2);
+              return `
+                <tr>
+                  <td class="excel-row-num">${idx + 5}</td>
+                  <td class="excel-cell-center" style="font-weight: 700;">${idx + 1}</td>
+                  <td class="excel-cell-center">${dtBR} ${r.horario || ''}</td>
+                  <td class="excel-cell-center" style="font-weight: 700;">${ident}</td>
+                  <td class="excel-cell-text" style="font-family: Consolas, monospace; font-size: 0.76rem;">${mem}</td>
+                  <td class="excel-cell-num" style="font-weight: 700; color: #0E2515;">${vol}</td>
+                </tr>
+              `;
+            }).join('')}
+            <tr class="excel-total-row">
+              <td class="excel-row-num">${records.length + 5}</td>
+              <td colspan="4" class="excel-cell-text" style="font-weight: 800; text-transform: uppercase;">
+                VOLUME CONSOLIDADO TOTAL (${records.length} CUBAGENS):
+              </td>
+              <td class="excel-cell-num" style="font-size: 1.05rem; font-weight: 800; color: #0E2515;">
+                ${fNum(totalVol, 2)} m³
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    // Aba de medição técnica consolidada
+    return `
+      <table class="excel-grid-table">
+        <thead>
+          <tr>
+            <th class="excel-row-num"></th>
+            <th class="excel-col-head" style="width: 35px;">A</th>
+            <th class="excel-col-head" style="width: 85px;">B</th>
+            <th class="excel-col-head" style="width: 55px;">C</th>
+            <th class="excel-col-head" style="width: 95px;">D</th>
+            <th class="excel-col-head" style="width: 120px;">E</th>
+            <th class="excel-col-head" style="width: 130px;">F</th>
+            <th class="excel-col-head" style="width: 110px;">G</th>
+            <th class="excel-col-head" style="width: 90px;">H</th>
+            <th class="excel-col-head" style="width: 75px;">I</th>
+            <th class="excel-col-head" style="width: 95px;">J</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="excel-row-num">1</td>
+            <td colspan="10" class="excel-brand-title-cell">
+              BIOKURI · SOLUÇÕES AMBIENTAIS — PLANILHA CONSOLIDADA DE CUBAGEM
+            </td>
+          </tr>
+          <tr>
+            <td class="excel-row-num">2</td>
+            <td colspan="10" class="excel-brand-sub-cell">
+              Relatório Multipasta Oficial de Dendrometria e Cubagem Florestal · Diretrizes Sistaxon / Sinaflor (IBAMA)
+            </td>
+          </tr>
+          <tr>
+            <td class="excel-row-num">3</td>
+            <td colspan="10" class="excel-meta-cell">
+              <strong>Período:</strong> ${periodoStr} &bull; 
+              <strong>Total de Medições:</strong> ${records.length} &bull; 
+              <strong>Volume Total:</strong> ${fNum(totalVol, 2)} m³ &bull; 
+              <strong>Responsável:</strong> ${records[0]?.responsavel || 'Lucas Aøsf'} &bull; 
+              <strong>CRBio:</strong> 127233/01-D
+            </td>
+          </tr>
+          <tr>
+            <td class="excel-row-num">4</td>
+            <td class="excel-header-col">#</td>
+            <td class="excel-header-col">Data</td>
+            <td class="excel-header-col">Hora</td>
+            <td class="excel-header-col">Modalidade</td>
+            <td class="excel-header-col">Placa / Ident.</td>
+            <td class="excel-header-col">Local / Rodovia</td>
+            <td class="excel-header-col">Origem / Espécie</td>
+            <td class="excel-header-col">Dimensões</td>
+            <td class="excel-header-col">Hm (m)</td>
+            <td class="excel-header-col">Volume (m³)</td>
+          </tr>
+          ${records.map((r, idx) => {
+            const dtBR = window.CubagemExcelExport.formatDateBR(r.data);
+            const tipo = r.tipo || 'caminhao';
+            const tipoLabel = tipo === 'caminhao' ? 'Caminhão' : (tipo === 'pilha' ? 'Pilha' : 'Toras');
+            const ident = r.placa || r.identificacao || r.plaqueta || '-';
+            const loc = `${r.rodovia || '-'}${r.km ? ' km ' + r.km : ''}`;
+            const espOrig = r.especie ? `${r.origemMadeira || 'Nativa'} (${r.especie})` : (r.origemMadeira || 'Nativa');
+            const dimStr = tipo === 'tora'
+              ? `${r.totalToras || 1} toras`
+              : `${fNum(r.comprimento || 0)} × ${fNum(r.largura || 0)} m`;
+            const hmStr = tipo === 'tora' ? `D: ${fNum(r.diametroMedio_cm || 0, 1)} cm` : `${fNum(r.alturaMedia || 0, 3)} m`;
+            const volStr = fNum(r.volumeGeometrico, tipo === 'tora' ? 3 : 2);
+
+            return `
+              <tr>
+                <td class="excel-row-num">${idx + 5}</td>
+                <td class="excel-cell-center" style="font-weight: 700;">${idx + 1}</td>
+                <td class="excel-cell-center">${dtBR}</td>
+                <td class="excel-cell-center">${r.horario || '-'}</td>
+                <td class="excel-cell-center"><span class="badge-type ${tipo}" style="font-size: 0.7rem; padding: 2px 6px;">${tipoLabel}</span></td>
+                <td class="excel-cell-center" style="font-weight: 700;">${ident}</td>
+                <td class="excel-cell-text">${loc}</td>
+                <td class="excel-cell-text" style="font-size: 0.75rem;">${espOrig}</td>
+                <td class="excel-cell-center font-mono">${dimStr}</td>
+                <td class="excel-cell-center font-mono">${hmStr}</td>
+                <td class="excel-cell-num" style="font-weight: 700; color: #0E2515;">${volStr}</td>
+              </tr>
+            `;
+          }).join('')}
+          <tr class="excel-total-row">
+            <td class="excel-row-num">${records.length + 5}</td>
+            <td colspan="9" class="excel-cell-text" style="font-weight: 800; text-transform: uppercase;">
+              TOTAL CONSOLIDADO (${records.length} CUBAGENS):
+            </td>
+            <td class="excel-cell-num" style="font-size: 1.05rem; font-weight: 800; color: #0E2515;">
+              ${fNum(totalVol, 2)} m³
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    `;
   }
 
   gerarHtmlPlanilhaPrevia(item, aba = 'medicao') {
