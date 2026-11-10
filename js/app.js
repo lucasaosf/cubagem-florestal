@@ -44,11 +44,13 @@ class CubagemApp {
     this.holdTriggered = false;
     this.isPinned = false;
     this.previaAberta = false;
+    this.previaOpenedAt = 0;
     this.previaAtivaItem = null;
     this.abaAtivaPrevia = 'medicao'; // 'medicao' | 'memoria'
     this.holdStartX = 0;
     this.holdStartY = 0;
     this.holdTargetEl = null;
+    this.activePointerId = null;
   }
 
   async init() {
@@ -88,13 +90,20 @@ class CubagemApp {
     this.setReportPeriod('mes-atual', false);
 
     // Listeners globais para Hold-to-Preview de Planilha (Espiar ao Segurar)
-    window.addEventListener('pointerup', (e) => this.finalizarSegurarPrevia(e));
-    window.addEventListener('pointercancel', (e) => this.cancelarSegurarPrevia(e));
-    window.addEventListener('touchend', (e) => this.finalizarSegurarPrevia(e));
+    window.addEventListener('pointerup', (e) => this.verificarSoltura(e));
+    window.addEventListener('touchend', (e) => this.verificarSoltura(e));
+    window.addEventListener('mouseup', (e) => this.verificarSoltura(e));
+    window.addEventListener('pointercancel', (e) => this.verificarSoltura(e));
     window.addEventListener('pointermove', (e) => this.verificarMovimentoSegurar(e), { passive: true });
+    window.addEventListener('touchmove', (e) => this.verificarMovimentoSegurar(e), { passive: true });
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.previaAberta) {
         this.fecharPreviaPlanilha(true);
+      }
+    });
+    window.addEventListener('contextmenu', (e) => {
+      if (this.isHolding || (this.previaAberta && !this.isPinned)) {
+        e.preventDefault();
       }
     });
 
@@ -2290,14 +2299,24 @@ class CubagemApp {
       return;
     }
 
+    if (e.pointerType === 'mouse' && e.button !== 0) {
+      return;
+    }
+
     this.holdStartX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
     this.holdStartY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
     this.isHolding = true;
     this.holdTriggered = false;
     this.holdTargetEl = e.currentTarget;
+    this.activePointerId = e.pointerId;
 
     if (this.holdTargetEl) {
       this.holdTargetEl.classList.add('holding-card');
+      if (e.pointerId !== undefined && typeof this.holdTargetEl.setPointerCapture === 'function') {
+        try {
+          this.holdTargetEl.setPointerCapture(e.pointerId);
+        } catch (_) {}
+      }
     }
 
     if (this.holdTimer) clearTimeout(this.holdTimer);
@@ -2305,6 +2324,7 @@ class CubagemApp {
     this.holdTimer = setTimeout(async () => {
       if (!this.isHolding) return;
       this.holdTriggered = true;
+      this.previaOpenedAt = Date.now();
 
       if (typeof navigator.vibrate === 'function') {
         try { navigator.vibrate(35); } catch (_) {}
@@ -2317,7 +2337,7 @@ class CubagemApp {
         item = id;
       }
 
-      if (item) {
+      if (item && this.isHolding) {
         this.mostrarPreviaPlanilha(item, { isHoldMode: true });
       } else {
         this.cancelarSegurarPrevia();
@@ -2330,14 +2350,24 @@ class CubagemApp {
       return;
     }
 
+    if (e.pointerType === 'mouse' && e.button !== 0) {
+      return;
+    }
+
     this.holdStartX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
     this.holdStartY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
     this.isHolding = true;
     this.holdTriggered = false;
     this.holdTargetEl = e.currentTarget;
+    this.activePointerId = e.pointerId;
 
     if (this.holdTargetEl) {
       this.holdTargetEl.classList.add('holding-card');
+      if (e.pointerId !== undefined && typeof this.holdTargetEl.setPointerCapture === 'function') {
+        try {
+          this.holdTargetEl.setPointerCapture(e.pointerId);
+        } catch (_) {}
+      }
     }
 
     if (this.holdTimer) clearTimeout(this.holdTimer);
@@ -2345,13 +2375,14 @@ class CubagemApp {
     this.holdTimer = setTimeout(() => {
       if (!this.isHolding) return;
       this.holdTriggered = true;
+      this.previaOpenedAt = Date.now();
 
       if (typeof navigator.vibrate === 'function') {
         try { navigator.vibrate(35); } catch (_) {}
       }
 
       const itemLive = this.obterRegistroLiveAtual();
-      if (itemLive) {
+      if (itemLive && this.isHolding) {
         this.mostrarPreviaPlanilha(itemLive, { isHoldMode: true });
       } else {
         this.cancelarSegurarPrevia();
@@ -2360,32 +2391,92 @@ class CubagemApp {
   }
 
   verificarMovimentoSegurar(e) {
-    if (!this.isHolding || this.holdTriggered) return;
+    if (!this.isHolding) return;
+
     const curX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
     const curY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-    const dist = Math.hypot(curX - this.holdStartX, curY - this.holdStartY);
 
-    // Se moveu mais que 14px antes de disparar o timer, é uma rolagem normal do usuário
-    if (dist > 14) {
-      this.cancelarSegurarPrevia();
+    // Se a prévia ainda não disparou: tolera até 18px de microtremores do dedo
+    if (!this.holdTriggered) {
+      const dist = Math.hypot(curX - this.holdStartX, curY - this.holdStartY);
+      if (dist > 18) {
+        this.cancelarSegurarPrevia();
+      }
+      return;
+    }
+
+    // Se já abriu em modo espiar: deslizar para cima fixa a planilha
+    if (this.previaAberta && !this.isPinned) {
+      if (this.holdStartY - curY > 55) {
+        this.fixarPreviaPorGesto();
+      }
     }
   }
 
-  finalizarSegurarPrevia(e) {
-    if (this.holdTimer) {
+  fixarPreviaPorGesto() {
+    if (this.isPinned) return;
+    this.isPinned = true;
+
+    if (typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate([40, 50, 40]); } catch (_) {}
+    }
+
+    const modal = document.getElementById('modalPreviaPlanilha');
+    if (modal) {
+      modal.classList.remove('peek-mode');
+    }
+
+    const holdTextEl = document.getElementById('prevHoldText');
+    const pinBtn = document.getElementById('prevBtnPin');
+    const pinLabel = document.getElementById('prevBtnPinLabel');
+
+    if (holdTextEl) holdTextEl.textContent = '📌 Fixada! Pode soltar o dedo';
+    if (pinBtn) pinBtn.classList.add('active-pinned');
+    if (pinLabel) pinLabel.textContent = 'Desafixar';
+
+    this.showToast('Planilha fixada! Agora você pode navegar e inspecionar.', 'info');
+  }
+
+  verificarSoltura(e) {
+    // Se o timer ainda não disparou, cancela a intenção de segurar
+    if (this.holdTimer && !this.holdTriggered) {
       clearTimeout(this.holdTimer);
       this.holdTimer = null;
     }
+
     if (this.holdTargetEl) {
       this.holdTargetEl.classList.remove('holding-card');
+      if (this.activePointerId !== null && typeof this.holdTargetEl.releasePointerCapture === 'function') {
+        try {
+          this.holdTargetEl.releasePointerCapture(this.activePointerId);
+        } catch (_) {}
+      }
       this.holdTargetEl = null;
     }
     this.isHolding = false;
 
-    // Se o modal de prévia foi aberto em modo segurar (peek) e NÃO foi fixado, fecha ao soltar
-    if (this.previaAberta && !this.isPinned) {
-      this.fecharPreviaPlanilha(false);
+    // Se a prévia não está aberta ou já está fixada, não fecha
+    if (!this.previaAberta || this.isPinned) {
+      return;
     }
+
+    // Janela de imunidade contra eventos espúrios de tap do navegador (mínimo 300ms de exibição)
+    if (Date.now() - this.previaOpenedAt < 300) {
+      return;
+    }
+
+    // Se for touch e ainda há dedos pressionando a tela, não fecha
+    if (e && e.touches && e.touches.length > 0) {
+      return;
+    }
+
+    // Se for mouse e o botão principal ainda estiver pressionado, não fecha
+    if (e && e.pointerType === 'mouse' && (e.buttons & 1)) {
+      return;
+    }
+
+    // O usuário realmente soltou o clique / dedo da tela: fecha a prévia suavemente
+    this.fecharPreviaPlanilha(false);
   }
 
   cancelarSegurarPrevia() {
@@ -2395,6 +2486,11 @@ class CubagemApp {
     }
     if (this.holdTargetEl) {
       this.holdTargetEl.classList.remove('holding-card');
+      if (this.activePointerId !== null && typeof this.holdTargetEl.releasePointerCapture === 'function') {
+        try {
+          this.holdTargetEl.releasePointerCapture(this.activePointerId);
+        } catch (_) {}
+      }
       this.holdTargetEl = null;
     }
     this.isHolding = false;
@@ -2546,6 +2642,7 @@ class CubagemApp {
     this.previaAtivaItem = item;
     this.abaAtivaPrevia = 'medicao';
     this.isPinned = !isHoldMode;
+    this.previaOpenedAt = Date.now();
 
     const modal = document.getElementById('modalPreviaPlanilha');
     const filenameEl = document.getElementById('prevExcelFilename');
@@ -2560,6 +2657,13 @@ class CubagemApp {
     const tabMemoria = document.getElementById('prevTabMemoria');
 
     if (!modal || !viewportGrid) return;
+
+    // Em modo espiar (hold), peek-mode deixa o modal transparente a cliques para não roubar o toque do dedo
+    if (isHoldMode) {
+      modal.classList.add('peek-mode');
+    } else {
+      modal.classList.remove('peek-mode');
+    }
 
     const tipo = item.tipo || 'caminhao';
     let nomeArquivo = 'Cubagem_Florestal.xlsx';
@@ -2586,7 +2690,7 @@ class CubagemApp {
       if (pinLabel) pinLabel.textContent = 'Desafixar';
     } else {
       if (holdIndEl) holdIndEl.style.display = 'inline-flex';
-      if (holdTextEl) holdTextEl.textContent = '👆 Segurando: Solte para fechar';
+      if (holdTextEl) holdTextEl.innerHTML = '👆 Segurando: Solte para fechar <span style="opacity:0.75; font-size:0.7rem; margin-left:4px;">(ou deslize ⬆ para fixar)</span>';
       if (pinBtn) pinBtn.classList.remove('active-pinned');
       if (pinLabel) pinLabel.textContent = 'Fixar';
     }
@@ -2620,17 +2724,20 @@ class CubagemApp {
 
   alternarFixarPrevia() {
     this.isPinned = !this.isPinned;
+    const modal = document.getElementById('modalPreviaPlanilha');
     const holdTextEl = document.getElementById('prevHoldText');
     const pinBtn = document.getElementById('prevBtnPin');
     const pinLabel = document.getElementById('prevBtnPinLabel');
 
     if (this.isPinned) {
+      if (modal) modal.classList.remove('peek-mode');
       if (holdTextEl) holdTextEl.textContent = '📌 Modo Fixo: Aberto para inspeção';
       if (pinBtn) pinBtn.classList.add('active-pinned');
       if (pinLabel) pinLabel.textContent = 'Desafixar';
       this.showToast('Planilha fixada na tela. Use o botão Fechar para sair.', 'info');
     } else {
-      if (holdTextEl) holdTextEl.textContent = '👆 Modo Espiar: Solte para fechar';
+      if (modal) modal.classList.add('peek-mode');
+      if (holdTextEl) holdTextEl.innerHTML = '👆 Segurando: Solte para fechar <span style="opacity:0.75; font-size:0.7rem; margin-left:4px;">(ou deslize ⬆ para fixar)</span>';
       if (pinBtn) pinBtn.classList.remove('active-pinned');
       if (pinLabel) pinLabel.textContent = 'Fixar';
     }
@@ -2641,18 +2748,27 @@ class CubagemApp {
     const modal = document.getElementById('modalPreviaPlanilha');
     if (modal) {
       modal.style.display = 'none';
+      modal.classList.remove('peek-mode');
     }
     this.previaAberta = false;
     this.isPinned = false;
     this.previaAtivaItem = null;
+    this.previaOpenedAt = 0;
     if (this.holdTimer) {
       clearTimeout(this.holdTimer);
       this.holdTimer = null;
     }
     if (this.holdTargetEl) {
       this.holdTargetEl.classList.remove('holding-card');
+      if (this.activePointerId !== null && typeof this.holdTargetEl.releasePointerCapture === 'function') {
+        try {
+          this.holdTargetEl.releasePointerCapture(this.activePointerId);
+        } catch (_) {}
+      }
       this.holdTargetEl = null;
     }
+    this.isHolding = false;
+    this.holdTriggered = false;
   }
 
   alternarAbaPrevia(aba) {
