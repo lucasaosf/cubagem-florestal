@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7.8';
+    this.appVersion = '2.7.9';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1567,7 +1567,7 @@ class CubagemApp {
       this.showToast(`Planilha com ${records.length} cubagens baixada com sucesso!`, 'success');
     } catch (err) {
       console.error('Erro ao exportar selecionadas:', err);
-      this.showToast('Erro ao exportar planilha Excel.', 'danger');
+      this.showToast(`Erro ao exportar planilha Excel: ${err.message || err}`, 'danger');
     }
   }
 
@@ -3143,7 +3143,7 @@ class CubagemApp {
         this.showToast(`Planilha ${fileName} baixada com sucesso!`, 'success');
       } catch (err) {
         console.error('Erro ao baixar planilha consolidada da prévia:', err);
-        this.showToast('Erro ao exportar planilha Excel.', 'danger');
+        this.showToast(`Erro ao exportar planilha Excel: ${err.message || err}`, 'danger');
       }
       return;
     }
@@ -3178,7 +3178,7 @@ class CubagemApp {
       this.showToast(`Planilha ${fileName} baixada com sucesso!`, 'success');
     } catch (err) {
       console.error('Erro ao baixar planilha da prévia:', err);
-      this.showToast('Erro ao exportar planilha Excel.', 'danger');
+      this.showToast(`Erro ao exportar planilha Excel: ${err.message || err}`, 'danger');
     }
   }
 

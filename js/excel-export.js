@@ -69,6 +69,19 @@ class CubagemExcelExport {
     const pilhas = records.filter(r => r.tipo === 'pilha');
     const toras = records.filter(r => r.tipo === 'tora');
 
+    const sumVol = arr => arr.reduce((acc, x) => {
+      if (x.tipo === 'tora' && Array.isArray(x.toras) && x.toras.length > 0) {
+        const sumT = x.toras.reduce((s, t) => s + (Number(t.volumeGeometrico) || 0), 0);
+        return acc + (Number(x.volumeGeometrico) || sumT);
+      }
+      return acc + (Number(x.volumeGeometrico) || 0);
+    }, 0);
+
+    const vCam = sumVol(caminhoes);
+    const vPil = sumVol(pilhas);
+    const vTor = sumVol(toras);
+    const vTot = vCam + vPil + vTor;
+
     // =========================================================================
     // ABA 1: RESUMO CONSOLIDADO
     // =========================================================================
@@ -126,12 +139,6 @@ class CubagemExcelExport {
       cell.alignment = { horizontal: i === 0 ? 'left' : 'center', vertical: 'middle' };
       cell.border = thinBorder;
     });
-
-    const sumVol = arr => arr.reduce((acc, x) => acc + (Number(x.volumeGeometrico) || 0), 0);
-    const vCam = sumVol(caminhoes);
-    const vPil = sumVol(pilhas);
-    const vTor = sumVol(toras);
-    const vTot = vCam + vPil + vTor;
 
     const resRows = [
       ['🚚 Cargas de Caminhões', caminhoes.length, vCam, caminhoes.length > 0 ? vCam / caminhoes.length : 0],
@@ -722,7 +729,9 @@ class CubagemExcelExport {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    window.URL.revokeObjectURL(downloadUrl);
+    setTimeout(() => {
+      window.URL.revokeObjectURL(downloadUrl);
+    }, 60000);
 
     return {
       success: true,
