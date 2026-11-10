@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v2.7.1';
+const CACHE_NAME = 'cubagem-florestal-v2.7.2';
 const CORE = [
   './',
   './index.html',
@@ -103,13 +103,18 @@ self.addEventListener('fetch', (event) => {
       caches.match(req).then((cachedResponse) => {
         if (cachedResponse) return cachedResponse;
 
-        return fetch(req).then((networkResponse) => {
-          if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          }
-          return networkResponse;
-        });
+        return fetch(req)
+          .then((networkResponse) => {
+            if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
+              const clone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+            }
+            return networkResponse;
+          })
+          .catch((err) => {
+            console.warn('[Service Worker] Falha de rede para:', req.url);
+            return caches.match(req);
+          });
       })
     );
   }

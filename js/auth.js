@@ -14,9 +14,19 @@ class CubagemAuth {
   }
 
   /**
-   * Carrega os scripts do Firebase sob demanda
+   * Carrega os scripts do Firebase sob demanda ou reutiliza os já carregados
    */
   async loadFirebase() {
+    if (this.fb) return this.fb;
+
+    if (window.firebase && window.firebase.auth && window.firebase.firestore) {
+      if (!window.firebase.apps.length && window.FIREBASE_CONFIG) {
+        window.firebase.initializeApp(window.FIREBASE_CONFIG);
+      }
+      this.fb = window.firebase;
+      return this.fb;
+    }
+
     if (this.authPromise) return this.authPromise;
 
     if (!window.FIREBASE_CONFIG) {
@@ -66,6 +76,21 @@ class CubagemAuth {
       if (!fb) {
         this.renderAuthUI();
         return;
+      }
+
+      // Processa resultado de redirecionamento (essencial para mobile / PWA)
+      try {
+        const redirectRes = await fb.auth().getRedirectResult();
+        if (redirectRes && redirectRes.user) {
+          this.user = redirectRes.user;
+          this.renderAuthUI();
+          if (window.app && window.app.showToast) {
+            window.app.showToast(`Bem-vindo, ${redirectRes.user.displayName || redirectRes.user.email}!`, 'success');
+          }
+          this.syncAllWithCloud(true);
+        }
+      } catch (redirErr) {
+        console.warn('[Auth] Redirect result info:', redirErr);
       }
 
       fb.auth().onAuthStateChanged(async (user) => {
@@ -222,7 +247,7 @@ class CubagemAuth {
       </div>
 
       <!-- Botão Google Oficial -->
-      <button class="btn btn-secondary btn-block" style="margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 10px;" onclick="app.auth.loginGoogle()">
+      <button type="button" id="btnGoogleLogin" class="btn btn-secondary btn-block" style="margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 10px;" onclick="app.auth.loginGoogle()">
         <svg width="20" height="20" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
           <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.41 7.34 24 12 24z"/>
@@ -258,7 +283,7 @@ class CubagemAuth {
           </div>
         ` : ''}
 
-        <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 10px;">
+        <button type="submit" id="authSubmitBtn" class="btn btn-primary btn-block btn-lg" style="margin-top: 10px;">
           ${tab === 'login' ? 'Entrar na Conta' : (tab === 'cadastro' ? 'Criar Conta Gratuita' : 'Enviar Link de Recuperação')}
         </button>
       </form>
@@ -276,43 +301,90 @@ class CubagemAuth {
 
   async loginGoogle() {
     if (!navigator.onLine) {
-      window.app.showToast('Você precisa de internet para fazer login com Google.', 'warning');
+      if (window.app && window.app.showToast) {
+        window.app.showToast('Você precisa de internet para fazer login com Google.', 'warning');
+      }
       return;
+    }
+
+    const btnGoogle = document.getElementById('btnGoogleLogin');
+    if (btnGoogle) {
+      btnGoogle.disabled = true;
+      btnGoogle.innerHTML = '<span>⏳ Conectando ao Google...</span>';
     }
 
     try {
       const fb = await this.loadFirebase();
-      if (!fb) throw new Error('Serviço de autenticação indisponível.');
+      if (!fb) throw new Error('Serviço de autenticação indisponível. Verifique sua conexão.');
 
       const provider = new fb.auth.GoogleAuthProvider();
-      const res = await fb.auth().signInWithPopup(provider).catch((err) => {
-        if (err && (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')) {
-          return fb.auth().signInWithRedirect(provider);
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      // Em dispositivos móveis ou ambientes PWA onde popups são bloqueados
+      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent);
+      let res = null;
+
+      if (isMobile) {
+        await fb.auth().signInWithRedirect(provider);
+        return;
+      }
+
+      try {
+        res = await fb.auth().signInWithPopup(provider);
+      } catch (popupErr) {
+        console.warn('[Auth] signInWithPopup falhou, tentando redirect:', popupErr);
+        if (popupErr && (
+          popupErr.code === 'auth/popup-blocked' ||
+          popupErr.code === 'auth/cancelled-popup-request' ||
+          popupErr.code === 'auth/popup-closed-by-user' ||
+          popupErr.code === 'auth/operation-not-supported-in-this-environment'
+        )) {
+          await fb.auth().signInWithRedirect(provider);
+          return;
         }
-        throw err;
-      });
+        throw popupErr;
+      }
 
       if (res && res.user) {
         this.user = res.user;
         this.fecharModalAuth();
-        window.app.showToast(`Bem-vindo, ${res.user.displayName || res.user.email}!`, 'success');
+        this.renderAuthUI();
+        if (window.app && window.app.showToast) {
+          window.app.showToast(`Bem-vindo, ${res.user.displayName || res.user.email}!`, 'success');
+        }
         this.syncAllWithCloud(true);
       }
     } catch (err) {
       console.error('Erro no login Google:', err);
       this.tratarErroAuth(err);
+    } finally {
+      if (btnGoogle) {
+        btnGoogle.disabled = false;
+        btnGoogle.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.41 7.34 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.42l4.04-3.15z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.59 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+          </svg>
+          <strong>Entrar com o Google</strong>
+        `;
+      }
     }
   }
 
   async submeterFormularioEmail(modo) {
     if (!navigator.onLine) {
-      window.app.showToast('Conecte-se à internet para entrar ou criar conta.', 'warning');
+      if (window.app && window.app.showToast) {
+        window.app.showToast('Conecte-se à internet para entrar ou criar conta.', 'warning');
+      }
       return;
     }
 
     const emailEl = document.getElementById('authEmail');
     const passEl = document.getElementById('authSenha');
     const nomeEl = document.getElementById('authNome');
+    const submitBtn = document.getElementById('authSubmitBtn');
 
     const email = emailEl ? emailEl.value.trim() : '';
     const pass = passEl ? passEl.value : '';
@@ -320,15 +392,23 @@ class CubagemAuth {
 
     if (!email) return;
 
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processando...';
+    }
+
     try {
       const fb = await this.loadFirebase();
-      if (!fb) throw new Error('Firebase indisponível.');
+      if (!fb) throw new Error('Firebase indisponível no momento.');
 
       if (modo === 'login') {
         const res = await fb.auth().signInWithEmailAndPassword(email, pass);
         this.user = res.user;
         this.fecharModalAuth();
-        window.app.showToast(`Conectado como ${res.user.email}!`, 'success');
+        this.renderAuthUI();
+        if (window.app && window.app.showToast) {
+          window.app.showToast(`Conectado como ${res.user.email}!`, 'success');
+        }
         this.syncAllWithCloud(true);
       } else if (modo === 'cadastro') {
         const res = await fb.auth().createUserWithEmailAndPassword(email, pass);
@@ -337,17 +417,27 @@ class CubagemAuth {
         }
         this.user = res.user;
         this.fecharModalAuth();
-        window.app.showToast(`Conta criada com sucesso!`, 'success');
+        this.renderAuthUI();
+        if (window.app && window.app.showToast) {
+          window.app.showToast(`Conta criada com sucesso!`, 'success');
+        }
         this.syncAllWithCloud(true);
       } else if (modo === 'recuperar') {
         fb.auth().languageCode = 'pt';
         await fb.auth().sendPasswordResetEmail(email);
         this.fecharModalAuth();
-        window.app.showToast('Enviamos um e-mail com instruções para redefinir sua senha.', 'info');
+        if (window.app && window.app.showToast) {
+          window.app.showToast('Enviamos um e-mail com instruções para redefinir sua senha.', 'info');
+        }
       }
     } catch (err) {
       console.error('Erro no formulário de e-mail:', err);
       this.tratarErroAuth(err);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = modo === 'login' ? 'Entrar na Conta' : (modo === 'cadastro' ? 'Criar Conta Gratuita' : 'Enviar Link de Recuperação');
+      }
     }
   }
 
@@ -359,7 +449,9 @@ class CubagemAuth {
       this.user = null;
       this.fecharModalAuth();
       this.renderAuthUI();
-      window.app.showToast('Você saiu da conta. Seus dados continuam no aparelho.', 'info');
+      if (window.app && window.app.showToast) {
+        window.app.showToast('Você saiu da conta. Seus dados continuam no aparelho.', 'info');
+      }
     } catch (err) {
       console.error('Erro ao sair:', err);
     }
@@ -367,16 +459,24 @@ class CubagemAuth {
 
   tratarErroAuth(err) {
     let msg = 'Ocorreu um erro na autenticação.';
-    if (err.code === 'auth/invalid-email') msg = 'E-mail informado é inválido.';
-    else if (err.code === 'auth/user-not-found') msg = 'Nenhum usuário cadastrado com este e-mail.';
-    else if (err.code === 'auth/wrong-password') msg = 'Senha incorreta.';
-    else if (err.code === 'auth/email-already-in-use') msg = 'Este e-mail já está em uso por outra conta.';
-    else if (err.code === 'auth/weak-password') msg = 'A senha deve ter no mínimo 6 caracteres.';
-    else if (err.code === 'auth/popup-closed-by-user') msg = 'A janela do Google foi fechada antes de concluir.';
-    else if (err.code === 'auth/network-request-failed') msg = 'Sem conexão com a internet.';
-    else if (err.message) msg = err.message;
+    const code = err ? err.code : '';
+    if (code === 'auth/invalid-email') msg = 'E-mail informado é inválido.';
+    else if (code === 'auth/user-not-found') msg = 'Nenhum usuário cadastrado com este e-mail. Crie uma conta no link abaixo.';
+    else if (code === 'auth/wrong-password') msg = 'Senha incorreta. Se esqueceu, use "Esqueci a senha".';
+    else if (code === 'auth/invalid-credential') msg = 'Credenciais incorretas ou expiradas. Tente novamente.';
+    else if (code === 'auth/email-already-in-use') msg = 'Este e-mail já está em uso por outra conta. Faça login.';
+    else if (code === 'auth/weak-password') msg = 'A senha deve ter no mínimo 6 caracteres.';
+    else if (code === 'auth/popup-closed-by-user') msg = 'A janela do Google foi fechada antes de concluir o login.';
+    else if (code === 'auth/popup-blocked') msg = 'O navegador bloqueou a janela pop-up do Google. Tente novamente.';
+    else if (code === 'auth/network-request-failed') msg = 'Sem conexão com a internet ou erro de rede.';
+    else if (code === 'auth/unauthorized-domain') msg = 'Este domínio precisa de autorização no console Firebase.';
+    else if (err && err.message) msg = err.message;
 
-    window.app.showToast(msg, 'danger');
+    if (window.app && window.app.showToast) {
+      window.app.showToast(msg, 'danger');
+    } else {
+      alert(msg);
+    }
   }
 
   // =========================================================================

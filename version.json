@@ -1,11 +1,11 @@
 {
-  "v": "2.7.1",
-  "nome": "2.7.1",
+  "v": "2.7.2",
+  "nome": "2.7.2",
   "data": "2026-11-09",
   "novidades": [
-    "Pop-up moderno e interativo de atualização de versão do aplicativo",
-    "Identidade visual oficial do Guia de Campo Aplicado à Identificação Botânica no Modo Campeiro",
-    "Abertura instantânea da Planilha Excel com 1 toque no card e exportação direta",
-    "Limpeza profunda e automática de cache sem recarregamento preso"
+    "Ajuste visual no topo da tela inicial: remoção do botão do meio",
+    "Correção completa e otimização no fluxo de login com Google e E-mail",
+    "Carregamento estável do Firebase SDK com suporte a redirecionamento no celular",
+    "Pop-up moderno de atualização de versão do aplicativo"
   ]
 }

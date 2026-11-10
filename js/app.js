@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7.1';
+    this.appVersion = '2.7.2';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1941,6 +1941,22 @@ class CubagemApp {
   fecharModal(id) {
     const modal = document.getElementById(id);
     if (modal) modal.classList.remove('open');
+  }
+
+  abrirModalAuth() {
+    if (this.auth && typeof this.auth.abrirModalAuth === 'function') {
+      this.auth.abrirModalAuth();
+    } else {
+      this.abrirModal('modalAuth');
+    }
+  }
+
+  fecharModalAuth() {
+    if (this.auth && typeof this.auth.fecharModalAuth === 'function') {
+      this.auth.fecharModalAuth();
+    } else {
+      this.fecharModal('modalAuth');
+    }
   }
 
   abrirModalNovidades() {
