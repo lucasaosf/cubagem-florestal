@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7.3';
+    this.appVersion = '2.7.4';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -38,9 +38,7 @@ class CubagemApp {
     // Lista dinâmica de toras para cubagem de pilhas de toras
     this.torasPilha = [];
 
-    // Sistema de Abertura de Planilha por Duplo Toque (Dois toques rápidos)
-    this.lastTapTime = 0;
-    this.lastTapTargetId = null;
+    // Sistema de Prévia da Planilha Excel
     this.previaAberta = false;
     this.previaAtivaItem = null;
     this.abaAtivaPrevia = 'medicao'; // 'medicao' | 'memoria'
@@ -1399,8 +1397,7 @@ class CubagemApp {
     }
 
     return `
-      <div class="history-item-card clickable-sheet-card"
-           onclick="app.abrirPreviaDoCard(event, '${item.id}')">
+      <div class="history-item-card">
         <div class="history-card-top">
           <span class="badge-type ${tipo}">${tagTipo}</span>
           <span class="history-tag-date">${dataBR} • ${item.horario || ''}</span>
@@ -1416,15 +1413,10 @@ class CubagemApp {
             <div class="history-vol-unit">m³ geom.</div>
           </div>
         </div>
-        <div class="card-sheet-action-banner">
-          <span class="sheet-icon">📊</span>
-          <span class="sheet-label">Toque para ver a Planilha Excel</span>
-          <span class="sheet-arrow">➔</span>
-        </div>
         <div class="history-card-actions">
-          <button type="button" class="btn-action-small preview-btn" onclick="event.stopPropagation(); app.abrirPreviaFixada('${item.id}')" title="Ver planilha completa">📊 Planilha</button>
-          <button type="button" class="btn-action-small" onclick="event.stopPropagation(); app.abrirDetalhes('${item.id}')">Detalhes</button>
-          <button type="button" class="btn-action-small danger" onclick="event.stopPropagation(); app.abrirModalExcluir('${item.id}')">Excluir</button>
+          <button type="button" class="btn-action-small preview-btn" onclick="app.abrirPreviaFixada('${item.id}')" title="Ver planilha completa desta cubagem">📊 Ver Planilha</button>
+          <button type="button" class="btn-action-small" onclick="app.abrirDetalhes('${item.id}')">Detalhes</button>
+          <button type="button" class="btn-action-small danger" onclick="app.abrirModalExcluir('${item.id}')">Excluir</button>
         </div>
       </div>
     `;
@@ -2350,30 +2342,10 @@ class CubagemApp {
   }
 
   // =========================================================================
-  // SISTEMA DE ABERTURA DIRETA DA PLANILHA EXCEL (1 TOQUE OU BOTÃO)
+  // SISTEMA DE PRÉVIA DA PLANILHA EXCEL (ACIONADO EXCLUSIVAMENTE POR BOTÃO)
   // =========================================================================
   abrirPreviaDoCard(e, id) {
-    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) {
-      return;
-    }
-    if (typeof navigator.vibrate === 'function') {
-      try { navigator.vibrate(35); } catch (_) {}
-    }
     this.abrirPreviaFixada(id);
-  }
-
-  tratarToqueItem(e, id) {
-    this.abrirPreviaDoCard(e, id);
-  }
-
-  tratarToqueLive(e) {
-    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) {
-      return;
-    }
-    if (typeof navigator.vibrate === 'function') {
-      try { navigator.vibrate(35); } catch (_) {}
-    }
-    this.abrirPreviaLiveFixada();
   }
 
   abrirPreviaLiveFixada() {
@@ -2560,7 +2532,7 @@ class CubagemApp {
 
     if (filenameEl) filenameEl.textContent = nomeArquivo;
     if (holdIndEl) holdIndEl.style.display = 'inline-flex';
-    if (holdTextEl) holdTextEl.textContent = '📋 Planilha Aberta (Toque no ✕ ou fora para fechar)';
+    if (holdTextEl) holdTextEl.textContent = '📋 Planilha Excel';
 
     if (tabMedicao) tabMedicao.classList.add('active');
     if (tabMemoria) tabMemoria.classList.remove('active');

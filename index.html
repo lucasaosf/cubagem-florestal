@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css?v=2.7.3">
+  <link rel="stylesheet" href="css/styles.css?v=2.7.4">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -189,7 +189,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <button type="button" class="cover-ver-pill" onclick="app.verificarOuAbrirPopUpAtualizacao()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para verificar atualizações">Versão 2.7.3 🔄</button>
+            <button type="button" class="cover-ver-pill" onclick="app.verificarOuAbrirPopUpAtualizacao()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para verificar atualizações">Versão 2.7.4 🔄</button>
             <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
@@ -482,7 +482,7 @@
               </div>
 
               <!-- Resumo Acumulado da Pilha -->
-              <div id="toraPileTotalSummary" class="clickable-sheet-card" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold); cursor: pointer;" onclick="app.abrirPreviaLiveFixada()">
+              <div id="toraPileTotalSummary" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold);">
                 <div style="display: flex; justify-content: space-between; align-items: baseline;">
                   <span style="font-weight: 700; color: var(--gold); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">Volume Total da Pilha</span>
                   <span style="font-size: 1.45rem; font-family: var(--display); font-weight: 700; color: var(--ink);" id="toraPileTotalVolDisplay">0,000 m³</span>
@@ -490,17 +490,15 @@
                 <div style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;" id="toraPileTotalStats">
                   0 toras • Dm Médio: 0,0 cm • Comp. Médio: 0,00 m
                 </div>
-                <div class="card-sheet-action-banner" style="margin-top: 10px;" onclick="event.stopPropagation(); app.abrirPreviaLiveFixada()">
-                  <span class="sheet-icon">📊</span>
-                  <span class="sheet-label">Toque para ver a Planilha da Pilha</span>
-                  <span class="sheet-arrow">➔</span>
-                </div>
+                <button type="button" class="btn-ver-previa" style="margin-top: 10px;" onclick="app.abrirPreviaLiveFixada()" title="Visualizar planilha desta pilha">
+                  <span>📊</span> <span>Ver Prévia da Planilha</span>
+                </button>
               </div>
             </div>
           </div>
 
           <!-- Card de Cálculo em Tempo Real -->
-          <div class="calc-result-card clickable-sheet-card" id="liveCalcCard" onclick="app.abrirPreviaLiveFixada()">
+          <div class="calc-result-card" id="liveCalcCard">
             <div class="calc-result-header">
               <span class="calc-result-tag" id="liveCalcTag">Cálculo Automático</span>
               <span class="calc-result-type-badge" id="liveTypeBadge">Carga de Caminhão</span>
@@ -530,11 +528,9 @@
               Preencha os dados da medição para visualizar o cálculo de volume.
             </div>
 
-            <div class="card-sheet-action-banner" onclick="event.stopPropagation(); app.abrirPreviaLiveFixada()">
-              <span class="sheet-icon">📊</span>
-              <span class="sheet-label">Toque para ver a Prévia da Planilha Excel</span>
-              <span class="sheet-arrow">➔</span>
-            </div>
+            <button type="button" class="btn-ver-previa" onclick="app.abrirPreviaLiveFixada()" title="Visualizar planilha desta medição">
+              <span>📊</span> <span>Ver Prévia da Planilha</span>
+            </button>
           </div>
 
           <div style="display: flex; gap: 10px; margin-bottom: 24px;">
@@ -1261,7 +1257,7 @@
     </div>
   </div>
 
-  <!-- MODAL: PRÉVIA DA PLANILHA EXCEL (DUPLO TOQUE / BOTÃO PLANILHA) -->
+  <!-- MODAL: PRÉVIA DA PLANILHA EXCEL -->
   <div id="modalPreviaPlanilha" class="modal-overlay modal-excel-overlay" style="display: none;" aria-hidden="true" onclick="if(event.target===this) app.fecharPreviaPlanilha(true)">
     <div class="excel-preview-window" onclick="event.stopPropagation()">
       <!-- Barra Superior Estilo Excel -->
@@ -1275,7 +1271,7 @@
         </div>
         <div class="excel-hold-indicator" id="prevHoldIndicator">
           <span class="pulse-dot"></span>
-          <span id="prevHoldText">📋 Planilha Aberta</span>
+          <span id="prevHoldText">📋 Planilha Excel</span>
         </div>
         <div class="excel-title-actions">
           <button type="button" class="btn-excel-tool export" id="prevBtnDownload" onclick="app.baixarExcelDaPrevia()" title="Baixar esta medição em formato Excel (.xlsx)">
@@ -1368,9 +1364,9 @@
   <script src="js/db.js"></script>
   <script src="js/calculator.js"></script>
   <script src="js/excel-export.js"></script>
-  <script src="js/auth.js?v=2.7.3"></script>
+  <script src="js/auth.js?v=2.7.4"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js?v=2.7.3"></script>
+  <script src="js/app.js?v=2.7.4"></script>
 </body>
 </html>

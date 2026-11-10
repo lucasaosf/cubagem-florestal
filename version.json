@@ -1,11 +1,10 @@
 {
-  "v": "2.7.3",
-  "nome": "2.7.3",
+  "v": "2.7.4",
+  "nome": "2.7.4",
   "data": "2026-11-10",
   "novidades": [
-    "Restauração do carregamento ultrarrápido e resposta imediata de todos os botões",
-    "Abertura instantânea do modal de login e sincronização de conta",
-    "Carregamento desacoplado e resiliente do Firebase sem travar o aplicativo",
-    "Topo da tela inicial limpo (apenas modo escuro e perfil/login)"
+    "Abertura da prévia da planilha acionada exclusivamente pelo botão dedicado 'Ver Planilha'",
+    "Remoção de duplo clique e toque prolongado para maior estabilidade no celular",
+    "Interface mais limpa e direta nos cards de medições e cálculo em tempo real"
   ]
 }

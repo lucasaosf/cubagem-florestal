@@ -3192,94 +3192,55 @@ body:not([data-active-tab="inicio"]) .install-balloon {
 }
 
 /* =========================================================================
-   SISTEMA DE ABERTURA DA PLANILHA EXCEL (1 TOQUE OU BOTÃO)
+   SISTEMA DE BOTÃO DA PRÉVIA DA PLANILHA EXCEL
    ========================================================================= */
 
-.clickable-sheet-card,
-.double-tap-card,
-.holdable-card {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-  position: relative;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.clickable-sheet-card:hover,
-.double-tap-card:hover {
-  border-color: var(--gold, #96784A) !important;
-  box-shadow: 0 4px 16px rgba(150, 120, 74, 0.25) !important;
-}
-
-.clickable-sheet-card:active,
-.double-tap-card:active {
-  transform: scale(0.985);
-}
-
-.card-sheet-action-banner {
-  background: linear-gradient(135deg, rgba(14, 37, 21, 0.08) 0%, rgba(150, 120, 74, 0.18) 100%);
-  border: 1px solid rgba(150, 120, 74, 0.4);
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin-top: 10px;
+.btn-ver-previa {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  margin-top: 12px;
+  background: linear-gradient(135deg, rgba(14, 37, 21, 0.08) 0%, rgba(150, 120, 74, 0.18) 100%);
+  border: 1.5px solid var(--gold, #96784A);
+  border-radius: 8px;
+  color: var(--ink, #0E2515);
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.card-sheet-action-banner:hover,
-.card-sheet-action-banner:active {
-  background: linear-gradient(135deg, rgba(14, 37, 21, 0.16) 0%, rgba(150, 120, 74, 0.32) 100%);
-  border-color: var(--gold, #96784A);
-  transform: translateY(-1px);
-}
-
-.card-sheet-action-banner .sheet-icon {
-  font-size: 1.15rem;
-  line-height: 1;
-}
-
-.card-sheet-action-banner .sheet-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--ink, #0E2515);
-  flex: 1;
-  letter-spacing: 0.2px;
-}
-
-[data-theme="dark"] .card-sheet-action-banner .sheet-label {
+[data-theme="dark"] .btn-ver-previa {
   color: #F2EBDD;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(150, 120, 74, 0.22) 100%);
 }
 
-.card-sheet-action-banner .sheet-arrow {
-  font-size: 0.85rem;
-  color: var(--gold, #96784A);
-  font-weight: 700;
-  transition: transform 0.2s ease;
-}
-
-.card-sheet-action-banner:hover .sheet-arrow,
-.card-sheet-action-banner:active .sheet-arrow {
-  transform: translateX(3px);
+.btn-ver-previa:hover,
+.btn-ver-previa:active {
+  background: var(--gold, #96784A);
+  color: #0E2515;
+  box-shadow: 0 4px 14px rgba(150, 120, 74, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-action-small.preview-btn {
   background: rgba(150, 120, 74, 0.18);
   color: var(--gold, #96784A);
-  border: 1px solid rgba(150, 120, 74, 0.45);
+  border: 1px solid rgba(150, 120, 74, 0.55);
   font-weight: 700;
+  transition: all 0.15s ease;
 }
 
-.btn-action-small.preview-btn:hover {
+.btn-action-small.preview-btn:hover,
+.btn-action-small.preview-btn:active {
   background: var(--gold, #96784A);
   color: #0E2515;
+  border-color: var(--gold, #96784A);
 }
 
 /* MODAL OVERLAY: ESTILO PLANILHA EXCEL */
