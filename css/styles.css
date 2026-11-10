@@ -3670,5 +3670,185 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   }
 }
 
+/* ==========================================================================
+   MODAL POP-UP DE ATUALIZAÇÃO DA VERSÃO DO APLICATIVO
+   ========================================================================== */
+.modal-update-overlay {
+  z-index: 10005 !important;
+  align-items: center !important;
+  padding: 16px !important;
+}
+
+.modal-dialog-update {
+  max-width: 480px !important;
+  width: 100% !important;
+  border-radius: 20px !important;
+  background: var(--surface, #FAF6ED) !important;
+  border: 1.5px solid var(--gold, #96784A) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45) !important;
+  overflow: hidden !important;
+  transform: scale(0.92) translateY(20px);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+}
+
+.modal-update-overlay.open .modal-dialog-update {
+  transform: scale(1) translateY(0) !important;
+}
+
+.modal-header-update {
+  background: linear-gradient(135deg, #092011 0%, #163e23 100%) !important;
+  color: #F2EBDD !important;
+  padding: 18px 20px !important;
+  border-bottom: 1.5px solid rgba(212, 175, 55, 0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.update-header-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.update-icon-circle {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.2);
+  border: 1.5px solid #D4AF37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.update-modal-title {
+  font-family: var(--display, 'Cinzel', serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #F2EBDD;
+  margin: 0 0 2px 0;
+  letter-spacing: 0.02em;
+}
+
+.update-modal-badge {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: var(--gold, #96784A);
+  color: #0E2515;
+  padding: 2px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.modal-body-update {
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  background: var(--surface, #FAF6ED) !important;
+  color: var(--ink, #1F2937) !important;
+}
+
+.update-desc {
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: var(--ink, #1F2937);
+  margin: 0;
+}
+
+.update-card-changelog {
+  background: rgba(14, 37, 21, 0.06);
+  border: 1px solid rgba(150, 120, 74, 0.3);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+:root[data-theme="dark"] .update-card-changelog {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.update-changelog-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--gold, #96784A);
+  margin-bottom: 8px;
+}
+
+.update-changelog-items {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ink, #1F2937);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.update-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.btn-update-now {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #D4AF37 0%, #B08854 100%);
+  color: #0E2515;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 18px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(176, 136, 84, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-update-now:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-update-now:active {
+  transform: scale(0.98);
+}
+
+.btn-update-now:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-update-later {
+  flex: 1;
+  background: transparent;
+  color: var(--muted, #6B7280);
+  border: 1.5px solid var(--line, rgba(0, 0, 0, 0.15));
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-update-later:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+
 
 

@@ -1,11 +1,11 @@
 {
-  "v": "2.7",
-  "nome": "2.7",
+  "v": "2.7.1",
+  "nome": "2.7.1",
   "data": "2026-11-09",
   "novidades": [
-    "Integração da identidade oficial do Guia de Campo Aplicado à Identificação Botânica no Modo Campeiro",
-    "Banner oficial ilustrado e navegação otimizada para as 315 pranchas botânicas",
-    "Correção de notificações repetitivas de atualização ao trocar de abas",
-    "Abertura instantânea da Planilha Excel com 1 toque no card e exportação direta"
+    "Pop-up moderno e interativo de atualização de versão do aplicativo",
+    "Identidade visual oficial do Guia de Campo Aplicado à Identificação Botânica no Modo Campeiro",
+    "Abertura instantânea da Planilha Excel com 1 toque no card e exportação direta",
+    "Limpeza profunda e automática de cache sem recarregamento preso"
   ]
 }

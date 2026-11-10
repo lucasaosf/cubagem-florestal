@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7';
+    this.appVersion = '2.7.1';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -168,13 +168,17 @@ class CubagemApp {
     return 0;
   }
 
+  verificarOuAbrirPopUpAtualizacao() {
+    this.checkUpdate(true);
+  }
+
   async checkUpdate(force = false) {
     if (this.updateChecking) return;
     this.updateChecking = true;
 
-    // Respeita intervalo de 6 horas se dispensado recentemente (a menos que seja clique forçado)
+    // Respeita intervalo de 3 horas se dispensado recentemente (a menos que seja clique manual)
     const lastDismissed = localStorage.getItem('cubagem.update_dismissed');
-    if (!force && lastDismissed && (Date.now() - parseInt(lastDismissed, 10) < 6 * 3600000)) {
+    if (!force && lastDismissed && (Date.now() - parseInt(lastDismissed, 10) < 3 * 3600000)) {
       this.updateChecking = false;
       return;
     }
@@ -199,15 +203,16 @@ class CubagemApp {
       const res = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        if (data && data.v && this.compararVersoes(data.v, this.appVersion) > 0) {
+        const temNova = data && data.v && this.compararVersoes(data.v, this.appVersion) > 0;
+        if (temNova) {
           this.notificarAtualizacaoDisponivel(data);
           this.updateChecking = false;
           return;
+        } else if (force) {
+          this.abrirPopUpJaAtualizado(data || { v: this.appVersion });
+          this.updateChecking = false;
+          return;
         }
-      }
-
-      if (force) {
-        this.showToast(`Você já está usando a versão mais recente (v${this.appVersion}).`, 'info');
       }
     } catch (err) {
       console.warn('[Update] Erro ao verificar atualização:', err);
@@ -219,95 +224,96 @@ class CubagemApp {
     }
   }
 
-  notificarAtualizacaoDisponivel(versionData) {
-    this.updateAvailable = versionData || { nome: 'Nova versão' };
-    const bar = document.getElementById('updateBar');
-    if (!bar) return;
+  notificarAtualizacaoDisponivel(data) {
+    this.updateAvailable = data || { v: '2.7', novidades: [] };
 
-    const nome = versionData.nome || versionData.v || 'Nova versão';
-    const novidades = Array.isArray(versionData.novidades) ? versionData.novidades.slice(0, 3) : [];
-    const listaHtml = novidades.length
-      ? `<ul>${novidades.map((n) => `<li>${this.escapeHtml(n)}</li>`).join('')}</ul>`
-      : '';
+    const title = document.getElementById('updateModalTitle');
+    const badge = document.getElementById('updateModalBadge');
+    const desc = document.getElementById('updateModalDesc');
+    const list = document.getElementById('updateModalChangelog');
+    const btnTxt = document.getElementById('updateBtnText');
+    const btnIcon = document.getElementById('updateBtnIcon');
+    const btnLater = document.getElementById('btnUpdateLater');
+    const btnNow = document.getElementById('btnUpdateNow');
 
-    bar.innerHTML = `
-      <div class="ub-row">
-        <span class="ub-title">
-          <span>🚀</span> <b>Nova versão ${this.escapeHtml(nome)} disponível</b>
-        </span>
-        <div class="ub-actions">
-          <button type="button" class="ub-btn-later" onclick="app.dispensarAtualizacao()">Depois</button>
-          <button type="button" class="ub-btn-now" onclick="app.aplicarAtualizacao()">Atualizar</button>
-        </div>
-      </div>
-      ${listaHtml}
-    `;
+    if (btnNow) btnNow.disabled = false;
+    if (btnIcon) btnIcon.textContent = '🔄';
+    if (btnTxt) btnTxt.textContent = 'Atualizar Agora';
+    if (title) title.textContent = 'Nova Versão Disponível!';
+    if (badge) badge.textContent = `Versão ${data.v || data.nome || '2.7'}`;
+    if (desc) desc.textContent = 'Uma nova versão do aplicativo está pronta para ser instalada. Atualize agora para ter as últimas melhorias, novidades e correções.';
+    if (btnLater) {
+      btnLater.style.display = 'inline-block';
+      btnLater.textContent = 'Lembrar Depois';
+    }
 
-    bar.hidden = false;
+    if (list) {
+      const novidades = Array.isArray(data.novidades) && data.novidades.length > 0 ? data.novidades : [
+        'Melhorias de desempenho e estabilidade',
+        'Visualização fluida de planilhas e exportação Excel',
+        'Guia de Campo botânico com 315 pranchas ilustradas'
+      ];
+      list.innerHTML = novidades.map((n) => `<li>${this.escapeHtml(n)}</li>`).join('');
+    }
+
+    this.abrirModal('modalAtualizacaoApp');
   }
 
-  dispensarAtualizacao() {
-    const bar = document.getElementById('updateBar');
-    if (bar) bar.hidden = true;
+  abrirPopUpJaAtualizado(data) {
+    const title = document.getElementById('updateModalTitle');
+    const badge = document.getElementById('updateModalBadge');
+    const desc = document.getElementById('updateModalDesc');
+    const list = document.getElementById('updateModalChangelog');
+    const btnTxt = document.getElementById('updateBtnText');
+    const btnIcon = document.getElementById('updateBtnIcon');
+    const btnLater = document.getElementById('btnUpdateLater');
+    const btnNow = document.getElementById('btnUpdateNow');
+
+    if (btnNow) btnNow.disabled = false;
+    if (btnIcon) btnIcon.textContent = '🔄';
+    if (btnTxt) btnTxt.textContent = 'Recarregar / Limpar Cache';
+    if (title) title.textContent = 'Aplicativo Atualizado';
+    if (badge) badge.textContent = `v${this.appVersion} (Mais recente)`;
+    if (desc) desc.textContent = `Você já está utilizando a versão mais recente do aplicativo (v${this.appVersion}). Se desejar forçar a limpeza de memória e cache, use o botão abaixo.`;
+    if (btnLater) {
+      btnLater.style.display = 'inline-block';
+      btnLater.textContent = 'Fechar';
+    }
+
+    if (list) {
+      const novidades = Array.isArray(data.novidades) && data.novidades.length > 0 ? data.novidades : [
+        'Sistema completo de cubagem de caminhões, pilhas e toras',
+        'Prévia instantânea da Planilha Excel com 1 toque',
+        'Guia de Campo Oficial aplicado à Identificação Botânica no Modo Campeiro'
+      ];
+      list.innerHTML = novidades.map((n) => `<li>${this.escapeHtml(n)}</li>`).join('');
+    }
+
+    this.abrirModal('modalAtualizacaoApp');
+  }
+
+  dispensarAtualizacaoPopUp() {
+    this.fecharModal('modalAtualizacaoApp');
     try {
       localStorage.setItem('cubagem.update_dismissed', String(Date.now()));
     } catch (e) {}
-    this.showToast('Atualização adiada. Você pode verificar quando quiser em Configurações.', 'info');
   }
 
-  async aplicarAtualizacao() {
-    const bar = document.getElementById('updateBar');
-    if (bar) {
-      bar.innerHTML = `
-        <div class="ub-row" style="justify-content: center; padding: 6px 0;">
-          <span style="display: flex; align-items: center; gap: 8px;">
-            <span>⏳</span> <b>Atualizando aplicativo, aguarde um instante...</b>
-          </span>
-        </div>
-      `;
-    }
+  async confirmarAtualizacaoPopUp() {
+    const btn = document.getElementById('btnUpdateNow');
+    const icon = document.getElementById('updateBtnIcon');
+    const txt = document.getElementById('updateBtnText');
+    if (btn) btn.disabled = true;
+    if (icon) icon.textContent = '⏳';
+    if (txt) txt.textContent = 'Atualizando e limpando cache...';
 
-    this.showToast('Aplicando nova versão...', 'info');
-
-    const recarregar = () => {
-      window.location.reload(true);
-    };
-
-    if ('serviceWorker' in navigator) {
-      try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (!reg) return recarregar();
-
-        if (reg.waiting) {
-          reg.waiting.postMessage({ action: 'skipWaiting' });
-        }
-
-        await reg.update();
-        const w = reg.installing || reg.waiting;
-        if (!w || w.state === 'activated') return recarregar();
-
-        w.addEventListener('statechange', () => {
-          if (w.state === 'activated' || w.state === 'redundant') {
-            recarregar();
-          }
-        });
-        setTimeout(recarregar, 3500);
-      } catch (e) {
-        recarregar();
-      }
-    } else {
-      recarregar();
-    }
-  }
-
-  async forcarAtualizacaoApp() {
-    this.showToast('Limpando cache e atualizando o aplicativo...', 'info');
+    this.showToast('Atualizando e limpando arquivos antigos...', 'info');
 
     try {
       localStorage.removeItem('cubagem.update_dismissed');
     } catch (_) {}
 
-    // Limpa os caches offline locais
+    // Limpa todos os caches locais do Service Worker
     if ('caches' in window) {
       try {
         const keys = await caches.keys();
@@ -315,24 +321,28 @@ class CubagemApp {
       } catch (_) {}
     }
 
-    // Solicita atualização do Service Worker
+    // Comanda ativação imediata do novo Service Worker e cancela registros antigos
     if ('serviceWorker' in navigator) {
       try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) {
-          if (reg.waiting) {
-            reg.waiting.postMessage({ action: 'skipWaiting' });
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) {
+          if (r.waiting) {
+            r.waiting.postMessage({ action: 'skipWaiting', type: 'SKIP_WAITING' });
           }
-          await reg.update();
+          await r.unregister();
         }
       } catch (_) {}
     }
 
-    // Recarrega o app forçando URL sem cache
+    // Recarrega sem cache após breve intervalo para confirmação de disco
     setTimeout(() => {
-      const target = window.location.origin + window.location.pathname + '?reload=' + Date.now();
-      window.location.replace(target);
-    }, 450);
+      const cleanUrl = window.location.origin + window.location.pathname + '?reload=' + Date.now();
+      window.location.replace(cleanUrl);
+    }, 350);
+  }
+
+  async forcarAtualizacaoApp() {
+    return this.confirmarAtualizacaoPopUp();
   }
 
   configurarMonitorRede() {
