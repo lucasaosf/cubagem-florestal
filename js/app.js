@@ -38,19 +38,12 @@ class CubagemApp {
     // Lista dinâmica de toras para cubagem de pilhas de toras
     this.torasPilha = [];
 
-    // Sistema Hold-to-Preview de Planilha Excel (Espiar ao segurar)
-    this.holdTimer = null;
-    this.isHolding = false;
-    this.holdTriggered = false;
-    this.isPinned = false;
+    // Sistema de Abertura de Planilha por Duplo Toque (Dois toques rápidos)
+    this.lastTapTime = 0;
+    this.lastTapTargetId = null;
     this.previaAberta = false;
-    this.previaOpenedAt = 0;
     this.previaAtivaItem = null;
     this.abaAtivaPrevia = 'medicao'; // 'medicao' | 'memoria'
-    this.holdStartX = 0;
-    this.holdStartY = 0;
-    this.holdTargetEl = null;
-    this.activePointerId = null;
   }
 
   async init() {
@@ -89,21 +82,10 @@ class CubagemApp {
 
     this.setReportPeriod('mes-atual', false);
 
-    // Listeners globais para Hold-to-Preview de Planilha (Espiar ao Segurar)
-    window.addEventListener('pointerup', (e) => this.verificarSoltura(e));
-    window.addEventListener('touchend', (e) => this.verificarSoltura(e));
-    window.addEventListener('mouseup', (e) => this.verificarSoltura(e));
-    window.addEventListener('pointercancel', (e) => this.verificarSoltura(e));
-    window.addEventListener('pointermove', (e) => this.verificarMovimentoSegurar(e), { passive: true });
-    window.addEventListener('touchmove', (e) => this.verificarMovimentoSegurar(e), { passive: true });
+    // Fechar modal de prévia da planilha com a tecla Escape
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.previaAberta) {
         this.fecharPreviaPlanilha(true);
-      }
-    });
-    window.addEventListener('contextmenu', (e) => {
-      if (this.isHolding || (this.previaAberta && !this.isPinned)) {
-        e.preventDefault();
       }
     });
 
@@ -1376,9 +1358,9 @@ class CubagemApp {
     }
 
     return `
-      <div class="history-item-card holdable-card"
-           onpointerdown="app.iniciarSegurarPrevia(event, '${item.id}')"
-           oncontextmenu="event.preventDefault()">
+      <div class="history-item-card double-tap-card"
+           onclick="app.tratarToqueItem(event, '${item.id}')"
+           ondblclick="app.abrirPreviaFixada('${item.id}')">
         <div class="history-card-top">
           <span class="badge-type ${tipo}">${tagTipo}</span>
           <span class="history-tag-date">${dataBR} • ${item.horario || ''}</span>
@@ -1394,8 +1376,8 @@ class CubagemApp {
             <div class="history-vol-unit">m³ geom.</div>
           </div>
         </div>
-        <div class="card-hold-peek-hint">
-          <span class="peek-icon">👁️</span> Segure para ver a planilha
+        <div class="card-double-tap-hint">
+          <span class="hint-icon">⚡</span> <strong>2 toques:</strong> ver planilha completa
         </div>
         <div class="history-card-actions">
           <button type="button" class="btn-action-small preview-btn" onclick="app.abrirPreviaFixada('${item.id}')" title="Ver planilha completa">📊 Planilha</button>
@@ -2292,209 +2274,72 @@ class CubagemApp {
   }
 
   // =========================================================================
-  // SISTEMA HOLD-TO-PREVIEW: ESPIAR PLANILHA EXCEL AO SEGURAR
+  // SISTEMA DUPLO TOQUE (2 TOQUES): PRÉVIA DA PLANILHA EXCEL
   // =========================================================================
-  async iniciarSegurarPrevia(e, id) {
+  tratarToqueItem(e, id) {
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) {
       return;
     }
 
-    if (e.pointerType === 'mouse' && e.button !== 0) {
-      return;
-    }
+    const now = Date.now();
+    const diff = now - this.lastTapTime;
 
-    this.holdStartX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-    this.holdStartY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-    this.isHolding = true;
-    this.holdTriggered = false;
-    this.holdTargetEl = e.currentTarget;
-    this.activePointerId = e.pointerId;
-
-    if (this.holdTargetEl) {
-      this.holdTargetEl.classList.add('holding-card');
-      if (e.pointerId !== undefined && typeof this.holdTargetEl.setPointerCapture === 'function') {
-        try {
-          this.holdTargetEl.setPointerCapture(e.pointerId);
-        } catch (_) {}
-      }
-    }
-
-    if (this.holdTimer) clearTimeout(this.holdTimer);
-
-    this.holdTimer = setTimeout(async () => {
-      if (!this.isHolding) return;
-      this.holdTriggered = true;
-      this.previaOpenedAt = Date.now();
+    // Detecta 2 toques rápidos (entre 40ms e 450ms) no mesmo item
+    if (diff > 40 && diff < 450 && this.lastTapTargetId === id) {
+      this.lastTapTime = 0;
+      this.lastTapTargetId = null;
 
       if (typeof navigator.vibrate === 'function') {
-        try { navigator.vibrate(35); } catch (_) {}
+        try { navigator.vibrate([35, 45]); } catch (_) {}
       }
 
-      let item = null;
-      if (typeof id === 'string') {
-        item = await window.cubagemDB.get(id);
-      } else if (typeof id === 'object' && id !== null) {
-        item = id;
+      const card = e.currentTarget;
+      if (card) {
+        card.classList.add('double-tapped-card');
+        setTimeout(() => card.classList.remove('double-tapped-card'), 300);
       }
 
-      if (item && this.isHolding) {
-        this.mostrarPreviaPlanilha(item, { isHoldMode: true });
-      } else {
-        this.cancelarSegurarPrevia();
-      }
-    }, 280);
+      this.abrirPreviaFixada(id);
+    } else {
+      this.lastTapTime = now;
+      this.lastTapTargetId = id;
+    }
   }
 
-  iniciarSegurarPreviaLive(e) {
+  tratarToqueLive(e) {
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) {
       return;
     }
 
-    if (e.pointerType === 'mouse' && e.button !== 0) {
-      return;
-    }
+    const now = Date.now();
+    const diff = now - this.lastTapTime;
 
-    this.holdStartX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-    this.holdStartY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-    this.isHolding = true;
-    this.holdTriggered = false;
-    this.holdTargetEl = e.currentTarget;
-    this.activePointerId = e.pointerId;
-
-    if (this.holdTargetEl) {
-      this.holdTargetEl.classList.add('holding-card');
-      if (e.pointerId !== undefined && typeof this.holdTargetEl.setPointerCapture === 'function') {
-        try {
-          this.holdTargetEl.setPointerCapture(e.pointerId);
-        } catch (_) {}
-      }
-    }
-
-    if (this.holdTimer) clearTimeout(this.holdTimer);
-
-    this.holdTimer = setTimeout(() => {
-      if (!this.isHolding) return;
-      this.holdTriggered = true;
-      this.previaOpenedAt = Date.now();
+    if (diff > 40 && diff < 450 && this.lastTapTargetId === 'live') {
+      this.lastTapTime = 0;
+      this.lastTapTargetId = null;
 
       if (typeof navigator.vibrate === 'function') {
-        try { navigator.vibrate(35); } catch (_) {}
+        try { navigator.vibrate([35, 45]); } catch (_) {}
       }
 
-      const itemLive = this.obterRegistroLiveAtual();
-      if (itemLive && this.isHolding) {
-        this.mostrarPreviaPlanilha(itemLive, { isHoldMode: true });
-      } else {
-        this.cancelarSegurarPrevia();
+      const card = e.currentTarget;
+      if (card) {
+        card.classList.add('double-tapped-card');
+        setTimeout(() => card.classList.remove('double-tapped-card'), 300);
       }
-    }, 280);
-  }
 
-  verificarMovimentoSegurar(e) {
-    if (!this.isHolding) return;
-
-    const curX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-    const curY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-
-    // Se a prévia ainda não disparou: tolera até 18px de microtremores do dedo
-    if (!this.holdTriggered) {
-      const dist = Math.hypot(curX - this.holdStartX, curY - this.holdStartY);
-      if (dist > 18) {
-        this.cancelarSegurarPrevia();
-      }
-      return;
-    }
-
-    // Se já abriu em modo espiar: deslizar para cima fixa a planilha
-    if (this.previaAberta && !this.isPinned) {
-      if (this.holdStartY - curY > 55) {
-        this.fixarPreviaPorGesto();
-      }
+      this.abrirPreviaLiveFixada();
+    } else {
+      this.lastTapTime = now;
+      this.lastTapTargetId = 'live';
     }
   }
 
-  fixarPreviaPorGesto() {
-    if (this.isPinned) return;
-    this.isPinned = true;
-
-    if (typeof navigator.vibrate === 'function') {
-      try { navigator.vibrate([40, 50, 40]); } catch (_) {}
+  abrirPreviaLiveFixada() {
+    const itemLive = this.obterRegistroLiveAtual();
+    if (itemLive) {
+      this.mostrarPreviaPlanilha(itemLive);
     }
-
-    const modal = document.getElementById('modalPreviaPlanilha');
-    if (modal) {
-      modal.classList.remove('peek-mode');
-    }
-
-    const holdTextEl = document.getElementById('prevHoldText');
-    const pinBtn = document.getElementById('prevBtnPin');
-    const pinLabel = document.getElementById('prevBtnPinLabel');
-
-    if (holdTextEl) holdTextEl.textContent = '📌 Fixada! Pode soltar o dedo';
-    if (pinBtn) pinBtn.classList.add('active-pinned');
-    if (pinLabel) pinLabel.textContent = 'Desafixar';
-
-    this.showToast('Planilha fixada! Agora você pode navegar e inspecionar.', 'info');
-  }
-
-  verificarSoltura(e) {
-    // Se o timer ainda não disparou, cancela a intenção de segurar
-    if (this.holdTimer && !this.holdTriggered) {
-      clearTimeout(this.holdTimer);
-      this.holdTimer = null;
-    }
-
-    if (this.holdTargetEl) {
-      this.holdTargetEl.classList.remove('holding-card');
-      if (this.activePointerId !== null && typeof this.holdTargetEl.releasePointerCapture === 'function') {
-        try {
-          this.holdTargetEl.releasePointerCapture(this.activePointerId);
-        } catch (_) {}
-      }
-      this.holdTargetEl = null;
-    }
-    this.isHolding = false;
-
-    // Se a prévia não está aberta ou já está fixada, não fecha
-    if (!this.previaAberta || this.isPinned) {
-      return;
-    }
-
-    // Janela de imunidade contra eventos espúrios de tap do navegador (mínimo 300ms de exibição)
-    if (Date.now() - this.previaOpenedAt < 300) {
-      return;
-    }
-
-    // Se for touch e ainda há dedos pressionando a tela, não fecha
-    if (e && e.touches && e.touches.length > 0) {
-      return;
-    }
-
-    // Se for mouse e o botão principal ainda estiver pressionado, não fecha
-    if (e && e.pointerType === 'mouse' && (e.buttons & 1)) {
-      return;
-    }
-
-    // O usuário realmente soltou o clique / dedo da tela: fecha a prévia suavemente
-    this.fecharPreviaPlanilha(false);
-  }
-
-  cancelarSegurarPrevia() {
-    if (this.holdTimer) {
-      clearTimeout(this.holdTimer);
-      this.holdTimer = null;
-    }
-    if (this.holdTargetEl) {
-      this.holdTargetEl.classList.remove('holding-card');
-      if (this.activePointerId !== null && typeof this.holdTargetEl.releasePointerCapture === 'function') {
-        try {
-          this.holdTargetEl.releasePointerCapture(this.activePointerId);
-        } catch (_) {}
-      }
-      this.holdTargetEl = null;
-    }
-    this.isHolding = false;
-    this.holdTriggered = false;
   }
 
   obterRegistroLiveAtual() {
@@ -2636,20 +2481,16 @@ class CubagemApp {
     return null;
   }
 
-  mostrarPreviaPlanilha(item, { isHoldMode = true } = {}) {
+  mostrarPreviaPlanilha(item) {
     if (!item) return;
 
     this.previaAtivaItem = item;
     this.abaAtivaPrevia = 'medicao';
-    this.isPinned = !isHoldMode;
-    this.previaOpenedAt = Date.now();
 
     const modal = document.getElementById('modalPreviaPlanilha');
     const filenameEl = document.getElementById('prevExcelFilename');
     const holdIndEl = document.getElementById('prevHoldIndicator');
     const holdTextEl = document.getElementById('prevHoldText');
-    const pinBtn = document.getElementById('prevBtnPin');
-    const pinLabel = document.getElementById('prevBtnPinLabel');
     const cellRefEl = document.getElementById('prevCellRef');
     const formulaTextEl = document.getElementById('prevFormulaText');
     const viewportGrid = document.getElementById('prevSheetGrid');
@@ -2658,12 +2499,7 @@ class CubagemApp {
 
     if (!modal || !viewportGrid) return;
 
-    // Em modo espiar (hold), peek-mode deixa o modal transparente a cliques para não roubar o toque do dedo
-    if (isHoldMode) {
-      modal.classList.add('peek-mode');
-    } else {
-      modal.classList.remove('peek-mode');
-    }
+    modal.classList.remove('peek-mode');
 
     const tipo = item.tipo || 'caminhao';
     let nomeArquivo = 'Cubagem_Florestal.xlsx';
@@ -2682,18 +2518,8 @@ class CubagemApp {
     }
 
     if (filenameEl) filenameEl.textContent = nomeArquivo;
-
-    if (this.isPinned) {
-      if (holdIndEl) holdIndEl.style.display = 'inline-flex';
-      if (holdTextEl) holdTextEl.textContent = '📌 Modo Fixo: Aberto para inspeção';
-      if (pinBtn) pinBtn.classList.add('active-pinned');
-      if (pinLabel) pinLabel.textContent = 'Desafixar';
-    } else {
-      if (holdIndEl) holdIndEl.style.display = 'inline-flex';
-      if (holdTextEl) holdTextEl.innerHTML = '👆 Segurando: Solte para fechar <span style="opacity:0.75; font-size:0.7rem; margin-left:4px;">(ou deslize ⬆ para fixar)</span>';
-      if (pinBtn) pinBtn.classList.remove('active-pinned');
-      if (pinLabel) pinLabel.textContent = 'Fixar';
-    }
+    if (holdIndEl) holdIndEl.style.display = 'inline-flex';
+    if (holdTextEl) holdTextEl.textContent = '📋 Planilha Aberta (Toque no ✕ ou fora para fechar)';
 
     if (tabMedicao) tabMedicao.classList.add('active');
     if (tabMemoria) tabMemoria.classList.remove('active');
@@ -2718,57 +2544,18 @@ class CubagemApp {
       item = this.obterRegistroLiveAtual();
     }
     if (item) {
-      this.mostrarPreviaPlanilha(item, { isHoldMode: false });
+      this.mostrarPreviaPlanilha(item);
     }
   }
 
-  alternarFixarPrevia() {
-    this.isPinned = !this.isPinned;
-    const modal = document.getElementById('modalPreviaPlanilha');
-    const holdTextEl = document.getElementById('prevHoldText');
-    const pinBtn = document.getElementById('prevBtnPin');
-    const pinLabel = document.getElementById('prevBtnPinLabel');
-
-    if (this.isPinned) {
-      if (modal) modal.classList.remove('peek-mode');
-      if (holdTextEl) holdTextEl.textContent = '📌 Modo Fixo: Aberto para inspeção';
-      if (pinBtn) pinBtn.classList.add('active-pinned');
-      if (pinLabel) pinLabel.textContent = 'Desafixar';
-      this.showToast('Planilha fixada na tela. Use o botão Fechar para sair.', 'info');
-    } else {
-      if (modal) modal.classList.add('peek-mode');
-      if (holdTextEl) holdTextEl.innerHTML = '👆 Segurando: Solte para fechar <span style="opacity:0.75; font-size:0.7rem; margin-left:4px;">(ou deslize ⬆ para fixar)</span>';
-      if (pinBtn) pinBtn.classList.remove('active-pinned');
-      if (pinLabel) pinLabel.textContent = 'Fixar';
-    }
-  }
-
-  fecharPreviaPlanilha(forcar = false) {
-    if (this.isPinned && !forcar) return;
+  fecharPreviaPlanilha(forcar = true) {
     const modal = document.getElementById('modalPreviaPlanilha');
     if (modal) {
       modal.style.display = 'none';
       modal.classList.remove('peek-mode');
     }
     this.previaAberta = false;
-    this.isPinned = false;
     this.previaAtivaItem = null;
-    this.previaOpenedAt = 0;
-    if (this.holdTimer) {
-      clearTimeout(this.holdTimer);
-      this.holdTimer = null;
-    }
-    if (this.holdTargetEl) {
-      this.holdTargetEl.classList.remove('holding-card');
-      if (this.activePointerId !== null && typeof this.holdTargetEl.releasePointerCapture === 'function') {
-        try {
-          this.holdTargetEl.releasePointerCapture(this.activePointerId);
-        } catch (_) {}
-      }
-      this.holdTargetEl = null;
-    }
-    this.isHolding = false;
-    this.holdTriggered = false;
   }
 
   alternarAbaPrevia(aba) {

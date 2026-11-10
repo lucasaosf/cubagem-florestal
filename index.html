@@ -476,7 +476,7 @@
               </div>
 
               <!-- Resumo Acumulado da Pilha -->
-              <div id="toraPileTotalSummary" class="holdable-card" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold); cursor: pointer;" onpointerdown="app.iniciarSegurarPreviaLive(event)" oncontextmenu="event.preventDefault()">
+              <div id="toraPileTotalSummary" class="double-tap-card" style="display: none; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin-top: 10px; border: 1.5px solid var(--gold); cursor: pointer;" onclick="app.tratarToqueLive(event)" ondblclick="app.abrirPreviaLiveFixada()">
                 <div style="display: flex; justify-content: space-between; align-items: baseline;">
                   <span style="font-weight: 700; color: var(--gold); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">Volume Total da Pilha</span>
                   <span style="font-size: 1.45rem; font-family: var(--display); font-weight: 700; color: var(--ink);" id="toraPileTotalVolDisplay">0,000 m³</span>
@@ -484,15 +484,15 @@
                 <div style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;" id="toraPileTotalStats">
                   0 toras • Dm Médio: 0,0 cm • Comp. Médio: 0,00 m
                 </div>
-                <div class="card-hold-peek-hint">
-                  <span class="peek-icon">👁️</span> Segure para ver a planilha da pilha
+                <div class="card-double-tap-hint">
+                  <span class="hint-icon">⚡</span> <strong>2 toques:</strong> ver planilha da pilha
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Card de Cálculo em Tempo Real -->
-          <div class="calc-result-card holdable-card" id="liveCalcCard" onpointerdown="app.iniciarSegurarPreviaLive(event)" oncontextmenu="event.preventDefault()">
+          <div class="calc-result-card double-tap-card" id="liveCalcCard" onclick="app.tratarToqueLive(event)" ondblclick="app.abrirPreviaLiveFixada()">
             <div class="calc-result-header">
               <span class="calc-result-tag" id="liveCalcTag">Cálculo Automático</span>
               <span class="calc-result-type-badge" id="liveTypeBadge">Carga de Caminhão</span>
@@ -522,8 +522,8 @@
               Preencha os dados da medição para visualizar o cálculo de volume.
             </div>
 
-            <div class="card-hold-peek-hint">
-              <span class="peek-icon">👁️</span> Segure este card para ver a prévia da planilha
+            <div class="card-double-tap-hint">
+              <span class="hint-icon">⚡</span> <strong>2 toques:</strong> ver prévia da planilha
             </div>
           </div>
 
@@ -1241,8 +1241,8 @@
     </div>
   </div>
 
-  <!-- MODAL: PRÉVIA DA PLANILHA EXCEL AO SEGURAR (PEEK ON HOLD) -->
-  <div id="modalPreviaPlanilha" class="modal-overlay modal-excel-overlay" style="display: none;" aria-hidden="true" onclick="if(event.target===this && app.isPinned) app.fecharPreviaPlanilha(true)">
+  <!-- MODAL: PRÉVIA DA PLANILHA EXCEL (DUPLO TOQUE / BOTÃO PLANILHA) -->
+  <div id="modalPreviaPlanilha" class="modal-overlay modal-excel-overlay" style="display: none;" aria-hidden="true" onclick="if(event.target===this) app.fecharPreviaPlanilha(true)">
     <div class="excel-preview-window" onclick="event.stopPropagation()">
       <!-- Barra Superior Estilo Excel -->
       <div class="excel-title-bar">
@@ -1255,12 +1255,9 @@
         </div>
         <div class="excel-hold-indicator" id="prevHoldIndicator">
           <span class="pulse-dot"></span>
-          <span id="prevHoldText">👆 Segurando: Solte para fechar</span>
+          <span id="prevHoldText">📋 Planilha Aberta</span>
         </div>
         <div class="excel-title-actions">
-          <button type="button" class="btn-excel-tool" id="prevBtnPin" onclick="app.alternarFixarPrevia()" title="Fixar prévia para poder rolar e inspecionar">
-            📌 <span class="btn-tool-label" id="prevBtnPinLabel">Fixar</span>
-          </button>
           <button type="button" class="btn-excel-tool export" id="prevBtnDownload" onclick="app.baixarExcelDaPrevia()" title="Baixar esta medição em formato Excel (.xlsx)">
             ⬇️ <span class="btn-tool-label">Baixar .xlsx</span>
           </button>

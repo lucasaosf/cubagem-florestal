@@ -3067,41 +3067,47 @@ body:not([data-active-tab="inicio"]) .install-balloon {
 }
 
 /* =========================================================================
-   SISTEMA HOLD-TO-PREVIEW: ESPIAR PLANILHA EXCEL AO SEGURAR
+   SISTEMA DUPLO TOQUE (2 TOQUES): PRÉVIA DA PLANILHA EXCEL
    ========================================================================= */
 
+.double-tap-card,
 .holdable-card {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  touch-action: pan-y;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.holdable-card:active,
-.holdable-card.holding-card {
-  transform: scale(0.985);
+.double-tap-card:active {
+  transform: scale(0.99);
+}
+
+.double-tapped-card {
+  transform: scale(0.975) !important;
   border-color: var(--gold, #96784A) !important;
-  box-shadow: 0 0 16px rgba(150, 120, 74, 0.4) !important;
+  box-shadow: 0 0 16px rgba(150, 120, 74, 0.45) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
+.card-double-tap-hint,
 .card-hold-peek-hint {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 0.72rem;
   color: var(--gold, #96784A);
-  opacity: 0.88;
+  opacity: 0.9;
   margin-top: 8px;
   padding-top: 6px;
   border-top: 1px dashed rgba(150, 120, 74, 0.28);
   letter-spacing: 0.2px;
   user-select: none;
-  pointer-events: none;
 }
 
+.card-double-tap-hint .hint-icon,
 .card-hold-peek-hint .peek-icon {
   font-size: 0.85rem;
   animation: peekPulse 1.8s infinite ease-in-out;
@@ -3138,15 +3144,7 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   padding: 16px;
   animation: excelFadeIn 0.18s ease-out;
   touch-action: pan-x pan-y;
-}
-
-/* Em modo espiar (hold/peek), a janela é 100% visível porém não rouba o ponteiro do card */
-.modal-excel-overlay.peek-mode {
-  pointer-events: none !important;
-}
-
-.modal-excel-overlay.peek-mode .excel-preview-window {
-  pointer-events: none !important;
+  pointer-events: auto;
 }
 
 @keyframes excelFadeIn {
