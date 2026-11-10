@@ -1,12 +1,12 @@
 {
-  "v": "2.7.6",
-  "nome": "2.7.6",
+  "v": "2.7.7",
+  "nome": "2.7.7",
   "data": "2026-11-10",
   "novidades": [
+    "Planilha Excel (.xlsx) com Total Geral da Cubagem do dia em destaque na primeira aba e em cada modalidade",
+    "Consolidado diário de toras: soma oficial do volume de todas as medições do dia na planilha e na tela",
     "Edição completa de cubagens salvas com recálculo imediato e atualização no histórico",
-    "Geração e exportação de planilha Excel (.xlsx) contendo dados de múltiplas cubagens selecionadas",
-    "Ferramenta de Mesclagem: unifique medições separadas em 1 única cubagem consolidada do dia todo",
-    "Filtros rápidos 'Hoje' e 'Esta Semana' na tela de relatórios e exportação Excel",
-    "Prévia consolidada na tela para visualizar todas as cubagens selecionadas antes de baixar"
+    "Geração e exportação de planilha Excel contendo dados de múltiplas cubagens selecionadas",
+    "Ferramenta de Mesclagem: unifique 2 ou mais cubagens em uma única medição definitiva do dia todo"
   ]
 }

@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.7.6';
+    this.appVersion = '2.7.7';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1546,11 +1546,18 @@ class CubagemApp {
 
     const dataPrimeira = records[0].data || '';
     const dataUltima = records[records.length - 1].data || '';
-    const dateRangeStr = dataPrimeira === dataUltima ? dataPrimeira : `${dataPrimeira}_a_${dataUltima}`;
-    const fileName = `Planilha_${records.length}_Cubagens_${dateRangeStr}.xlsx`;
+    const isSingleDay = Boolean(dataPrimeira && dataPrimeira === dataUltima);
+    const fileName = isSingleDay
+      ? `Planilha_Consolidada_do_Dia_${dataPrimeira}_${records.length}_Cubagens.xlsx`
+      : `Planilha_${records.length}_Cubagens_${dataPrimeira}_a_${dataUltima}.xlsx`;
 
     try {
-      this.showToast(`Exportando ${records.length} cubagens para Excel (.xlsx)...`, 'info');
+      this.showToast(
+        isSingleDay
+          ? `Exportando consolidado de ${records.length} cubagens do dia para Excel (.xlsx)...`
+          : `Exportando ${records.length} cubagens para Excel (.xlsx)...`,
+        'info'
+      );
       await window.CubagemExcelExport.exportWorkbook(records, {
         fileName,
         responsavel: records[0].responsavel || 'BioKuri Soluções Ambientais',
@@ -1660,12 +1667,26 @@ class CubagemApp {
       this.renderizarGridsAlturas();
     } else if (tipo === 'tora') {
       const elIdent = document.getElementById('cubIdentPilhaTora');
-      if (elIdent) elIdent.value = placasJuntas || principal.identificacao || '';
+      const diaBR = window.CubagemExcelExport.formatDateBR(principal.data);
+      if (elIdent) elIdent.value = `Cubagem do Dia - ${diaBR}`;
 
       const todasToras = [];
       records.forEach(r => {
-        if (Array.isArray(r.toras)) {
+        if (Array.isArray(r.toras) && r.toras.length > 0) {
           todasToras.push(...r.toras);
+        } else if (r.diametroPonta1_cm) {
+          todasToras.push({
+            numero: 1,
+            plaqueta: r.plaqueta || '1',
+            especie: r.especie || '',
+            diametroPonta1_cm: r.diametroPonta1_cm,
+            diametroPonta2_cm: r.diametroPonta2_cm,
+            diametroPonta1_m: r.diametroPonta1_m || (r.diametroPonta1_cm / 100),
+            diametroPonta2_m: r.diametroPonta2_m || (r.diametroPonta2_cm / 100),
+            diametroMedio_cm: r.diametroMedio_cm || ((r.diametroPonta1_cm + r.diametroPonta2_cm) / 2),
+            comprimento: r.comprimento,
+            volumeGeometrico: r.volumeGeometrico
+          });
         }
       });
       todasToras.forEach((t, i) => { t.numero = i + 1; });
@@ -3165,7 +3186,14 @@ class CubagemApp {
     const totalVol = records.reduce((acc, r) => acc + (Number(r.volumeGeometrico) || 0), 0);
     const dataPrimeira = records[0]?.data ? window.CubagemExcelExport.formatDateBR(records[0].data) : '';
     const dataUltima = records[records.length - 1]?.data ? window.CubagemExcelExport.formatDateBR(records[records.length - 1].data) : '';
-    const periodoStr = dataPrimeira === dataUltima ? dataPrimeira : `${dataPrimeira} a ${dataUltima}`;
+    const isSingleDay = Boolean(dataPrimeira && dataPrimeira === dataUltima);
+    const periodoStr = isSingleDay ? dataPrimeira : `${dataPrimeira} a ${dataUltima}`;
+    const titPrincipal = isSingleDay
+      ? `BIOKURI · SOLUÇÕES AMBIENTAIS — CONSOLIDADO DIÁRIO DE CUBAGEM (${dataPrimeira})`
+      : 'BIOKURI · SOLUÇÕES AMBIENTAIS — PLANILHA CONSOLIDADA DE CUBAGEM';
+    const titTotal = isSingleDay
+      ? `TOTAL GERAL DA CUBAGEM DO DIA (${records.length} MEDIÇÕES CONSOLIDADAS):`
+      : `TOTAL GERAL CONSOLIDADO (${records.length} CUBAGENS):`;
     const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
 
     if (aba === 'memoria') {
@@ -3185,7 +3213,7 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">1</td>
               <td colspan="5" class="excel-brand-title-cell">
-                BIOKURI · SOLUÇÕES AMBIENTAIS — MEMÓRIA TÉCNICA CONSOLIDADA
+                ${titPrincipal} — MEMÓRIA TÉCNICA
               </td>
             </tr>
             <tr>
@@ -3230,7 +3258,7 @@ class CubagemApp {
             <tr class="excel-total-row">
               <td class="excel-row-num">${records.length + 5}</td>
               <td colspan="4" class="excel-cell-text" style="font-weight: 800; text-transform: uppercase;">
-                VOLUME CONSOLIDADO TOTAL (${records.length} CUBAGENS):
+                ${titTotal}
               </td>
               <td class="excel-cell-num" style="font-size: 1.05rem; font-weight: 800; color: #0E2515;">
                 ${fNum(totalVol, 2)} m³
@@ -3263,7 +3291,7 @@ class CubagemApp {
           <tr>
             <td class="excel-row-num">1</td>
             <td colspan="10" class="excel-brand-title-cell">
-              BIOKURI · SOLUÇÕES AMBIENTAIS — PLANILHA CONSOLIDADA DE CUBAGEM
+              ${titPrincipal}
             </td>
           </tr>
           <tr>
@@ -3277,7 +3305,7 @@ class CubagemApp {
             <td colspan="10" class="excel-meta-cell">
               <strong>Período:</strong> ${periodoStr} &bull; 
               <strong>Total de Medições:</strong> ${records.length} &bull; 
-              <strong>Volume Total:</strong> ${fNum(totalVol, 2)} m³ &bull; 
+              <strong>Volume Total do Dia:</strong> ${fNum(totalVol, 2)} m³ &bull; 
               <strong>Responsável:</strong> ${records[0]?.responsavel || 'Lucas Aøsf'} &bull; 
               <strong>CRBio:</strong> 127233/01-D
             </td>
@@ -3327,7 +3355,7 @@ class CubagemApp {
           <tr class="excel-total-row">
             <td class="excel-row-num">${records.length + 5}</td>
             <td colspan="9" class="excel-cell-text" style="font-weight: 800; text-transform: uppercase;">
-              TOTAL CONSOLIDADO (${records.length} CUBAGENS):
+              ${titTotal}
             </td>
             <td class="excel-cell-num" style="font-size: 1.05rem; font-weight: 800; color: #0E2515;">
               ${fNum(totalVol, 2)} m³

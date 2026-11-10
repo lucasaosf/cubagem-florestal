@@ -1,4 +1,4 @@
-﻿/**
+/**
  * excel-export.js - GeraÃ§Ã£o de planilha Excel multipasta personalizada via ExcelJS
  * Suporte a Cargas de CaminhÃ£o, Pilhas de Madeira e Toras RoliÃ§as (Smalian)
  * Identidade Visual Oficial: Pesquisa & SoluÃ§Ãµes Ambientais â€” Lucas AÃ¸sf
@@ -88,9 +88,14 @@ class CubagemExcelExport {
       { key: 'D', width: 24 }
     ];
 
+    const isSingleDay = records.length > 0 && records.every(r => r.data === records[0].data);
+    const dayStr = isSingleDay && records[0]?.data ? this.formatDateBR(records[0].data) : '';
+
     wsResumo.mergeCells('A1:D1');
     const r1 = wsResumo.getCell('A1');
-    r1.value = '   CUBAGEM FLORESTAL â€” RELATÃ“RIO TÃ‰CNICO GERAL';
+    r1.value = isSingleDay
+      ? `   CUBAGEM FLORESTAL — CONSOLIDADO DIÁRIO OFICIAL (${dayStr})`
+      : '   CUBAGEM FLORESTAL — RELATÓRIO TÉCNICO GERAL';
     r1.font = { name: FONT_NAME, size: 14, bold: true, color: { argb: C.creme } };
     r1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
     r1.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -98,8 +103,10 @@ class CubagemExcelExport {
 
     wsResumo.mergeCells('A2:D2');
     const r2 = wsResumo.getCell('A2');
-    const perStr = startDate && endDate ? `${this.formatDateBR(startDate)} a ${this.formatDateBR(endDate)}` : 'PerÃ­odo Completo';
-    r2.value = `PerÃ­odo: ${perStr}  â€¢  ${CONTATO}`;
+    const perStr = isSingleDay
+      ? `Data: ${dayStr}  •  Volume Total Consolidado do Dia: ${vTot.toFixed(2)} m³`
+      : (startDate && endDate ? `${this.formatDateBR(startDate)} a ${this.formatDateBR(endDate)}` : 'Período Completo');
+    r2.value = `Período: ${perStr}  •  ${CONTATO}`;
     r2.font = { name: FONT_NAME, size: 9, italic: true, color: { argb: C.creme2 } };
     r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
     r2.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -107,8 +114,8 @@ class CubagemExcelExport {
 
     wsResumo.getRow(3).height = 10;
 
-    // CabeÃ§alho da Tabela de Resumo
-    const resHeaders = ['Modalidade de Cubagem', 'Qtd. Registros', 'Volume Total (mÂ³)', 'Volume MÃ©dio (mÂ³)'];
+    // Cabeçalho da Tabela de Resumo
+    const resHeaders = ['Modalidade de Cubagem', 'Qtd. Registros', 'Volume Total (m³)', 'Volume Médio (m³)'];
     const r4 = wsResumo.getRow(4);
     r4.height = 24;
     resHeaders.forEach((h, i) => {
@@ -127,9 +134,9 @@ class CubagemExcelExport {
     const vTot = vCam + vPil + vTor;
 
     const resRows = [
-      ['ðŸšš Cargas de CaminhÃµes', caminhoes.length, vCam, caminhoes.length > 0 ? vCam / caminhoes.length : 0],
-      ['ðŸªµ Pilhas de Madeira', pilhas.length, vPil, pilhas.length > 0 ? vPil / pilhas.length : 0],
-      ['ðŸŒ² Toras RoliÃ§as (Smalian)', toras.length, vTor, toras.length > 0 ? vTor / toras.length : 0]
+      ['🚚 Cargas de Caminhões', caminhoes.length, vCam, caminhoes.length > 0 ? vCam / caminhoes.length : 0],
+      ['🪵 Pilhas de Madeira', pilhas.length, vPil, pilhas.length > 0 ? vPil / pilhas.length : 0],
+      ['🌲 Toras Roliças (Smalian)', toras.length, vTor, toras.length > 0 ? vTor / toras.length : 0]
     ];
 
     let rowIdx = 5;
@@ -170,15 +177,102 @@ class CubagemExcelExport {
     rTot.getCell(3).font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
     rTot.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
     rTot.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
-    rTot.getCell(3).numFmt = '#,##0.00 "mÂ³"';
+    rTot.getCell(3).numFmt = '#,##0.00 "m³"';
     rTot.getCell(3).border = doubleBottomBorder;
 
     rTot.getCell(4).value = records.length > 0 ? vTot / records.length : 0;
     rTot.getCell(4).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
     rTot.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
     rTot.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
-    rTot.getCell(4).numFmt = '#,##0.00 "mÂ³"';
+    rTot.getCell(4).numFmt = '#,##0.00 "m³"';
     rTot.getCell(4).border = doubleBottomBorder;
+
+    // Demonstrativo detalhado das medições selecionadas / do dia
+    if (records.length > 0) {
+      rowIdx += 2;
+      const titTabelaDetalhe = isSingleDay
+        ? `DEMONSTRATIVO CONSOLIDADO DO DIA — ${dayStr} (${records.length} MEDIÇÕES)`
+        : `DEMONSTRATIVO DAS MEDIÇÕES CONSOLIDADAS NO PERÍODO (${records.length} MEDIÇÕES)`;
+
+      wsResumo.mergeCells(`A${rowIdx}:D${rowIdx}`);
+      const hDet = wsResumo.getCell(`A${rowIdx}`);
+      hDet.value = titTabelaDetalhe;
+      hDet.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
+      hDet.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+      hDet.alignment = { vertical: 'middle', horizontal: 'center' };
+      wsResumo.getRow(rowIdx).height = 26;
+      rowIdx++;
+
+      const detHeaders = ['Item / Data e Horário', 'Identificação / Placa / Lote', 'Modalidade / Espécie', 'Volume Geométrico (m³)'];
+      const rDetH = wsResumo.getRow(rowIdx);
+      rDetH.height = 22;
+      detHeaders.forEach((h, i) => {
+        const cell = rDetH.getCell(i + 1);
+        cell.value = h;
+        cell.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
+        cell.alignment = { horizontal: i === 3 ? 'right' : (i === 1 ? 'center' : 'left'), vertical: 'middle' };
+        cell.border = thinBorder;
+      });
+      rowIdx++;
+
+      records.forEach((rec, idx) => {
+        const r = wsResumo.getRow(rowIdx);
+        r.height = 20;
+        const bg = idx % 2 === 0 ? C.creme : C.creme2;
+        const tipoLabel = rec.tipo === 'tora' ? 'Toras (Smalian)' : (rec.tipo === 'pilha' ? 'Pilha de Madeira' : 'Carga Caminhão');
+        const identStr = rec.placa || rec.identificacao || rec.plaqueta || `Medição ${idx + 1}`;
+        const dtStr = `${this.formatDateBR(rec.data)} ${rec.horario || ''}`;
+        const vNum = Number(rec.volumeGeometrico) || 0;
+        const isToraRec = rec.tipo === 'tora';
+
+        const vals = [
+          `#${idx + 1}  •  ${dtStr}`,
+          identStr,
+          rec.especie ? `${tipoLabel} (${rec.especie})` : tipoLabel,
+          vNum
+        ];
+
+        vals.forEach((v, vi) => {
+          const cell = r.getCell(vi + 1);
+          cell.value = v;
+          cell.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
+          cell.border = thinBorder;
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 3 ? 'D6C7A1' : bg } };
+          if (vi === 0) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+          else if (vi === 1) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          else if (vi === 2) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+          else {
+            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+            cell.numFmt = isToraRec ? '#,##0.000' : '#,##0.00';
+            cell.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
+          }
+        });
+        rowIdx++;
+      });
+
+      // Linha Final: TOTAL GERAL DA CUBAGEM (VOLUME TOTAL DO DIA)
+      const rTotFinal = wsResumo.getRow(rowIdx);
+      rTotFinal.height = 28;
+
+      wsResumo.mergeCells(`A${rowIdx}:C${rowIdx}`);
+      const cTotGeralTit = rTotFinal.getCell(1);
+      cTotGeralTit.value = isSingleDay
+        ? `TOTAL GERAL DA CUBAGEM DO DIA (${records.length} MEDIÇÕES CONSOLIDADAS):`
+        : `TOTAL GERAL DA CUBAGEM CONSOLIDADA (${records.length} MEDIÇÕES):`;
+      cTotGeralTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+      cTotGeralTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+      cTotGeralTit.alignment = { horizontal: 'right', vertical: 'middle' };
+      cTotGeralTit.border = doubleBottomBorder;
+
+      const cTotGeralVal = rTotFinal.getCell(4);
+      cTotGeralVal.value = vTot;
+      cTotGeralVal.numFmt = '#,##0.00 "m³"';
+      cTotGeralVal.font = { name: FONT_NAME, size: 12, bold: true, color: { argb: C.creme } };
+      cTotGeralVal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
+      cTotGeralVal.alignment = { horizontal: 'right', vertical: 'middle' };
+      cTotGeralVal.border = doubleBottomBorder;
+    }
 
     // =========================================================================
     // ABA 2: CARGAS DE CAMINHÃ•ES
@@ -259,6 +353,34 @@ class CubagemExcelExport {
         });
         rCamIdx++;
       });
+
+      // Linha de TOTAL GERAL de Caminhões
+      if (caminhoes.length > 0) {
+        const totCamRow = wsCam.getRow(rCamIdx);
+        totCamRow.height = 26;
+        wsCam.mergeCells(`A${rCamIdx}:P${rCamIdx}`);
+        const cTotCamTit = totCamRow.getCell(1);
+        cTotCamTit.value = `TOTAL GERAL DE CARGAS DE CAMINHÕES (${caminhoes.length} CARGAS MEDIDAS):`;
+        cTotCamTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+        cTotCamTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+        cTotCamTit.alignment = { horizontal: 'right', vertical: 'middle' };
+        cTotCamTit.border = doubleBottomBorder;
+
+        const cTotCamVol = totCamRow.getCell(17);
+        cTotCamVol.value = vCam;
+        cTotCamVol.numFmt = '#,##0.00 "m³"';
+        cTotCamVol.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
+        cTotCamVol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
+        cTotCamVol.alignment = { horizontal: 'right', vertical: 'middle' };
+        cTotCamVol.border = doubleBottomBorder;
+
+        const cTotCamObs = totCamRow.getCell(18);
+        cTotCamObs.value = 'Volume Total Homologado';
+        cTotCamObs.font = { name: FONT_NAME, size: 9, bold: true, italic: true, color: { argb: C.creme } };
+        cTotCamObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+        cTotCamObs.alignment = { horizontal: 'left', vertical: 'middle' };
+        cTotCamObs.border = doubleBottomBorder;
+      }
     }
 
     // =========================================================================
@@ -338,6 +460,32 @@ class CubagemExcelExport {
         });
         rPilIdx++;
       });
+
+      // Linha de TOTAL GERAL de Pilhas
+      const totPilRow = wsPil.getRow(rPilIdx);
+      totPilRow.height = 26;
+      wsPil.mergeCells(`A${rPilIdx}:O${rPilIdx}`);
+      const cTotPilTit = totPilRow.getCell(1);
+      cTotPilTit.value = `TOTAL GERAL DE PILHAS DE MADEIRA (${pilhas.length} PILHAS MEDIDAS):`;
+      cTotPilTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+      cTotPilTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+      cTotPilTit.alignment = { horizontal: 'right', vertical: 'middle' };
+      cTotPilTit.border = doubleBottomBorder;
+
+      const cTotPilVol = totPilRow.getCell(16);
+      cTotPilVol.value = vPil;
+      cTotPilVol.numFmt = '#,##0.00 "m³"';
+      cTotPilVol.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
+      cTotPilVol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
+      cTotPilVol.alignment = { horizontal: 'right', vertical: 'middle' };
+      cTotPilVol.border = doubleBottomBorder;
+
+      const cTotPilObs = totPilRow.getCell(17);
+      cTotPilObs.value = 'Volume Total Homologado';
+      cTotPilObs.font = { name: FONT_NAME, size: 9, bold: true, italic: true, color: { argb: C.creme } };
+      cTotPilObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+      cTotPilObs.alignment = { horizontal: 'left', vertical: 'middle' };
+      cTotPilObs.border = doubleBottomBorder;
     }
 
     // =========================================================================
@@ -505,6 +653,57 @@ class CubagemExcelExport {
           rTorIdx++;
         }
       });
+
+      // Linha de TOTAL GERAL de Toras
+      const totTorRow = wsTor.getRow(rTorIdx);
+      totTorRow.height = 26;
+
+      wsTor.mergeCells(`A${rTorIdx}:L${rTorIdx}`);
+      const cTotTit = totTorRow.getCell(1);
+      cTotTit.value = `TOTAL GERAL DA CUBAGEM DE TORAS (${totalTorasLinhas} TORAS AVALIADAS):`;
+      cTotTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+      cTotTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+      cTotTit.alignment = { horizontal: 'right', vertical: 'middle' };
+      cTotTit.border = doubleBottomBorder;
+
+      const allTorasIndiv = toras.flatMap(p => (p.toras && Array.isArray(p.toras) && p.toras.length > 0) ? p.toras : [p]);
+      const avgDmGeral = allTorasIndiv.length > 0
+        ? allTorasIndiv.reduce((acc, t) => acc + (Number(t.diametroMedio_cm) || 0), 0) / allTorasIndiv.length
+        : 0;
+      const avgCompGeral = allTorasIndiv.length > 0
+        ? allTorasIndiv.reduce((acc, t) => acc + (Number(t.comprimento) || 0), 0) / allTorasIndiv.length
+        : 0;
+
+      const cTotDm = totTorRow.getCell(13);
+      cTotDm.value = avgDmGeral;
+      cTotDm.numFmt = '#,##0.0';
+      cTotDm.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+      cTotDm.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
+      cTotDm.alignment = { horizontal: 'right', vertical: 'middle' };
+      cTotDm.border = doubleBottomBorder;
+
+      const cTotComp = totTorRow.getCell(14);
+      cTotComp.value = avgCompGeral;
+      cTotComp.numFmt = '#,##0.00';
+      cTotComp.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+      cTotComp.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
+      cTotComp.alignment = { horizontal: 'right', vertical: 'middle' };
+      cTotComp.border = doubleBottomBorder;
+
+      const cTotVol = totTorRow.getCell(15);
+      cTotVol.value = vTor;
+      cTotVol.numFmt = '#,##0.000 "m³"';
+      cTotVol.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
+      cTotVol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
+      cTotVol.alignment = { horizontal: 'right', vertical: 'middle' };
+      cTotVol.border = doubleBottomBorder;
+
+      const cTotObs = totTorRow.getCell(16);
+      cTotObs.value = 'Volume Total Homologado';
+      cTotObs.font = { name: FONT_NAME, size: 9, bold: true, italic: true, color: { argb: C.creme } };
+      cTotObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+      cTotObs.alignment = { horizontal: 'left', vertical: 'middle' };
+      cTotObs.border = doubleBottomBorder;
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
