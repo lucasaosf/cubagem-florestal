@@ -610,6 +610,21 @@ class CubagemAuth {
   }
 
   /**
+   * Sanitiza objetos para o Firestore, removendo valores undefined que quebram a gravação
+   */
+  cleanRecordForFirestore(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    try {
+      return JSON.parse(JSON.stringify(obj, (key, value) => {
+        if (value === undefined) return undefined;
+        return value;
+      }));
+    } catch (e) {
+      return obj;
+    }
+  }
+
+  /**
    * Obtém metadados de autoria e integrantes de um projeto (local + Firestore)
    */
   async obterMetaProjeto(nomeProjeto) {
@@ -636,9 +651,32 @@ class CubagemAuth {
     }
 
     if (!meta) {
-      const criadorEmail = (this.user && this.user.email) ? this.user.email.toLowerCase() : 'lucasaosf@gmail.com';
-      const criadorNome = (this.user && (this.user.displayName || this.user.email.split('@')[0])) ? (this.user.displayName || this.user.email.split('@')[0]) : 'Lucas Aøsf';
-      const criadorUid = (this.user && this.user.uid) ? this.user.uid : 'lucas_master';
+      const isLucas = this.user && this.user.email && this.user.email.toLowerCase() === 'lucasaosf@gmail.com';
+      const criadorEmail = isLucas ? 'lucasaosf@gmail.com' : (nome === 'BR-153' ? 'lucasaosf@gmail.com' : ((this.user && this.user.email) ? this.user.email.toLowerCase() : 'lucasaosf@gmail.com'));
+      const criadorNome = isLucas ? (this.user.displayName || 'Lucas Aøsf') : (nome === 'BR-153' ? 'Lucas Aøsf' : ((this.user && (this.user.displayName || this.user.email.split('@')[0])) || 'Lucas Aøsf'));
+      const criadorUid = isLucas ? this.user.uid : (nome === 'BR-153' ? 'lucas_master' : ((this.user && this.user.uid) || 'lucas_master'));
+
+      const membrosIniciais = [
+        {
+          email: criadorEmail,
+          nome: criadorNome,
+          role: 'criador',
+          adicionadoEm: Date.now()
+        }
+      ];
+      const membrosEmailsIniciais = [criadorEmail];
+
+      // Se o usuário atual for outro integrante (ex: Micheli), inclui na lista local para não travar o acesso
+      if (this.user && this.user.email && this.user.email.toLowerCase() !== criadorEmail.toLowerCase()) {
+        const uEmail = this.user.email.toLowerCase();
+        membrosIniciais.push({
+          email: uEmail,
+          nome: this.user.displayName || uEmail.split('@')[0],
+          role: 'membro',
+          adicionadoEm: Date.now()
+        });
+        membrosEmailsIniciais.push(uEmail);
+      }
 
       meta = {
         id: projId,
@@ -647,15 +685,8 @@ class CubagemAuth {
         criadorNome: criadorNome,
         criadorUid: criadorUid,
         criadoEm: Date.now(),
-        membros: [
-          {
-            email: criadorEmail,
-            nome: criadorNome,
-            role: 'criador',
-            adicionadoEm: Date.now()
-          }
-        ],
-        membrosEmails: [criadorEmail],
+        membros: membrosIniciais,
+        membrosEmails: membrosEmailsIniciais,
         updatedAt: Date.now()
       };
       localMetas[projId] = meta;
@@ -686,9 +717,14 @@ class CubagemAuth {
     try {
       const fb = await this.loadFirebase();
       if (!fb) return;
-      await fb.firestore().collection('projects').doc(meta.id).set(meta, { merge: true });
+      const cleanMeta = this.cleanRecordForFirestore(meta);
+      await fb.firestore().collection('projects').doc(meta.id).set(cleanMeta, { merge: true });
+      console.log(`[Cloud] Metadados do projeto "${meta.id}" atualizados na nuvem.`);
     } catch (e) {
       console.warn('[Auth] Erro ao salvar meta do projeto no Firestore:', e);
+      if (e && (e.code === 'permission-denied' || String(e).includes('permission-denied')) && window.app) {
+        window.app.showToast('⚠️ Permissão negada no Firestore: configure as Regras de Segurança no Firebase Console para autorizar "projects".', 'danger', 9000);
+      }
     }
   }
 
@@ -960,8 +996,19 @@ class CubagemAuth {
     }
   }
 
-  async syncProjectWithCloud(nomeProjeto, silencioso = false) {
-    if (!this.user || !navigator.onLine) return;
+  async syncProjectWithCloud(nomeProjeto, silencioso = false, forcarEnvioLocal = false) {
+    if (!this.user || !navigator.onLine) {
+      if (!silencioso && window.app) {
+        if (!navigator.onLine) {
+          window.app.showToast('Sem conexão de internet no momento.', 'warning');
+        } else if (!this.user) {
+          window.app.showToast('Faça login para sincronizar o projeto com a equipe.', 'info');
+          if (typeof window.app.abrirModalAuth === 'function') window.app.abrirModalAuth();
+        }
+      }
+      return;
+    }
+
     const nome = (nomeProjeto || this.projetoVinculado || 'BR-153').trim();
     const projId = this.normalizarProjetoId(nome);
 
@@ -969,6 +1016,18 @@ class CubagemAuth {
       const fb = await this.loadFirebase();
       if (!fb) return;
       const firestore = fb.firestore();
+
+      // 0. Sincroniza metadados do projeto primeiro (garante criador e integrantes na nuvem)
+      const metaLocal = await this.obterMetaProjeto(nome);
+      if (metaLocal) {
+        try {
+          const cleanMeta = this.cleanRecordForFirestore(metaLocal);
+          await firestore.collection('projects').doc(projId).set(cleanMeta, { merge: true });
+        } catch (mErr) {
+          console.warn('[Cloud] Erro ao sincronizar metadados do projeto:', mErr);
+        }
+      }
+
       const projCol = firestore.collection('projects').doc(projId).collection('cubagens');
 
       // 1. Obter medições locais deste projeto
@@ -989,7 +1048,7 @@ class CubagemAuth {
       let novosDaNuvem = 0;
       let enviadosParaNuvem = 0;
 
-      // 3. Nuvem -> Local
+      // 3. Nuvem -> Local (recebe dados inseridos por outros membros)
       for (const [id, cloudRec] of cloudMap) {
         const localRec = localMap.get(id);
         const cloudTs = cloudRec.updatedAt || cloudRec.timestamp || 0;
@@ -1001,21 +1060,21 @@ class CubagemAuth {
         }
       }
 
-      // 4. Local -> Nuvem
+      // 4. Local -> Nuvem (envia dados medidos localmente)
       for (const [id, localRec] of localMap) {
         const cloudRec = cloudMap.get(id);
         const localTs = localRec.updatedAt || localRec.timestamp || 0;
         const cloudTs = cloudRec ? (cloudRec.updatedAt || cloudRec.timestamp || 0) : 0;
 
-        if (!cloudRec || localTs > cloudTs) {
-          const recProj = {
+        if (forcarEnvioLocal || !cloudRec || localTs > cloudTs) {
+          const recProj = this.cleanRecordForFirestore({
             ...localRec,
             projeto: nome,
-            autorNome: localRec.autorNome || this.user.displayName || this.user.email.split('@')[0],
-            autorEmail: localRec.autorEmail || this.user.email,
-            autorUid: localRec.autorUid || this.user.uid,
+            autorNome: localRec.autorNome || this.user.displayName || (this.user.email ? this.user.email.split('@')[0] : 'Campo'),
+            autorEmail: localRec.autorEmail || this.user.email || '',
+            autorUid: localRec.autorUid || this.user.uid || '',
             updatedAt: Date.now()
-          };
+          });
           await projCol.doc(id).set(recProj);
           enviadosParaNuvem++;
         }
@@ -1031,8 +1090,13 @@ class CubagemAuth {
       }
     } catch (err) {
       console.warn('[Cloud] Erro ao sincronizar projeto com nuvem:', err);
+      const isPerm = err && (err.code === 'permission-denied' || String(err).includes('permission-denied') || String(err).includes('insufficient permissions'));
       if (!silencioso && window.app) {
-        window.app.showToast(`Não foi possível sincronizar o projeto "${nome}".`, 'warning');
+        if (isPerm) {
+          window.app.showToast(`⚠️ Permissão negada no Firebase: É necessário autorizar a coleção 'projects' nas Regras de Segurança do Firebase Console.`, 'danger', 9000);
+        } else {
+          window.app.showToast(`Não foi possível sincronizar o projeto "${nome}": ${err.message || err.code || 'Erro de conexão'}`, 'warning', 6000);
+        }
       }
     }
   }
@@ -1047,21 +1111,23 @@ class CubagemAuth {
       if (!fb) return;
       const firestore = fb.firestore();
 
+      const cleanRec = this.cleanRecordForFirestore(record);
+
       // 1. Grava no backup pessoal do usuário
-      await firestore.collection('users').doc(this.user.uid).collection('cubagens').doc(record.id).set(record);
+      await firestore.collection('users').doc(this.user.uid).collection('cubagens').doc(record.id).set(cleanRec);
 
       // 2. Grava na coleção compartilhada do projeto
       const projName = record.projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
       const projId = this.normalizarProjetoId(projName);
 
-      const recordCompartilhado = {
-        ...record,
+      const recordCompartilhado = this.cleanRecordForFirestore({
+        ...cleanRec,
         projeto: projName,
-        autorNome: record.autorNome || this.user.displayName || this.user.email.split('@')[0],
-        autorEmail: record.autorEmail || this.user.email,
-        autorUid: record.autorUid || this.user.uid,
+        autorNome: cleanRec.autorNome || this.user.displayName || (this.user.email ? this.user.email.split('@')[0] : 'Campo'),
+        autorEmail: cleanRec.autorEmail || this.user.email || '',
+        autorUid: cleanRec.autorUid || this.user.uid || '',
         updatedAt: Date.now()
-      };
+      });
 
       await firestore.collection('projects').doc(projId).collection('cubagens').doc(record.id).set(recordCompartilhado);
       console.log(`[Cloud] Medição ${record.id} compartilhada com a equipe no projeto "${projName}"!`);

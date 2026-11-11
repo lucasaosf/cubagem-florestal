@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.4';
+    this.appVersion = '2.9.5';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -4136,7 +4136,7 @@ class CubagemApp {
     this.showToast(`✓ Projeto "${nome}" ativado com sucesso!`, 'success');
   }
 
-  async sincronizarProjetoAgora() {
+  async sincronizarProjetoAgora(forcarEnvio = false) {
     if (!navigator.onLine) {
       this.showToast('Sem conexão de internet no momento. As medições locais continuam seguras.', 'warning');
       return;
@@ -4146,7 +4146,7 @@ class CubagemApp {
       this.abrirModalAuth();
       return;
     }
-    await this.auth.syncProjectWithCloud(this.projetoAtivo, false);
+    await this.auth.syncProjectWithCloud(this.projetoAtivo, false, forcarEnvio);
     this.atualizarUIProjeto();
   }
 

@@ -1,12 +1,12 @@
 {
-  "v": "2.9.4",
-  "nome": "2.9.4",
+  "v": "2.9.5",
+  "nome": "2.9.5",
   "data": "2026-11-11",
   "novidades": [
-    "Atribuir Cubagens Existentes ao Projeto: opção de selecionar medições já realizadas (sem projeto ou de outras frentes) e vinculá-las imediatamente ao projeto ativo",
-    "Atribuição em Lote no Histórico: botão '📁 Atribuir ao Projeto' na barra de seleção múltipla para vincular medições marcadas diretamente à frente de trabalho",
-    "Layout Responsivo Zero-Zoom: tela perfeitamente adaptada para celulares e computadores sem necessidade de dar ou tirar zoom manual",
-    "Prevenção de Auto-Zoom no Mobile: campos de entrada padronizados em 16px no celular, evitando que navegadores aproximem a tela ao digitar",
-    "Legibilidade Máxima: reforço no contraste do botão '+ Adicionar Esta Tora à Pilha' com texto branco e borda dourada"
+    "Sincronização Segura de Equipe: compatibilidade total com regras de segurança do Firebase Firestore para projetos compartilhados",
+    "Sanitização de Dados: prevenção de erros com valores indefinidos na gravação no Firestore",
+    "Diagnóstico Transparente: aviso específico caso falte autorização nas Regras de Segurança do Firebase",
+    "Botão 'Forçar Envio à Nuvem': permite ao criador enviar todas as cubagens da frente diretamente para a nuvem da equipe de uma só vez",
+    "Entrada Fluida de Membros: integrantes autorizados agora baixam instantaneamente todo o lote medido pelo criador e demais membros"
   ]
 }
