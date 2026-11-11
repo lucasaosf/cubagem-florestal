@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.9';
+    this.appVersion = '2.10.0';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1038,14 +1038,28 @@ class CubagemApp {
 
         if (totalToras > 0) {
           const lote = window.CubagemCalculator.calculateLoteToras(this.torasCaminhao);
-          const volStr = lote.display.volumeTotal || lote.display.volumeGeometrico || window.CubagemCalculator.formatNumber(lote.volumeTotal || 0, 3);
+          let volNum = (lote && typeof lote.volumeTotal === 'number' && !isNaN(lote.volumeTotal) && lote.volumeTotal > 0)
+            ? lote.volumeTotal
+            : (lote && typeof lote.volumeGeometrico === 'number' && !isNaN(lote.volumeGeometrico) && lote.volumeGeometrico > 0 ? lote.volumeGeometrico : 0);
+          if (volNum <= 0 && Array.isArray(this.torasCaminhao)) {
+            volNum = this.torasCaminhao.reduce((acc, t) => acc + (window.CubagemCalculator ? (window.CubagemCalculator.parseNumber(t.volumeGeometrico) || 0) : 0), 0);
+          }
+          const volStr = (lote && lote.display && (lote.display.volumeTotal || lote.display.volumeGeometrico))
+            || window.CubagemCalculator.formatNumber(volNum, 3);
+
           setTxt(volEl, volStr);
           setTxt(v1, `${lote.totalToras} toras`);
-          setTxt(v2, lote.display.diametroMedio);
-          setTxt(v3, lote.display.comprimentoMedio);
+
+          const dmRaw = (lote && lote.display && lote.display.diametroMedio) || '0,0 cm';
+          const compRaw = (lote && lote.display && lote.display.comprimentoMedio) || '0,00 m';
+          const dmClean = String(dmRaw).replace(/\s*cm(\s*cm)+/gi, ' cm').trim();
+          const compClean = String(compRaw).replace(/\s*m(\s*m)+/gi, ' m').trim();
+
+          setTxt(v2, dmClean);
+          setTxt(v3, compClean);
           setHtml(memEl, [
             `<strong>Retirada por Toras Rastreáveis (Fórmula de Smalian)</strong>`,
-            `Total de Toras: ${lote.totalToras} | Dm Médio: ${lote.display.diametroMedio} | Comp. Médio: ${lote.display.comprimentoMedio}`,
+            `Total de Toras: ${lote.totalToras} | Dm Médio: ${dmClean} | Comp. Médio: ${compClean}`,
             `Volume Total Transportado: <strong>${volStr} m³</strong>`
           ].join('<br>'));
         } else {
@@ -2008,14 +2022,29 @@ class CubagemApp {
           if (volEfetivo > 0) {
             item.volumeGeometrico = volEfetivo;
             item.volumeTotal = volEfetivo;
-            if (Array.isArray(item.toras) && item.toras.length > 0) {
-              const lote = window.CubagemCalculator.calculateLoteToras(item.toras);
-              if (!item.totalToras) item.totalToras = lote.totalToras;
-              if (!item.diametroMedio_cm) item.diametroMedio_cm = lote.diametroMedio_cm;
-              if (!item.comprimento && lote.comprimentoMedio) item.comprimento = lote.comprimentoMedio;
-              if (!item.comprimentoMedio && lote.comprimentoMedio) item.comprimentoMedio = lote.comprimentoMedio;
-            }
             mudou = true;
+          }
+        }
+
+        if (Array.isArray(item.toras) && item.toras.length > 0) {
+          const lote = window.CubagemCalculator ? window.CubagemCalculator.calculateLoteToras(item.toras) : null;
+          if (lote) {
+            if (!item.totalToras || item.totalToras !== lote.totalToras) {
+              item.totalToras = lote.totalToras;
+              mudou = true;
+            }
+            if ((!item.diametroMedio_cm || item.diametroMedio_cm <= 0) && lote.diametroMedio_cm) {
+              item.diametroMedio_cm = lote.diametroMedio_cm;
+              mudou = true;
+            }
+            if ((!item.comprimento || item.comprimento <= 0) && lote.comprimentoMedio) {
+              item.comprimento = lote.comprimentoMedio;
+              mudou = true;
+            }
+            if ((!item.comprimentoMedio || item.comprimentoMedio <= 0) && lote.comprimentoMedio) {
+              item.comprimentoMedio = lote.comprimentoMedio;
+              mudou = true;
+            }
           }
         }
 
@@ -2029,7 +2058,8 @@ class CubagemApp {
       }
 
       if (reparados > 0) {
-        console.log(`[AutoRepair] ✓ ${reparados} medição(ões) com volume zerado foram recalculadas e corrigidas no banco!`);
+        console.log(`[AutoRepair] ✓ ${reparados} medição(ões) reparadas e sincronizadas!`);
+        this.atualizarDashboard();
       }
     } catch (err) {
       console.warn('[AutoRepair] Erro na auto-reparação:', err);
@@ -2066,7 +2096,7 @@ class CubagemApp {
       container.innerHTML = items.map((item) => this.gerarCardItemHTML(item)).join('');
       this.atualizarBarraSelecao();
 
-      if (items.some(it => !it.volumeGeometrico || Number(it.volumeGeometrico) <= 0)) {
+      if (items.some(it => !it.volumeGeometrico || Number(it.volumeGeometrico) <= 0 || (Array.isArray(it.toras) && it.toras.length > 0 && !it.comprimentoMedio))) {
         this.autoRepararRegistrosZerados();
       }
     } catch (err) {
@@ -2117,9 +2147,24 @@ class CubagemApp {
       tagTipo = '🌲 Tora (Smalian)';
       tituloItem = `Plaqueta: ${item.plaqueta || 'S/P'}`;
       const espStr = item.especie ? ` • ${item.especie}` : '';
-      const compVal = item.comprimento || item.comprimentoMedio;
-      const compStr = compVal ? `${Number(compVal).toFixed(2)} m` : '-';
-      subItem = `D: ${item.diametroMedio_cm ? Number(item.diametroMedio_cm).toFixed(1) + ' cm' : '-'} • L: ${compStr}${espStr}`;
+      let compVal = item.comprimento || item.comprimentoMedio;
+      let dmVal = item.diametroMedio_cm;
+      if (Array.isArray(item.toras) && item.toras.length > 0) {
+        if (!compVal) {
+          const somaC = item.toras.reduce((acc, t) => acc + (Number(t.comprimento) || 0), 0);
+          compVal = somaC / item.toras.length;
+        }
+        if (!dmVal) {
+          const somaD = item.toras.reduce((acc, t) => {
+            const d = Number(t.diametroMedio_cm) || ((Number(t.diametroPonta1_cm) + Number(t.diametroPonta2_cm)) / 2) || 0;
+            return acc + d;
+          }, 0);
+          dmVal = somaD / item.toras.length;
+        }
+      }
+      const dmStr = (dmVal && !isNaN(dmVal) && Number(dmVal) > 0) ? `${Number(dmVal).toFixed(1)} cm` : '-';
+      const compStr = (compVal && !isNaN(compVal) && Number(compVal) > 0) ? `${Number(compVal).toFixed(2)} m` : '-';
+      subItem = `D: ${dmStr} • L: ${compStr}${espStr}`;
     }
 
     return `
@@ -3037,9 +3082,21 @@ class CubagemApp {
       const statsEl = document.getElementById('camToraDmCompStats');
       const espEl = document.getElementById('camToraEspeciesResumo');
 
-      const volStr = lote.display.volumeTotal || lote.display.volumeGeometrico || window.CubagemCalculator.formatNumber(lote.volumeTotal || lote.volumeGeometrico || 0, 3);
+      let volNum = (lote && typeof lote.volumeTotal === 'number' && !isNaN(lote.volumeTotal) && lote.volumeTotal > 0)
+        ? lote.volumeTotal
+        : (lote && typeof lote.volumeGeometrico === 'number' && !isNaN(lote.volumeGeometrico) && lote.volumeGeometrico > 0 ? lote.volumeGeometrico : 0);
+      if (volNum <= 0 && Array.isArray(this.torasCaminhao)) {
+        volNum = this.torasCaminhao.reduce((acc, t) => acc + (window.CubagemCalculator ? (window.CubagemCalculator.parseNumber(t.volumeGeometrico) || 0) : 0), 0);
+      }
+      const volStr = (lote && lote.display && (lote.display.volumeTotal || lote.display.volumeGeometrico))
+        || window.CubagemCalculator.formatNumber(volNum, 3);
       if (volDisp) volDisp.textContent = `${volStr} m³`;
-      if (statsEl) statsEl.textContent = `Dm Médio: ${lote.display.diametroMedio} • Comp. Médio: ${lote.display.comprimentoMedio}`;
+
+      const dmRaw = (lote && lote.display && lote.display.diametroMedio) || '0,0 cm';
+      const compRaw = (lote && lote.display && lote.display.comprimentoMedio) || '0,00 m';
+      const dmClean = String(dmRaw).replace(/\s*cm(\s*cm)+/gi, ' cm').trim();
+      const compClean = String(compRaw).replace(/\s*m(\s*m)+/gi, ' m').trim();
+      if (statsEl) statsEl.textContent = `Dm Médio: ${dmClean} • Comp. Médio: ${compClean}`;
 
       const especiesUnicas = [...new Set(this.torasCaminhao.map(t => t.especie).filter(Boolean))];
       if (espEl) {

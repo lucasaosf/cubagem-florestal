@@ -1284,62 +1284,70 @@ textarea.form-control {
   border: 1.5px solid var(--accent-strong);
 }
 
-/* Botão Principal de Adicionar Tora à Pilha */
+/* Botão Principal de Adicionar Tora à Pilha (CTA de Alta Visibilidade e Contraste Máximo) */
 .btn-add-tora {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 10px !important;
   font-weight: 800 !important;
-  font-size: 1.02rem !important;
+  font-size: 1.05rem !important;
   letter-spacing: 0.3px !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
-  cursor: pointer !important;
   border-radius: 10px !important;
   height: 52px !important;
   width: 100% !important;
-  transition: all 0.15s ease !important;
-  background: linear-gradient(135deg, #1D4B28 0%, #103219 100%) !important;
-  color: #FFFFFF !important;
-  border: 2px solid #C5A059 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  background: linear-gradient(135deg, #D4AF37 0%, #B28F59 100%) !important;
+  color: #0E2515 !important;
+  border: 2px solid #F0D59E !important;
+  box-shadow: 0 4px 18px rgba(212, 175, 55, 0.45) !important;
 }
 
-.btn-add-tora span {
-  color: #FFFFFF !important;
+.btn-add-tora span,
+.btn-add-tora .btn-add-tora-label {
+  color: #0E2515 !important;
   font-weight: 800 !important;
+  font-size: 1.05rem !important;
 }
 
 .btn-add-tora svg {
-  stroke: #E5C384 !important;
+  stroke: #0E2515 !important;
+  color: #0E2515 !important;
   stroke-width: 2.5 !important;
 }
 
-/* Modo Escuro (Padrão e Forçado): Fundo Verde Escuro com Letra Creme/Branca de Alto Contraste */
+/* Modo Escuro (Padrão e Forçado): Fundo Dourado Luminoso com Letra Verde Floresta de Altíssimo Contraste */
 :root[data-theme="dark"] .btn-add-tora,
 :root:not([data-theme="light"]) .btn-add-tora {
-  background: linear-gradient(135deg, #1D4B28 0%, #103219 100%) !important;
-  color: #FFFFFF !important;
-  border: 2px solid #C5A059 !important;
+  background: linear-gradient(135deg, #D4AF37 0%, #B28F59 100%) !important;
+  color: #0E2515 !important;
+  border: 2px solid #F0D59E !important;
+  box-shadow: 0 4px 18px rgba(212, 175, 55, 0.45) !important;
 }
 
 :root[data-theme="dark"] .btn-add-tora span,
-:root:not([data-theme="light"]) .btn-add-tora span {
-  color: #FFFFFF !important;
+:root[data-theme="dark"] .btn-add-tora .btn-add-tora-label,
+:root:not([data-theme="light"]) .btn-add-tora span,
+:root:not([data-theme="light"]) .btn-add-tora .btn-add-tora-label {
+  color: #0E2515 !important;
   font-weight: 800 !important;
 }
 
 :root[data-theme="dark"] .btn-add-tora svg,
 :root:not([data-theme="light"]) .btn-add-tora svg {
-  stroke: #E5C384 !important;
+  stroke: #0E2515 !important;
+  color: #0E2515 !important;
   stroke-width: 2.5 !important;
 }
 
 :root[data-theme="dark"] .btn-add-tora:hover,
 :root:not([data-theme="light"]) .btn-add-tora:hover {
-  background: linear-gradient(135deg, #245D31 0%, #143F20 100%) !important;
-  border-color: #F0D59E !important;
-  filter: brightness(1.1) !important;
+  background: linear-gradient(135deg, #E5C384 0%, #C5A059 100%) !important;
+  border-color: #FFFFFF !important;
+  filter: brightness(1.08) !important;
   transform: translateY(-1px) !important;
+  box-shadow: 0 6px 22px rgba(212, 175, 55, 0.55) !important;
 }
 
 :root[data-theme="dark"] .btn-add-tora:active,
@@ -1347,21 +1355,23 @@ textarea.form-control {
   transform: scale(0.98) !important;
 }
 
-/* Modo Claro: Fundo Verde Floresta com Letra Creme Clara */
+/* Modo Claro: Fundo Verde Floresta com Letra Creme Clara e Borda Ouro */
 :root[data-theme="light"] .btn-add-tora {
-  background: #0E2515 !important;
+  background: linear-gradient(135deg, #0E2515 0%, #173A20 100%) !important;
   color: #F2EBDD !important;
   border: 2px solid #96784A !important;
-  box-shadow: 0 4px 14px rgba(14, 37, 21, 0.25) !important;
+  box-shadow: 0 4px 16px rgba(14, 37, 21, 0.3) !important;
 }
 
-:root[data-theme="light"] .btn-add-tora span {
+:root[data-theme="light"] .btn-add-tora span,
+:root[data-theme="light"] .btn-add-tora .btn-add-tora-label {
   color: #F2EBDD !important;
   font-weight: 800 !important;
 }
 
 :root[data-theme="light"] .btn-add-tora svg {
   stroke: #E5C384 !important;
+  color: #E5C384 !important;
   stroke-width: 2.5 !important;
 }
 

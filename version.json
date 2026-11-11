@@ -1,11 +1,10 @@
 {
-  "v": "2.9.9",
-  "nome": "2.9.9",
+  "v": "2.10.0",
+  "nome": "2.10.0",
   "data": "2026-11-11",
   "novidades": [
-    "Recálculo e Correção do Volume de Retirada (Caminhões): resolução do valor 0,00 m³ nos cards e histórico, garantindo que o volume total das toras seja exibido com exatidão",
-    "Motor Matemático Resiliente (Volume Efetivo): cálculo dinâmico e auto-recálculo das toras mesmo para medições antigas salvas com campos pendentes",
-    "Auto-Reparação Automática do Banco: o sistema detecta e repara em segundo plano qualquer medição que esteja com cubagem zerada no aparelho e na nuvem",
-    "Comprimento Médio Visível: exibição do comprimento médio nas identificações de lotes de toras no histórico"
+    "Botão Adicionar Tora à Pilha de Altíssimo Contraste: novo visual Dourado Ouro no Modo Escuro e Verde Floresta no Modo Claro com texto em destaque máximo, 100% legível sob luz solar direta",
+    "Prevenção Total de 'undefined m³' e Unidades Duplicadas: volume total em tempo real sempre formatado com precisão e tratamento de unidades de diâmetro e comprimento",
+    "Auto-Reparação Automática dos Registros e Comprimento Médio: exibição imediata do volume efetivo real das toras na retirada e cálculo dinâmico de comprimento e diâmetro médio nos cards do histórico"
   ]
 }
