@@ -4089,6 +4089,207 @@ body:not([data-active-tab="inicio"]) .install-balloon {
   transform: translateY(-1px);
 }
 
+/* ========================================================================= */
+/* CUBAGEM DE CAMINHÃO POR TORAS RASTREÁVEIS (POR PLAQUETA)                  */
+/* ========================================================================= */
+.cam-tora-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: all 0.15s ease;
+  gap: 8px;
+}
+
+.cam-tora-card:hover {
+  border-color: var(--gold);
+}
+
+.cam-tora-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cam-tora-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  background: rgba(150, 120, 74, 0.2);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.cam-tora-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.cam-tora-especie {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cam-tora-medidas {
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.cam-tora-vol {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sage);
+  font-family: var(--mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cam-tora-btn-del {
+  background: transparent;
+  border: none;
+  color: var(--danger, #B84B29);
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 1.1rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.cam-tora-btn-del:hover {
+  background: rgba(184, 75, 41, 0.15);
+}
+
+/* Modal de Seleção de Toras Cubadas */
+.modal-dialog-toras {
+  max-width: 680px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-toras-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.modal-toras-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.modal-tora-pill {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.modal-tora-pill.active {
+  background: var(--forest);
+  border-color: var(--gold);
+  color: #FFFFFF;
+}
+
+:root:not([data-theme="light"]) .modal-tora-pill.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #0E2515;
+}
+
+.modal-tora-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 380px;
+  padding-right: 4px;
+}
+
+.modal-tora-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.modal-tora-item:hover {
+  border-color: var(--gold);
+  background: var(--surface);
+}
+
+.modal-tora-item.selected {
+  border-color: var(--gold);
+  background: rgba(150, 120, 74, 0.15);
+}
+
+.modal-tora-item.already-loaded {
+  border-style: dashed;
+}
+
+.modal-tora-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--gold);
+}
+
+.modal-tora-status-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-tag-disponivel {
+  background: rgba(74, 120, 86, 0.18);
+  color: var(--sage);
+  border: 1px solid rgba(74, 120, 86, 0.4);
+}
+
+.status-tag-carregada {
+  background: rgba(184, 75, 41, 0.15);
+  color: #E2847A;
+  border: 1px solid rgba(184, 75, 41, 0.35);
+}
+
+
 
 
 

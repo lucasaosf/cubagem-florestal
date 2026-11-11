@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.8.0';
+    this.appVersion = '2.8.1';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -43,6 +43,13 @@ class CubagemApp {
 
     // Lista dinâmica de toras para cubagem de pilhas de toras
     this.torasPilha = [];
+
+    // Modalidade de Carga do Caminhão: 'geometrica' | 'toras'
+    this.modoCargaCaminhao = 'geometrica';
+    this.torasCaminhao = [];
+    this.modalTorasSelecionadas = new Set();
+    this.filtroStatusTorasModal = 'todas';
+    this.catalogoTorasCache = [];
 
     // Sistema de Prévia da Planilha Excel
     this.previaAberta = false;
@@ -829,7 +836,10 @@ class CubagemApp {
       secPil.style.display = 'none';
       secTor.style.display = 'none';
       if (lblRodovia) lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
-      document.getElementById('liveTypeBadge').textContent = 'Carga de Caminhão';
+      document.getElementById('liveTypeBadge').textContent = this.modoCargaCaminhao === 'toras' ? 'Caminhão (Toras Rastreáveis)' : 'Carga de Caminhão';
+      if (this.modoCargaCaminhao === 'toras') {
+        this.renderizarListaTorasCaminhao();
+      }
     } else if (tipo === 'pilha') {
       secCam.style.display = 'none';
       secPil.style.display = 'block';
@@ -946,31 +956,58 @@ class CubagemApp {
     const v3 = document.getElementById('liveDetVal3');
 
     if (this.tipoCubagem === 'caminhao') {
-      const comp = document.getElementById('cubComprimentoCam').value;
-      const larg = document.getElementById('cubLarguraCam').value;
-      const res = window.CubagemCalculator.calculateCaminhao({
-        alturasLE: this.alturasLE,
-        alturasLD: this.alturasLD,
-        comprimentoRaw: comp,
-        larguraRaw: larg
-      });
+      if (this.modoCargaCaminhao === 'toras') {
+        const totalToras = this.torasCaminhao.length;
+        const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+        l1.textContent = 'Total de Toras';
+        l2.textContent = 'Dm Médio';
+        l3.textContent = 'Comp. Médio';
 
-      l1.textContent = 'Soma Alturas';
-      l2.textContent = 'Hm Média';
-      l3.textContent = 'Dimensões (C × L)';
-
-      if (res.isValid) {
-        volEl.textContent = res.display.volumeGeometrico;
-        v1.textContent = `${res.display.somaAlturas} m`;
-        v2.textContent = `${res.display.alturaMedia} m`;
-        v3.textContent = `${res.display.comprimento} × ${res.display.largura} m`;
-        memEl.innerHTML = res.memoriaCalculo.join('<br>');
+        if (totalToras > 0) {
+          const lote = window.CubagemCalculator.calculateLoteToras(this.torasCaminhao);
+          volEl.textContent = lote.display.volumeGeometrico;
+          v1.textContent = `${lote.totalToras} toras`;
+          v2.textContent = `${lote.display.diametroMedio} cm`;
+          v3.textContent = `${lote.display.comprimentoMedio} m`;
+          memEl.innerHTML = [
+            `<strong>Carga por Toras Rastreáveis (Fórmula de Smalian)</strong>`,
+            `Total de Toras: ${lote.totalToras} | Dm Médio: ${lote.display.diametroMedio} cm | Comp. Médio: ${lote.display.comprimentoMedio} m`,
+            `Volume Total Transportado: <strong>${lote.display.volumeGeometrico} m³</strong>`
+          ].join('<br>');
+        } else {
+          volEl.textContent = '0,000';
+          v1.textContent = '0 toras';
+          v2.textContent = '0,0 cm';
+          v3.textContent = '0,00 m';
+          memEl.textContent = 'Puxe as toras pelas plaquetas ou selecione na lista de toras cubadas.';
+        }
       } else {
-        volEl.textContent = '0,00';
-        v1.textContent = '0,00 m';
-        v2.textContent = '0,00 m';
-        v3.textContent = '0 × 0 m';
-        memEl.textContent = 'Preencha todas as alturas (LE e LD) e as dimensões da carga.';
+        const comp = document.getElementById('cubComprimentoCam').value;
+        const larg = document.getElementById('cubLarguraCam').value;
+        const res = window.CubagemCalculator.calculateCaminhao({
+          alturasLE: this.alturasLE,
+          alturasLD: this.alturasLD,
+          comprimentoRaw: comp,
+          larguraRaw: larg
+        });
+
+        l1.textContent = 'Soma Alturas';
+        l2.textContent = 'Hm Média';
+        l3.textContent = 'Dimensões (C × L)';
+
+        if (res.isValid) {
+          volEl.textContent = res.display.volumeGeometrico;
+          v1.textContent = `${res.display.somaAlturas} m`;
+          v2.textContent = `${res.display.alturaMedia} m`;
+          v3.textContent = `${res.display.comprimento} × ${res.display.largura} m`;
+          memEl.innerHTML = res.memoriaCalculo.join('<br>');
+        } else {
+          volEl.textContent = '0,00';
+          v1.textContent = '0,00 m';
+          v2.textContent = '0,00 m';
+          v3.textContent = '0 × 0 m';
+          memEl.textContent = 'Preencha todas as alturas (LE e LD) e as dimensões da carga.';
+        }
       }
     } else if (this.tipoCubagem === 'pilha') {
       const comp = document.getElementById('cubComprimentoPilha').value;
@@ -1069,42 +1106,89 @@ class CubagemApp {
     let record = null;
 
     if (this.tipoCubagem === 'caminhao') {
-      const comp = document.getElementById('cubComprimentoCam').value;
-      const larg = document.getElementById('cubLarguraCam').value;
       const placa = document.getElementById('cubPlaca').value.trim().toUpperCase();
 
-      const calc = window.CubagemCalculator.calculateCaminhao({
-        alturasLE: this.alturasLE,
-        alturasLD: this.alturasLD,
-        comprimentoRaw: comp,
-        larguraRaw: larg
-      });
+      if (this.modoCargaCaminhao === 'toras') {
+        if (!this.torasCaminhao || this.torasCaminhao.length === 0) {
+          this.showToast('Puxe ou selecione ao menos uma tora carregada no caminhão.', 'warning');
+          return;
+        }
 
-      if (!calc.isValid) {
-        this.showToast(calc.errors[0] || 'Verifique as medidas do caminhão.', 'danger');
-        return;
+        const lote = window.CubagemCalculator.calculateLoteToras(this.torasCaminhao);
+        const plaquetasList = this.torasCaminhao.map(t => t.plaqueta).filter(Boolean);
+        const especiesUnicas = [...new Set(this.torasCaminhao.map(t => t.especie).filter(Boolean))];
+        const especieFinal = especiesUnicas.length > 0
+          ? (especiesUnicas.length <= 2 ? especiesUnicas.join(', ') : `${especiesUnicas.slice(0, 2).join(', ')} (+${especiesUnicas.length - 2})`)
+          : '';
+
+        const plaquetasResumo = plaquetasList.length > 0
+          ? (plaquetasList.length > 4 ? `${plaquetasList[0]}, ${plaquetasList[1]}... (${lote.totalToras} toras)` : plaquetasList.join(', '))
+          : 'SEM PLAQUETA';
+
+        record = {
+          id: window.cubagemDB.generateId('CAM'),
+          tipo: 'caminhao',
+          modoCarga: 'toras',
+          origemMadeira: this.origemMadeira || 'Nativa',
+          especie: especieFinal,
+          data, horario, rodovia, km, utm, responsavel,
+          placa: placa || 'NÃO INFORMADA',
+          observacoes,
+          totalToras: lote.totalToras,
+          diametroMedio_cm: lote.diametroMedio,
+          comprimento: lote.comprimentoMedio,
+          largura: 0,
+          volumeGeometrico: lote.volumeGeometrico,
+          tipoVolume: 'Volume Smalian (Toras no Caminhão)',
+          toras: [...this.torasCaminhao],
+          plaqueta: `Plaquetas: ${plaquetasResumo}`,
+          identificacao: `Caminhão ${placa || 'S/ Placa'} (${lote.totalToras} Toras)`,
+          memoriaCalculo: [
+            `Caminhão ${placa || 'S/ Placa'} — Carga por Toras Rastreáveis`,
+            `Total de Toras Carregadas: ${lote.totalToras}`,
+            `Diâmetro Médio (Dm): ${lote.display.diametroMedio} cm | Comprimento Médio: ${lote.display.comprimentoMedio} m`,
+            `Volume Total do Caminhão: ${lote.display.volumeGeometrico} m³ (Fórmula de Smalian individual por tora)`
+          ],
+          timestamp: Date.now()
+        };
+      } else {
+        const comp = document.getElementById('cubComprimentoCam').value;
+        const larg = document.getElementById('cubLarguraCam').value;
+
+        const calc = window.CubagemCalculator.calculateCaminhao({
+          alturasLE: this.alturasLE,
+          alturasLD: this.alturasLD,
+          comprimentoRaw: comp,
+          larguraRaw: larg
+        });
+
+        if (!calc.isValid) {
+          this.showToast(calc.errors[0] || 'Verifique as medidas do caminhão.', 'danger');
+          return;
+        }
+
+        record = {
+          id: window.cubagemDB.generateId('CAM'),
+          tipo: 'caminhao',
+          modoCarga: 'geometrica',
+          origemMadeira: this.origemMadeira || 'Nativa',
+          especie: '',
+          data, horario, rodovia, km, utm, responsavel,
+          placa: placa || 'NÃO INFORMADA',
+          observacoes,
+          alturasLE: calc.alturasLE,
+          alturasLD: calc.alturasLD,
+          somaAlturas: calc.somaAlturas,
+          totalAlturas: calc.totalAlturas,
+          alturaMedia: calc.alturaMedia,
+          comprimento: calc.comprimento,
+          largura: calc.largura,
+          volumeGeometrico: calc.volumeGeometrico,
+          tipoVolume: calc.tipoVolume,
+          memoriaCalculo: calc.memoriaCalculo,
+          timestamp: Date.now()
+        };
       }
-
-      record = {
-        id: window.cubagemDB.generateId('CAM'),
-        tipo: 'caminhao',
-        origemMadeira: this.origemMadeira || 'Nativa',
-        especie: '',
-        data, horario, rodovia, km, utm, responsavel,
-        placa: placa || 'NÃO INFORMADA',
-        observacoes,
-        alturasLE: calc.alturasLE,
-        alturasLD: calc.alturasLD,
-        somaAlturas: calc.somaAlturas,
-        totalAlturas: calc.totalAlturas,
-        alturaMedia: calc.alturaMedia,
-        comprimento: calc.comprimento,
-        largura: calc.largura,
-        volumeGeometrico: calc.volumeGeometrico,
-        tipoVolume: calc.tipoVolume,
-        memoriaCalculo: calc.memoriaCalculo,
-        timestamp: Date.now()
-      };
     } else if (this.tipoCubagem === 'pilha') {
       const comp = document.getElementById('cubComprimentoPilha').value;
       const larg = document.getElementById('cubLarguraPilha').value;
@@ -1279,6 +1363,13 @@ class CubagemApp {
       document.getElementById('cubComprimentoCam').value = '';
       document.getElementById('cubLarguraCam').value = '';
       document.getElementById('cubPlaca').value = '';
+      this.torasCaminhao = [];
+      this.renderizarListaTorasCaminhao();
+      const fb = document.getElementById('camToraFeedbackMsg');
+      if (fb) fb.style.display = 'none';
+      const plqInp = document.getElementById('cubCamPlaquetasInput');
+      if (plqInp) plqInp.value = '';
+      this.setModoCargaCaminhao('geometrica');
     } else if (this.tipoCubagem === 'pilha') {
       this.alturasPilha = ['', '', '', ''];
       this.renderizarGridsAlturas();
@@ -1319,6 +1410,13 @@ class CubagemApp {
     this.renderizarGridsAlturas();
     this.torasPilha = [];
     this.renderizarListaTorasPilha();
+    this.torasCaminhao = [];
+    this.renderizarListaTorasCaminhao();
+    this.setModoCargaCaminhao('geometrica');
+    const fb = document.getElementById('camToraFeedbackMsg');
+    if (fb) fb.style.display = 'none';
+    const plqInp = document.getElementById('cubCamPlaquetasInput');
+    if (plqInp) plqInp.value = '';
     this.carregarPreferenciasIniciais();
     this.executarCalculoTempoReal();
     this.showToast('Formulário limpo.', 'warning');
@@ -1362,16 +1460,24 @@ class CubagemApp {
 
       if (tipo === 'caminhao') {
         const elPlaca = document.getElementById('cubPlaca');
-        const elComp = document.getElementById('cubComprimentoCam');
-        const elLarg = document.getElementById('cubLarguraCam');
-
         if (elPlaca) elPlaca.value = item.placa || '';
-        if (elComp) elComp.value = item.comprimento || '';
-        if (elLarg) elLarg.value = item.largura || '';
 
-        this.alturasLE = Array.isArray(item.alturasLE) && item.alturasLE.length > 0 ? [...item.alturasLE] : ['', '', ''];
-        this.alturasLD = Array.isArray(item.alturasLD) && item.alturasLD.length > 0 ? [...item.alturasLD] : ['', '', ''];
-        this.renderizarGridsAlturas();
+        const modo = (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0)) ? 'toras' : 'geometrica';
+        this.setModoCargaCaminhao(modo);
+
+        if (modo === 'toras') {
+          this.torasCaminhao = Array.isArray(item.toras) ? JSON.parse(JSON.stringify(item.toras)) : [];
+          this.renderizarListaTorasCaminhao();
+        } else {
+          const elComp = document.getElementById('cubComprimentoCam');
+          const elLarg = document.getElementById('cubLarguraCam');
+          if (elComp) elComp.value = item.comprimento || '';
+          if (elLarg) elLarg.value = item.largura || '';
+
+          this.alturasLE = Array.isArray(item.alturasLE) && item.alturasLE.length > 0 ? [...item.alturasLE] : ['', '', ''];
+          this.alturasLD = Array.isArray(item.alturasLD) && item.alturasLD.length > 0 ? [...item.alturasLD] : ['', '', ''];
+          this.renderizarGridsAlturas();
+        }
       } else if (tipo === 'pilha') {
         const elIdent = document.getElementById('cubIdentPilha');
         const elComp = document.getElementById('cubComprimentoPilha');
@@ -1817,7 +1923,8 @@ class CubagemApp {
 
   gerarCardItemHTML(item) {
     const tipo = item.tipo || 'caminhao';
-    const isTora = tipo === 'tora';
+    const isTorasCam = tipo === 'caminhao' && (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0));
+    const isTora = tipo === 'tora' || isTorasCam;
     const volFormatado = window.CubagemCalculator.formatNumber(item.volumeGeometrico, isTora ? 3 : 2);
     const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
     const isSelected = this.selectedHistoryIds.has(item.id);
@@ -1827,8 +1934,15 @@ class CubagemApp {
     let subItem = `${item.rodovia} ${item.km ? '• km ' + item.km : ''}`;
 
     if (tipo === 'caminhao') {
-      const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
-      tagTipo = `🚚 Caminhão${origStr}`;
+      if (isTorasCam) {
+        const nToras = item.totalToras || (item.toras ? item.toras.length : 0);
+        tagTipo = `🚚 Caminhão • ${nToras} Toras`;
+        tituloItem = `${item.placa || 'SEM PLACA'} (${nToras} toras)`;
+        subItem = `${item.rodovia} • Smalian • ${item.especie || item.origemMadeira || 'Nativa'}`;
+      } else {
+        const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
+        tagTipo = `🚚 Caminhão${origStr}`;
+      }
     } else if (tipo === 'pilha') {
       const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
       tagTipo = `🪵 Pilha${origStr}`;
@@ -1879,38 +1993,80 @@ class CubagemApp {
     this.currentDetailItem = item;
     const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
     const tipo = item.tipo || 'caminhao';
-    const isTora = tipo === 'tora';
+    const isTorasCam = tipo === 'caminhao' && (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0));
+    const isTora = tipo === 'tora' || isTorasCam;
     const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
 
     document.getElementById('detalheModalTitulo').textContent = `Detalhes: ${tipo.toUpperCase()}`;
 
     let detalheHtml = '';
     if (tipo === 'caminhao') {
-      const leStr = Array.isArray(item.alturasLE) ? item.alturasLE.map(v => fNum(v) + ' m').join(', ') : '-';
-      const ldStr = Array.isArray(item.alturasLD) ? item.alturasLD.map(v => fNum(v) + ' m').join(', ') : '-';
-      detalheHtml = `
-        <div style="margin-bottom: 12px;">
-          <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
-          <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
-          ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
-          <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
-          ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
-          <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
-          <strong>Responsável:</strong> ${item.responsavel}
-        </div>
-        <div class="calc-result-card">
-          <div class="calc-result-header">
-            <span class="calc-result-tag">Volume Geométrico</span>
-            <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 2)} m³</span>
+      if (isTorasCam) {
+        const torasArr = Array.isArray(item.toras) ? item.toras : [];
+        const nToras = item.totalToras || torasArr.length;
+        const torasPreview = torasArr.slice(0, 15).map(t =>
+          `<div style="display: flex; justify-content: space-between; font-size: 0.78rem; padding: 4px 0; border-bottom: 1px dotted var(--line);">
+            <span><strong>Plaqueta ${t.plaqueta}</strong> <em>(${t.especie || 'N/I'})</em></span>
+            <span>Dm: ${fNum(t.diametroMedio_cm, 1)} cm • L: ${fNum(t.comprimento, 2)} m • <strong style="color: var(--gold);">${fNum(t.volumeGeometrico, 3)} m³</strong></span>
+          </div>`
+        ).join('') + (torasArr.length > 15 ? `<div style="text-align: center; font-size: 0.75rem; color: var(--gold); margin-top: 6px; font-weight: 700;">+ ${torasArr.length - 15} outras toras carregadas</div>` : '');
+
+        detalheHtml = `
+          <div style="margin-bottom: 12px;">
+            <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
+            <strong>Modalidade:</strong> <span style="font-weight: 700; color: var(--gold);">Toras Rastreáveis (Fórmula de Smalian)</span><br>
+            <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
+            ${item.especie ? `<strong>Espécies:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
+            <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
+            ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
+            <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
+            <strong>Responsável:</strong> ${item.responsavel}
           </div>
-          <div style="font-size: 0.85rem; line-height: 1.6;">
-            <strong>Alturas LE:</strong> ${leStr}<br>
-            <strong>Alturas LD:</strong> ${ldStr}<br>
-            <strong>Hm Média:</strong> ${fNum(item.alturaMedia, 4)} m<br>
-            <strong>Dimensões:</strong> ${fNum(item.comprimento)} m × ${fNum(item.largura)} m
+          <div class="calc-result-card">
+            <div class="calc-result-header">
+              <span class="calc-result-tag">Volume Total das Toras</span>
+              <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 3)} m³</span>
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.6; margin-bottom: 10px;">
+              <strong>Total de Toras Carregadas:</strong> ${nToras} toras<br>
+              <strong>Diâmetro Médio (Dm):</strong> ${fNum(item.diametroMedio_cm, 1)} cm<br>
+              <strong>Comprimento Médio:</strong> ${fNum(item.comprimento, 2)} m
+            </div>
+            ${torasArr.length > 0 ? `
+              <div style="border-top: 1.5px solid var(--line); padding-top: 8px;">
+                <strong style="font-size: 0.82rem; color: var(--gold); display: block; margin-bottom: 6px;">Toras Carregadas neste Caminhão:</strong>
+                ${torasPreview}
+              </div>
+            ` : ''}
           </div>
-        </div>
-      `;
+        `;
+      } else {
+        const leStr = Array.isArray(item.alturasLE) ? item.alturasLE.map(v => fNum(v) + ' m').join(', ') : '-';
+        const ldStr = Array.isArray(item.alturasLD) ? item.alturasLD.map(v => fNum(v) + ' m').join(', ') : '-';
+        detalheHtml = `
+          <div style="margin-bottom: 12px;">
+            <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
+            <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
+            ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
+            <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
+            ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
+            <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
+            <strong>Responsável:</strong> ${item.responsavel}
+          </div>
+          <div class="calc-result-card">
+            <div class="calc-result-header">
+              <span class="calc-result-tag">Volume Geométrico</span>
+              <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 2)} m³</span>
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.6;">
+              <strong>Alturas LE:</strong> ${leStr}<br>
+              <strong>Alturas LD:</strong> ${ldStr}<br>
+              <strong>Hm Média:</strong> ${fNum(item.alturaMedia, 4)} m<br>
+              <strong>Dimensões:</strong> ${fNum(item.comprimento)} m × ${fNum(item.largura)} m
+            </div>
+          </div>
+        `;
+      }
     } else if (tipo === 'pilha') {
       const altStr = Array.isArray(item.alturas) ? item.alturas.map(v => fNum(v) + ' m').join(', ') : '-';
       detalheHtml = `
@@ -2384,6 +2540,547 @@ class CubagemApp {
       if (dispEl) dispEl.textContent = `${lote.display.volumeTotal} m³`;
       if (statsEl) statsEl.textContent = `${lote.totalToras} toras • Dm Médio: ${lote.display.diametroMedio} • Comp. Médio: ${lote.display.comprimentoMedio}`;
     }
+  }
+
+  // =========================================================================
+  // CUBAGEM DE CAMINHÃO POR TORAS RASTREÁVEIS (POR PLAQUETA)
+  // =========================================================================
+
+  setModoCargaCaminhao(modo) {
+    this.modoCargaCaminhao = modo;
+    const btnGeom = document.getElementById('btnModoCargaCamGeometrica');
+    const btnTor = document.getElementById('btnModoCargaCamToras');
+    const boxGeom = document.getElementById('containerCargaGeometricaCam');
+    const boxTor = document.getElementById('containerCargaTorasCam');
+
+    if (btnGeom) btnGeom.classList.toggle('active', modo === 'geometrica');
+    if (btnTor) btnTor.classList.toggle('active', modo === 'toras');
+
+    if (boxGeom) boxGeom.style.display = modo === 'geometrica' ? 'block' : 'none';
+    if (boxTor) boxTor.style.display = modo === 'toras' ? 'block' : 'none';
+
+    const typeBadge = document.getElementById('liveTypeBadge');
+    if (typeBadge && this.tipoCubagem === 'caminhao') {
+      typeBadge.textContent = modo === 'toras' ? 'Caminhão (Toras Rastreáveis)' : 'Carga de Caminhão';
+    }
+
+    if (modo === 'toras') {
+      this.renderizarListaTorasCaminhao();
+    }
+
+    this.executarCalculoTempoReal();
+  }
+
+  compararPlaquetas(q, c) {
+    if (!q || !c) return false;
+    const s1 = String(q).trim().toLowerCase();
+    const s2 = String(c).trim().toLowerCase();
+    if (s1 === s2) return true;
+
+    // Normalização numérica retirando zeros à esquerda (ex: '01' === '1' === '001')
+    const num1 = s1.replace(/\D/g, '').replace(/^0+/, '') || '0';
+    const num2 = s2.replace(/\D/g, '').replace(/^0+/, '') || '0';
+    if (num1 && num2 && num1 === num2 && num1 !== '0') return true;
+
+    return false;
+  }
+
+  parsePlaquetasInput(inputStr) {
+    if (!inputStr) return [];
+    // Divide por vírgulas, ponto-e-vírgula ou quebras de linha
+    const tokens = inputStr.split(/[,;\n\r]+/).map(s => s.trim()).filter(Boolean);
+    const result = [];
+
+    tokens.forEach(tok => {
+      // Reconhece intervalos: "01 a 10", "1 até 10", "1 ate 10", "1-10", "01-10"
+      const rangeMatch = tok.match(/^(\d+)\s*(?:a|até|ate|-|\.\.)\s*(\d+)$/i);
+      if (rangeMatch) {
+        const rawStart = rangeMatch[1];
+        const rawEnd = rangeMatch[2];
+        const start = parseInt(rawStart, 10);
+        const end = parseInt(rawEnd, 10);
+        if (!isNaN(start) && !isNaN(end)) {
+          const min = Math.min(start, end);
+          const max = Math.max(start, end);
+          const padLen = (rawStart.startsWith('0') || rawEnd.startsWith('0')) ? Math.max(rawStart.length, rawEnd.length) : 0;
+          for (let i = min; i <= max; i++) {
+            result.push(padLen > 0 ? String(i).padStart(padLen, '0') : String(i));
+          }
+          return;
+        }
+      }
+
+      // Se houver números separados por espaço no mesmo token
+      const subParts = tok.split(/\s+/).filter(Boolean);
+      if (subParts.length > 1) {
+        subParts.forEach(sp => result.push(sp));
+      } else {
+        result.push(tok);
+      }
+    });
+
+    return [...new Set(result)];
+  }
+
+  async obterCatalogoTorasCubadas() {
+    const allRecords = await window.cubagemDB.getAll(false);
+
+    // Mapeia toras já despachadas em outros caminhões
+    const carregadasMap = new Map();
+    allRecords.forEach(rec => {
+      if (rec.tipo === 'caminhao' && (rec.modoCarga === 'toras' || (Array.isArray(rec.toras) && rec.toras.length > 0))) {
+        if (this.editingRecordId && rec.id === this.editingRecordId) return;
+        if (Array.isArray(rec.toras)) {
+          rec.toras.forEach(t => {
+            if (t && t.plaqueta) {
+              const numKey = String(t.plaqueta).trim().replace(/\D/g, '').replace(/^0+/, '') || String(t.plaqueta).trim().toLowerCase();
+              carregadasMap.set(numKey, {
+                placa: rec.placa || 'Sem Placa',
+                data: rec.data || '',
+                caminhaoId: rec.id
+              });
+            }
+          });
+        }
+      }
+    });
+
+    const catalogo = [];
+    const toraRecords = allRecords.filter(r => r.tipo === 'tora');
+    toraRecords.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    toraRecords.forEach(rec => {
+      if (Array.isArray(rec.toras) && rec.toras.length > 0) {
+        rec.toras.forEach((t, i) => {
+          if (!t) return;
+          const plaqStr = String(t.plaqueta || '').trim();
+          if (!plaqStr) return;
+          const numKey = plaqStr.replace(/\D/g, '').replace(/^0+/, '') || plaqStr.toLowerCase();
+          const infoCarga = carregadasMap.get(numKey);
+          catalogo.push({
+            id: `${rec.id}_${i}_${plaqStr}`,
+            registroOrigemId: rec.id,
+            registroData: rec.data || '',
+            plaqueta: plaqStr,
+            especie: t.especie || rec.especie || 'Nativa',
+            diametroPonta1_cm: Number(t.diametroPonta1_cm) || 0,
+            diametroPonta2_cm: Number(t.diametroPonta2_cm) || 0,
+            diametroMedio_cm: Number(t.diametroMedio_cm) || ((Number(t.diametroPonta1_cm) + Number(t.diametroPonta2_cm)) / 2) || 0,
+            comprimento: Number(t.comprimento) || 0,
+            volumeGeometrico: Number(t.volumeGeometrico) || 0,
+            statusCarga: infoCarga ? 'carregada' : 'disponivel',
+            carregadaEm: infoCarga ? infoCarga.placa : null
+          });
+        });
+      } else if (rec.diametroPonta1_cm || rec.volumeGeometrico || rec.plaqueta) {
+        const plaqStr = String(rec.plaqueta || '').trim();
+        if (plaqStr) {
+          const numKey = plaqStr.replace(/\D/g, '').replace(/^0+/, '') || plaqStr.toLowerCase();
+          const infoCarga = carregadasMap.get(numKey);
+          catalogo.push({
+            id: `${rec.id}_single_${plaqStr}`,
+            registroOrigemId: rec.id,
+            registroData: rec.data || '',
+            plaqueta: plaqStr,
+            especie: rec.especie || 'Nativa',
+            diametroPonta1_cm: Number(rec.diametroPonta1_cm) || 0,
+            diametroPonta2_cm: Number(rec.diametroPonta2_cm) || 0,
+            diametroMedio_cm: Number(rec.diametroMedio_cm) || ((Number(rec.diametroPonta1_cm) + Number(rec.diametroPonta2_cm)) / 2) || 0,
+            comprimento: Number(rec.comprimento) || 0,
+            volumeGeometrico: Number(rec.volumeGeometrico) || 0,
+            statusCarga: infoCarga ? 'carregada' : 'disponivel',
+            carregadaEm: infoCarga ? infoCarga.placa : null
+          });
+        }
+      }
+    });
+
+    this.catalogoTorasCache = catalogo;
+    return catalogo;
+  }
+
+  async puxarTorasPorPlaquetasDigitadas() {
+    const inputEl = document.getElementById('cubCamPlaquetasInput');
+    const rawVal = inputEl ? inputEl.value.trim() : '';
+    if (!rawVal) {
+      this.showToast('Digite as plaquetas das toras a carregar (ex: 01, 05, 09, 17, 45).', 'warning');
+      return;
+    }
+
+    const plaquetasBuscadas = this.parsePlaquetasInput(rawVal);
+    if (plaquetasBuscadas.length === 0) {
+      this.showToast('Nenhuma plaqueta válida identificada no texto digitado.', 'warning');
+      return;
+    }
+
+    await this.obterCatalogoTorasCubadas();
+    const catalogo = this.catalogoTorasCache;
+
+    if (catalogo.length === 0) {
+      this.showToast('Não há toras cubadas no banco local. Realize primeiro a cubagem de toras no pátio.', 'warning');
+      return;
+    }
+
+    const adicionadas = [];
+    const jaEstavam = [];
+    const naoEncontradas = [];
+
+    plaquetasBuscadas.forEach(plaqQuery => {
+      const candidatos = catalogo.filter(c => this.compararPlaquetas(plaqQuery, c.plaqueta));
+      if (candidatos.length === 0) {
+        naoEncontradas.push(plaqQuery);
+        return;
+      }
+
+      // Prioriza toras disponíveis no pátio
+      const tora = candidatos.find(c => c.statusCarga === 'disponivel') || candidatos[0];
+
+      const jaPresente = this.torasCaminhao.some(tc => this.compararPlaquetas(tora.plaqueta, tc.plaqueta));
+      if (jaPresente) {
+        jaEstavam.push(tora.plaqueta);
+        return;
+      }
+
+      const itemTora = {
+        numero: this.torasCaminhao.length + 1,
+        plaqueta: tora.plaqueta,
+        especie: tora.especie,
+        diametroPonta1_cm: tora.diametroPonta1_cm,
+        diametroPonta2_cm: tora.diametroPonta2_cm,
+        diametroPonta1_m: tora.diametroPonta1_cm / 100,
+        diametroPonta2_m: tora.diametroPonta2_cm / 100,
+        diametroMedio_cm: tora.diametroMedio_cm,
+        comprimento: tora.comprimento,
+        volumeGeometrico: tora.volumeGeometrico,
+        origemId: tora.registroOrigemId
+      };
+
+      this.torasCaminhao.push(itemTora);
+      adicionadas.push(tora.plaqueta);
+    });
+
+    this.torasCaminhao.forEach((t, i) => { t.numero = i + 1; });
+
+    if (inputEl) inputEl.value = '';
+    this.renderizarListaTorasCaminhao();
+    this.executarCalculoTempoReal();
+
+    const fb = document.getElementById('camToraFeedbackMsg');
+    if (fb) {
+      let fbHtml = '';
+      if (adicionadas.length > 0) {
+        fbHtml += `<div style="color: var(--sage); font-weight: 700;">✓ ${adicionadas.length} toras adicionadas à carga: Plaqueta(s) ${adicionadas.join(', ')}</div>`;
+      }
+      if (jaEstavam.length > 0) {
+        fbHtml += `<div style="color: var(--gold); margin-top: 2px;">ℹ️ Já estavam no caminhão: ${jaEstavam.join(', ')}</div>`;
+      }
+      if (naoEncontradas.length > 0) {
+        fbHtml += `<div style="color: var(--danger); margin-top: 2px;">⚠️ Não encontradas no pátio: Plaqueta(s) ${naoEncontradas.join(', ')}</div>`;
+      }
+      fb.innerHTML = fbHtml;
+      fb.style.display = 'block';
+    }
+
+    if (adicionadas.length > 0) {
+      const fNum = (n, d = 3) => window.CubagemCalculator.formatNumber(n, d);
+      const volTotal = this.torasCaminhao.reduce((acc, t) => acc + (t.volumeGeometrico || 0), 0);
+      this.showToast(`✓ ${adicionadas.length} toras puxadas com sucesso! Carga atual: ${fNum(volTotal)} m³`, 'success');
+    } else if (naoEncontradas.length > 0) {
+      this.showToast(`Atenção: plaqueta(s) ${naoEncontradas.join(', ')} não encontradas no banco.`, 'warning');
+    }
+  }
+
+  renderizarListaTorasCaminhao() {
+    const container = document.getElementById('camToraListContainer');
+    const headerCounter = document.getElementById('camToraHeaderCounter');
+    const countBadge = document.getElementById('camToraCountBadge');
+    const sumBox = document.getElementById('camToraTotalSummary');
+    const btnLimpar = document.getElementById('btnLimparTorasCam');
+    const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+
+    const totalToras = this.torasCaminhao.length;
+    if (headerCounter) headerCounter.textContent = `${totalToras} ${totalToras === 1 ? 'tora' : 'toras'}`;
+    if (countBadge) countBadge.textContent = `${totalToras} ${totalToras === 1 ? 'tora' : 'toras'}`;
+    if (btnLimpar) btnLimpar.style.display = totalToras > 0 ? 'inline-block' : 'none';
+
+    if (!container) return;
+
+    if (totalToras === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 18px 12px; color: var(--muted); font-size: 0.82rem; background: var(--surface-2); border-radius: 8px; border: 1px dashed var(--line);">
+          Nenhuma tora carregada ainda.<br>
+          Digite as plaquetas acima e clique em <strong>"🔍 Puxar Toras"</strong> ou toque em <strong>"📋 Escolher da Lista"</strong>.
+        </div>
+      `;
+      if (sumBox) sumBox.style.display = 'none';
+      return;
+    }
+
+    const lote = window.CubagemCalculator.calculateLoteToras(this.torasCaminhao);
+    if (sumBox) {
+      sumBox.style.display = 'block';
+      const volDisp = document.getElementById('camToraTotalVolDisplay');
+      const statsEl = document.getElementById('camToraDmCompStats');
+      const espEl = document.getElementById('camToraEspeciesResumo');
+
+      if (volDisp) volDisp.textContent = `${lote.display.volumeGeometrico} m³`;
+      if (statsEl) statsEl.textContent = `Dm Médio: ${lote.display.diametroMedio} cm • Comp. Médio: ${lote.display.comprimentoMedio} m`;
+
+      const especiesUnicas = [...new Set(this.torasCaminhao.map(t => t.especie).filter(Boolean))];
+      if (espEl) {
+        espEl.innerHTML = especiesUnicas.length > 0
+          ? `<strong>Espécies na Carga:</strong> ${especiesUnicas.join(', ')}`
+          : '<strong>Espécies na Carga:</strong> Madeira Nativa Diversa';
+      }
+    }
+
+    container.innerHTML = this.torasCaminhao.map((t, idx) => `
+      <div class="cam-tora-card">
+        <div class="cam-tora-card-left">
+          <span class="cam-tora-badge">#${t.plaqueta}</span>
+          <div class="cam-tora-info">
+            <div class="cam-tora-especie">${t.especie || 'Não informada'}</div>
+            <div class="cam-tora-medidas">
+              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="cam-tora-vol">${fNum(t.volumeGeometrico, 3)} m³</div>
+          <button type="button" class="cam-tora-btn-del" onclick="app.removerToraCaminhao(${idx})" title="Remover tora do caminhão">&times;</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  removerToraCaminhao(index) {
+    if (index >= 0 && index < this.torasCaminhao.length) {
+      const removida = this.torasCaminhao.splice(index, 1)[0];
+      this.torasCaminhao.forEach((t, i) => { t.numero = i + 1; });
+      this.renderizarListaTorasCaminhao();
+      this.executarCalculoTempoReal();
+      this.showToast(`Tora Plaqueta ${removida.plaqueta} removida do caminhão.`, 'warning');
+    }
+  }
+
+  limparTorasCaminhao() {
+    if (this.torasCaminhao.length === 0) return;
+    if (confirm('Deseja remover todas as toras carregadas neste caminhão?')) {
+      this.torasCaminhao = [];
+      this.renderizarListaTorasCaminhao();
+      this.executarCalculoTempoReal();
+      const fb = document.getElementById('camToraFeedbackMsg');
+      if (fb) fb.style.display = 'none';
+      this.showToast('Carga de toras do caminhão zerada.', 'info');
+    }
+  }
+
+  // =========================================================================
+  // MODAL: SELEÇÃO VISUAL DE TORAS CUBADAS DO BANCO
+  // =========================================================================
+
+  async abrirModalSelecionarTorasBanco() {
+    await this.obterCatalogoTorasCubadas();
+    if (this.catalogoTorasCache.length === 0) {
+      this.showToast('Não há toras cubadas cadastradas no aparelho.', 'warning');
+      return;
+    }
+
+    this.modalTorasSelecionadas = new Set(this.torasCaminhao.map(t => String(t.plaqueta).trim()));
+    this.filtroStatusTorasModal = 'todas';
+
+    const pillTodas = document.getElementById('modalPillTodas');
+    const pillDisp = document.getElementById('modalPillDisponiveis');
+    const pillCarreg = document.getElementById('modalPillCarregadas');
+    if (pillTodas) pillTodas.classList.add('active');
+    if (pillDisp) pillDisp.classList.remove('active');
+    if (pillCarreg) pillCarreg.classList.remove('active');
+
+    const searchInput = document.getElementById('filtroModalTorasInput');
+    if (searchInput) searchInput.value = '';
+
+    this.filtrarTorasModalCarregamento();
+    this.abrirModal('modalSelecionarTorasCaminhao');
+  }
+
+  setFiltroStatusTorasModal(status) {
+    this.filtroStatusTorasModal = status;
+    const pillTodas = document.getElementById('modalPillTodas');
+    const pillDisp = document.getElementById('modalPillDisponiveis');
+    const pillCarreg = document.getElementById('modalPillCarregadas');
+
+    if (pillTodas) pillTodas.classList.toggle('active', status === 'todas');
+    if (pillDisp) pillDisp.classList.toggle('active', status === 'disponiveis');
+    if (pillCarreg) pillCarreg.classList.toggle('active', status === 'carregadas');
+
+    this.filtrarTorasModalCarregamento();
+  }
+
+  filtrarTorasModalCarregamento() {
+    const searchInput = document.getElementById('filtroModalTorasInput');
+    const term = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const container = document.getElementById('listaTorasModalContainer');
+    if (!container) return;
+
+    let items = this.catalogoTorasCache;
+
+    if (this.filtroStatusTorasModal === 'disponiveis') {
+      items = items.filter(t => t.statusCarga === 'disponivel');
+    } else if (this.filtroStatusTorasModal === 'carregadas') {
+      items = items.filter(t => t.statusCarga === 'carregada');
+    }
+
+    if (term) {
+      items = items.filter(t => {
+        const p = String(t.plaqueta).toLowerCase();
+        const esp = String(t.especie).toLowerCase();
+        const d = String(t.registroData).toLowerCase();
+        return p.includes(term) || esp.includes(term) || d.includes(term);
+      });
+    }
+
+    const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 24px 12px; color: var(--muted); font-size: 0.85rem;">
+          Nenhuma tora encontrada para os filtros aplicados.
+        </div>
+      `;
+      this.atualizarResumoSelecaoModal();
+      return;
+    }
+
+    container.innerHTML = items.map(t => {
+      const plaqStr = String(t.plaqueta).trim();
+      const isSelected = this.modalTorasSelecionadas.has(plaqStr);
+      const isCarregada = t.statusCarga === 'carregada';
+
+      const tagStatus = isCarregada
+        ? `<span class="modal-tora-status-tag status-tag-carregada">🚚 Em ${t.carregadaEm || 'outro caminhão'}</span>`
+        : `<span class="modal-tora-status-tag status-tag-disponivel">🟢 No Pátio</span>`;
+
+      return `
+        <div class="modal-tora-item ${isSelected ? 'selected' : ''} ${isCarregada ? 'already-loaded' : ''}" onclick="app.toggleSelecaoToraModal('${this.escapeHtml(plaqStr)}')">
+          <input type="checkbox" class="modal-tora-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoToraModal('${this.escapeHtml(plaqStr)}')">
+          <div style="min-width: 0; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span class="cam-tora-badge" style="font-size: 0.78rem;">#${plaqStr}</span>
+              <span style="font-weight: 600; color: var(--ink); font-size: 0.82rem;">${t.especie}</span>
+              ${tagStatus}
+            </div>
+            <div style="font-size: 0.72rem; color: var(--muted); margin-top: 3px;">
+              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m • Medição: ${window.CubagemExcelExport.formatDateBR(t.registroData)}
+            </div>
+          </div>
+          <div style="text-align: right; font-family: var(--mono); font-weight: 700; color: var(--gold); font-size: 0.88rem; white-space: nowrap;">
+            ${fNum(t.volumeGeometrico, 3)} m³
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    this.atualizarResumoSelecaoModal();
+  }
+
+  toggleSelecaoToraModal(plaqueta) {
+    if (!plaqueta) return;
+    if (this.modalTorasSelecionadas.has(plaqueta)) {
+      this.modalTorasSelecionadas.delete(plaqueta);
+    } else {
+      this.modalTorasSelecionadas.add(plaqueta);
+    }
+    this.filtrarTorasModalCarregamento();
+  }
+
+  marcarTodasTorasModal(marcar) {
+    const searchInput = document.getElementById('filtroModalTorasInput');
+    const term = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+    let items = this.catalogoTorasCache;
+    if (this.filtroStatusTorasModal === 'disponiveis') {
+      items = items.filter(t => t.statusCarga === 'disponivel');
+    } else if (this.filtroStatusTorasModal === 'carregadas') {
+      items = items.filter(t => t.statusCarga === 'carregada');
+    }
+    if (term) {
+      items = items.filter(t => {
+        const p = String(t.plaqueta).toLowerCase();
+        const esp = String(t.especie).toLowerCase();
+        return p.includes(term) || esp.includes(term);
+      });
+    }
+
+    items.forEach(t => {
+      const p = String(t.plaqueta).trim();
+      if (marcar) {
+        this.modalTorasSelecionadas.add(p);
+      } else {
+        this.modalTorasSelecionadas.delete(p);
+      }
+    });
+
+    this.filtrarTorasModalCarregamento();
+  }
+
+  atualizarResumoSelecaoModal() {
+    const resumoEl = document.getElementById('modalTorasResumoSelecao');
+    const btnConfirm = document.getElementById('btnConfirmarTorasModal');
+    const count = this.modalTorasSelecionadas.size;
+
+    let volTotal = 0;
+    this.modalTorasSelecionadas.forEach(p => {
+      const t = this.catalogoTorasCache.find(c => this.compararPlaquetas(p, c.plaqueta));
+      if (t) volTotal += (Number(t.volumeGeometrico) || 0);
+    });
+
+    const fNum = (n, d = 3) => window.CubagemCalculator.formatNumber(n, d);
+    if (resumoEl) {
+      resumoEl.textContent = `${count} ${count === 1 ? 'tora selecionada' : 'toras selecionadas'} • ${fNum(volTotal)} m³`;
+    }
+    if (btnConfirm) {
+      btnConfirm.textContent = `Confirmar Seleção (${count})`;
+    }
+  }
+
+  confirmarSelecaoTorasModal() {
+    const selecionadas = Array.from(this.modalTorasSelecionadas);
+    const novasToras = [];
+
+    selecionadas.forEach(p => {
+      const existing = this.torasCaminhao.find(tc => this.compararPlaquetas(p, tc.plaqueta));
+      if (existing) {
+        novasToras.push(existing);
+      } else {
+        const t = this.catalogoTorasCache.find(c => this.compararPlaquetas(p, c.plaqueta));
+        if (t) {
+          novasToras.push({
+            numero: novasToras.length + 1,
+            plaqueta: t.plaqueta,
+            especie: t.especie,
+            diametroPonta1_cm: t.diametroPonta1_cm,
+            diametroPonta2_cm: t.diametroPonta2_cm,
+            diametroPonta1_m: t.diametroPonta1_cm / 100,
+            diametroPonta2_m: t.diametroPonta2_cm / 100,
+            diametroMedio_cm: t.diametroMedio_cm,
+            comprimento: t.comprimento,
+            volumeGeometrico: t.volumeGeometrico,
+            origemId: t.registroOrigemId
+          });
+        }
+      }
+    });
+
+    novasToras.forEach((t, i) => { t.numero = i + 1; });
+    this.torasCaminhao = novasToras;
+
+    this.fecharModal('modalSelecionarTorasCaminhao');
+    this.renderizarListaTorasCaminhao();
+    this.executarCalculoTempoReal();
+
+    const fNum = (n, d = 3) => window.CubagemCalculator.formatNumber(n, d);
+    const vTot = this.torasCaminhao.reduce((acc, t) => acc + (t.volumeGeometrico || 0), 0);
+    this.showToast(`✓ Carga do caminhão atualizada com ${this.torasCaminhao.length} toras (${fNum(vTot)} m³).`, 'success');
   }
 
 
@@ -3463,6 +4160,124 @@ class CubagemApp {
 
     // ABA: MEDIÇÃO TÉCNICA (Planilha Excel Principal)
     if (tipo === 'caminhao') {
+      const isToras = item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0);
+      if (isToras) {
+        const listaToras = Array.isArray(item.toras) && item.toras.length > 0 ? item.toras : [];
+        const totalToras = listaToras.length;
+        let somaDm = 0;
+        let somaComp = 0;
+        let somaVol = 0;
+
+        const rowsHtml = listaToras.map((t, idx) => {
+          const rowNum = 6 + idx;
+          const d1 = Number(t.diametroPonta1_cm) || 0;
+          const d2 = Number(t.diametroPonta2_cm) || 0;
+          const dm = Number(t.diametroMedio_cm) || ((d1 + d2) / 2);
+          const comp = Number(t.comprimento) || 0;
+          const vol = Number(t.volumeGeometrico) || 0;
+
+          const g1 = Math.PI * Math.pow(d1 / 200, 2);
+          const g2 = Math.PI * Math.pow(d2 / 200, 2);
+
+          somaDm += dm;
+          somaComp += comp;
+          somaVol += vol;
+
+          return `
+            <tr>
+              <td class="excel-row-num">${rowNum}</td>
+              <td class="excel-cell-center font-mono">${idx + 1}</td>
+              <td class="excel-cell-center font-mono" style="font-weight: 700;">${t.plaqueta || 'S/P'}</td>
+              <td class="excel-cell-text" style="font-style: italic;">${t.especie || item.especie || '-'}</td>
+              <td class="excel-cell-num">${fNum(d1, 1)}</td>
+              <td class="excel-cell-num">${fNum(d2, 1)}</td>
+              <td class="excel-cell-num font-mono" style="font-weight: 600;">${fNum(dm, 1)}</td>
+              <td class="excel-cell-num">${fNum(comp, 2)}</td>
+              <td class="excel-cell-num" style="color: #6B7280;">${fNum(g1, 4)}</td>
+              <td class="excel-cell-num" style="color: #6B7280;">${fNum(g2, 4)}</td>
+              <td class="excel-cell-num" style="font-weight: 700; color: #0E2515;">${fNum(vol, 3)}</td>
+            </tr>
+          `;
+        }).join('');
+
+        const dmMedio = totalToras > 0 ? (somaDm / totalToras) : 0;
+        const compMedio = totalToras > 0 ? (somaComp / totalToras) : 0;
+        const totalVolFinal = somaVol > 0 ? somaVol : (Number(item.volumeGeometrico) || 0);
+
+        return `
+          <table class="excel-grid-table">
+            <thead>
+              <tr>
+                <th class="excel-row-num"></th>
+                <th class="excel-col-head" style="width: 35px;">A</th>
+                <th class="excel-col-head" style="width: 85px;">B</th>
+                <th class="excel-col-head" style="width: 150px;">C</th>
+                <th class="excel-col-head" style="width: 70px;">D</th>
+                <th class="excel-col-head" style="width: 70px;">E</th>
+                <th class="excel-col-head" style="width: 70px;">F</th>
+                <th class="excel-col-head" style="width: 80px;">G</th>
+                <th class="excel-col-head" style="width: 85px;">H</th>
+                <th class="excel-col-head" style="width: 85px;">I</th>
+                <th class="excel-col-head" style="width: 105px;">J</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="excel-row-num">1</td>
+                <td colspan="10" class="excel-brand-title-cell">
+                  BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — ROMANEIO DE TRANSPORTE DE TORAS (CAMINHÃO)
+                </td>
+              </tr>
+              <tr>
+                <td class="excel-row-num">2</td>
+                <td colspan="10" class="excel-brand-sub-cell">
+                  Planilha Oficial de Carga por Toras Rastreáveis (Fórmula de Smalian) &bull; Placa: ${item.placa || 'SEM PLACA'}
+                </td>
+              </tr>
+              <tr>
+                <td class="excel-row-num">3</td>
+                <td colspan="10" class="excel-meta-cell">
+                  <strong>Data:</strong> ${dataBR} &bull; 
+                  <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
+                  <strong>Caminhão:</strong> ${item.placa || 'Sem placa'} &bull; 
+                  <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
+                  <strong>Resp:</strong> ${item.responsavel || '-'}
+                </td>
+              </tr>
+              <tr>
+                <td class="excel-row-num">4</td>
+                <td colspan="10" style="background: #FAFAFA; height: 6px; padding: 0;"></td>
+              </tr>
+              <tr>
+                <td class="excel-row-num">5</td>
+                <th class="excel-header-col">Nº</th>
+                <th class="excel-header-col">Plaqueta</th>
+                <th class="excel-header-col">Espécie</th>
+                <th class="excel-header-col">D1 (cm)</th>
+                <th class="excel-header-col">D2 (cm)</th>
+                <th class="excel-header-col">Dm (cm)</th>
+                <th class="excel-header-col">Comp. (m)</th>
+                <th class="excel-header-col">g1 (m²)</th>
+                <th class="excel-header-col">g2 (m²)</th>
+                <th class="excel-header-col">Vol. Smalian (m³)</th>
+              </tr>
+              ${rowsHtml}
+              <tr class="excel-total-row">
+                <td class="excel-row-num">${6 + listaToras.length}</td>
+                <td colspan="3" class="excel-cell-text" style="font-weight: 700;">TOTAL DA CARGA DO CAMINHÃO (${totalToras} toras)</td>
+                <td class="excel-cell-center" style="font-size: 0.74rem;">-</td>
+                <td class="excel-cell-center" style="font-size: 0.74rem;">-</td>
+                <td class="excel-cell-num" style="font-weight: 700;">${fNum(dmMedio, 1)} cm</td>
+                <td class="excel-cell-num" style="font-weight: 700;">${fNum(compMedio, 2)} m</td>
+                <td class="excel-cell-center">-</td>
+                <td class="excel-cell-center">-</td>
+                <td class="excel-cell-num" style="font-size: 0.96rem; font-weight: 800; color: #0E2515;">${fNum(totalVolFinal, 3)} m³</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+      }
+
       const leArray = Array.isArray(item.alturasLE) ? item.alturasLE : [];
       const ldArray = Array.isArray(item.alturasLD) ? item.alturasLD : [];
       const leStr = leArray.length > 0 ? leArray.map(v => fNum(v)).join(' | ') : '-';

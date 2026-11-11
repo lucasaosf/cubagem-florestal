@@ -9,12 +9,12 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E2515">
   <meta name="background-color" content="#0E2515">
   <meta name="description" content="Aplicativo florestal para cubagem de caminhões, pilhas e toras roliças. Desenvolvido por Lucas Aøsf para BIOKURI Pesquisa e Soluções Ambientais.">
-  <link rel="manifest" href="manifest.webmanifest?v=2.8.0">
-  <link rel="icon" href="icons/favicon.png?v=2.8.0" type="image/png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.8.0">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.8.0">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.8.0">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.8.0">
+  <link rel="manifest" href="manifest.webmanifest?v=2.8.1">
+  <link rel="icon" href="icons/favicon.png?v=2.8.1" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.8.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.8.1">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.8.1">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.8.1">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
@@ -193,7 +193,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <button type="button" class="cover-ver-pill" onclick="app.verificarOuAbrirPopUpAtualizacao()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para verificar atualizações">Versão 2.8.0 🔄</button>
+            <button type="button" class="cover-ver-pill" onclick="app.verificarOuAbrirPopUpAtualizacao()" style="cursor: pointer; background: transparent; border: 1px solid var(--gold); color: var(--gold);" title="Tocar para verificar atualizações">Versão 2.8.1 🔄</button>
             <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
@@ -324,42 +324,120 @@
               </div>
             </div>
 
-            <p class="section-desc" style="margin-bottom: 12px;">Adicione ou remova medições conforme a variação de alturas da carga.</p>
-
-            <div class="measure-box-container">
-              <div class="measure-box-header">
-                <span class="measure-box-title">
-                  <span style="color: var(--sage);">✦</span> LADO ESQUERDO (LE)
-                </span>
-                <span class="helper" id="countLELabel">3 alturas</span>
-              </div>
-              <div class="measure-dynamic-grid" id="gridAlturasLE"></div>
-              <div class="measure-btn-bar">
-                <button type="button" class="btn-action-small" onclick="app.adicionarAltura('LE')">+ Altura LE</button>
+            <!-- Modalidade de Carga do Caminhão (Geométrica vs Toras Rastreáveis) -->
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label">Tipo de Carga / Cubagem do Caminhão <span class="required">*</span></label>
+              <div class="toggle-pills-row">
+                <button type="button" class="btn-toggle-pill active" id="btnModoCargaCamGeometrica" onclick="app.setModoCargaCaminhao('geometrica')">
+                  📐 Carga Geométrica (Alturas LE / LD)
+                </button>
+                <button type="button" class="btn-toggle-pill" id="btnModoCargaCamToras" onclick="app.setModoCargaCaminhao('toras')">
+                  🌲 Toras Rastreáveis (por Plaqueta)
+                </button>
               </div>
             </div>
 
-            <div class="measure-box-container">
-              <div class="measure-box-header">
-                <span class="measure-box-title">
-                  <span style="color: var(--gold);">✦</span> LADO DIREITO (LD)
-                </span>
-                <span class="helper" id="countLDLabel">3 alturas</span>
+            <!-- MODO A: CARGA GEOMÉTRICA (LE/LD + COMPRIMENTO/LARGURA) -->
+            <div id="containerCargaGeometricaCam">
+              <p class="section-desc" style="margin-bottom: 12px;">Adicione ou remova medições conforme a variação de alturas da carga.</p>
+
+              <div class="measure-box-container">
+                <div class="measure-box-header">
+                  <span class="measure-box-title">
+                    <span style="color: var(--sage);">✦</span> LADO ESQUERDO (LE)
+                  </span>
+                  <span class="helper" id="countLELabel">3 alturas</span>
+                </div>
+                <div class="measure-dynamic-grid" id="gridAlturasLE"></div>
+                <div class="measure-btn-bar">
+                  <button type="button" class="btn-action-small" onclick="app.adicionarAltura('LE')">+ Altura LE</button>
+                </div>
               </div>
-              <div class="measure-dynamic-grid" id="gridAlturasLD"></div>
-              <div class="measure-btn-bar">
-                <button type="button" class="btn-action-small" onclick="app.adicionarAltura('LD')">+ Altura LD</button>
+
+              <div class="measure-box-container">
+                <div class="measure-box-header">
+                  <span class="measure-box-title">
+                    <span style="color: var(--gold);">✦</span> LADO DIREITO (LD)
+                  </span>
+                  <span class="helper" id="countLDLabel">3 alturas</span>
+                </div>
+                <div class="measure-dynamic-grid" id="gridAlturasLD"></div>
+                <div class="measure-btn-bar">
+                  <button type="button" class="btn-action-small" onclick="app.adicionarAltura('LD')">+ Altura LD</button>
+                </div>
+              </div>
+
+              <div class="form-row" style="margin-top: 10px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="cubComprimentoCam">Comprimento da Carga (m) <span class="required">*</span></label>
+                  <input type="text" inputmode="decimal" id="cubComprimentoCam" class="form-control calc-trigger" placeholder="Ex: 6,35">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="cubLarguraCam">Largura da Carga (m) <span class="required">*</span></label>
+                  <input type="text" inputmode="decimal" id="cubLarguraCam" class="form-control calc-trigger" placeholder="Ex: 2,55">
+                </div>
               </div>
             </div>
 
-            <div class="form-row" style="margin-top: 10px;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" for="cubComprimentoCam">Comprimento da Carga (m) <span class="required">*</span></label>
-                <input type="text" inputmode="decimal" id="cubComprimentoCam" class="form-control calc-trigger" placeholder="Ex: 6,35">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" for="cubLarguraCam">Largura da Carga (m) <span class="required">*</span></label>
-                <input type="text" inputmode="decimal" id="cubLarguraCam" class="form-control calc-trigger" placeholder="Ex: 2,55">
+            <!-- MODO B: CARGA POR TORAS RASTREÁVEIS (PUXAR POR PLAQUETA) -->
+            <div id="containerCargaTorasCam" style="display: none;">
+              <p class="section-desc" style="margin-bottom: 12px;">
+                Digite os números das plaquetas das toras carregadas (já cubadas) para puxar automaticamente as medidas e calcular o volume total do caminhão.
+              </p>
+
+              <div class="measure-box-container" style="background: var(--surface-1); border-color: var(--gold);">
+                <div class="form-group" style="margin-bottom: 10px;">
+                  <label class="form-label" for="cubCamPlaquetasInput">
+                    Plaquetas das Toras Carregadas
+                    <span class="helper">(Ex: 01, 05, 09, 17, 45 ou 1 a 10)</span>
+                  </label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="text" id="cubCamPlaquetasInput" class="form-control" placeholder="Digite ex: 01, 05, 09, 17, 45" style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); app.puxarTorasPorPlaquetasDigitadas();}">
+                    <button type="button" class="btn btn-primary" onclick="app.puxarTorasPorPlaquetasDigitadas()" style="white-space: nowrap; padding: 0 16px;">
+                      🔍 Puxar Toras
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+                  <button type="button" class="btn-action-small" onclick="app.abrirModalSelecionarTorasBanco()" style="background: var(--surface-2); border-color: var(--gold); color: var(--gold); font-weight: 700;">
+                    📋 Escolher da Lista de Toras Cubadas
+                  </button>
+                  <button type="button" class="btn-action-small" id="btnLimparTorasCam" onclick="app.limparTorasCaminhao()" style="display: none; color: var(--danger); border-color: var(--danger);">
+                    🗑️ Limpar Toras
+                  </button>
+                </div>
+
+                <div id="camToraFeedbackMsg" style="display: none; margin-bottom: 10px; font-size: 0.85rem; border-radius: 8px; padding: 8px 12px;"></div>
+
+                <!-- Resumo em Destaque da Carga de Toras -->
+                <div id="camToraTotalSummary" style="display: none; background: linear-gradient(135deg, rgba(14,37,21,0.9), rgba(23,58,30,0.9)); border: 1.5px solid var(--gold); border-radius: 10px; padding: 14px; margin-bottom: 14px; color: var(--creme);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                      <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold); font-weight: 700;">Volume Total das Toras Carregadas</span>
+                      <div id="camToraTotalVolDisplay" style="font-size: 1.5rem; font-weight: 800; color: var(--creme); font-family: var(--display);">0,000 m³</div>
+                    </div>
+                    <div style="text-align: right;">
+                      <span class="badge-plaqueta" id="camToraCountBadge" style="font-size: 0.85rem; padding: 4px 10px; background: var(--gold); color: #0E2515; font-weight: 800; border-radius: 20px;">0 toras</span>
+                      <div id="camToraDmCompStats" style="font-size: 0.78rem; color: var(--creme-soft); margin-top: 4px;">Dm: 0,0 cm &bull; Comp: 0,00 m</div>
+                    </div>
+                  </div>
+                  <div id="camToraEspeciesResumo" style="margin-top: 8px; font-size: 0.8rem; color: var(--gold-soft); border-top: 1px solid rgba(168,133,82,0.3); padding-top: 6px;"></div>
+                </div>
+
+                <!-- Lista de Toras Carregadas -->
+                <div class="measure-box-header" style="margin-bottom: 6px;">
+                  <span class="measure-box-title" style="font-size: 0.92rem;">
+                    <span style="color: var(--gold);">🌲</span> Toras Carregadas no Caminhão
+                  </span>
+                  <span class="helper" id="camToraHeaderCounter">0 toras</span>
+                </div>
+                <div id="camToraListContainer" style="display: flex; flex-direction: column; gap: 6px; max-height: 380px; overflow-y: auto;">
+                  <div style="text-align: center; padding: 18px 12px; color: var(--muted); font-size: 0.82rem; background: var(--surface-2); border-radius: 8px; border: 1px dashed var(--line);">
+                    Nenhuma tora carregada ainda.<br>
+                    Digite as plaquetas acima e clique em <strong>"🔍 Puxar Toras"</strong> ou toque em <strong>"📋 Escolher da Lista"</strong>.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1361,6 +1439,59 @@
   </div>
 
   <!-- ========================================================================= -->
+  <!-- MODAL: SELECIONAR TORAS CUBADAS PARA CARGA DO CAMINHÃO                   -->
+  <!-- ========================================================================= -->
+  <div id="modalSelecionarTorasCaminhao" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalSelecionarTorasCaminhao')">
+    <div class="modal-dialog modal-dialog-toras" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span>🌲</span> Escolher Toras Cubadas
+          </h3>
+          <p class="modal-subtitle" style="font-size: 0.8rem; color: var(--muted); margin-top: 2px;">
+            Selecione as toras medidas no pátio para carregar no caminhão.
+          </p>
+        </div>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalSelecionarTorasCaminhao')" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 14px 18px;">
+        <div class="modal-toras-filter-bar">
+          <div style="position: relative;">
+            <input type="text" id="filtroModalTorasInput" class="form-control" placeholder="Buscar por plaqueta, espécie ou data..." oninput="app.filtrarTorasModalCarregamento()" style="padding-left: 34px;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted);">🔍</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div class="modal-toras-tabs">
+              <button type="button" class="modal-tora-pill active" id="modalPillTodas" onclick="app.setFiltroStatusTorasModal('todas')">Todas as Toras</button>
+              <button type="button" class="modal-tora-pill" id="modalPillDisponiveis" onclick="app.setFiltroStatusTorasModal('disponiveis')">🟢 No Pátio (Disponíveis)</button>
+              <button type="button" class="modal-tora-pill" id="modalPillCarregadas" onclick="app.setFiltroStatusTorasModal('carregadas')">🚚 Já Carregadas</button>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-action-small" onclick="app.marcarTodasTorasModal(true)" style="font-size: 0.75rem;">Marcar Visíveis</button>
+              <button type="button" class="btn-action-small" onclick="app.marcarTodasTorasModal(false)" style="font-size: 0.75rem;">Desmarcar Todas</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="listaTorasModalContainer" class="modal-tora-list">
+          <!-- Lista de toras preenchida dinamicamente -->
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div id="modalTorasResumoSelecao" style="font-size: 0.85rem; font-weight: 600; color: var(--ink);">
+          0 toras selecionadas • 0,000 m³
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="app.fecharModal('modalSelecionarTorasCaminhao')">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmarTorasModal" onclick="app.confirmarSelecaoTorasModal()">
+            Confirmar Seleção
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
   <!-- MODAL: POP-UP DE ATUALIZAÇÃO DA VERSÃO DO APLICATIVO                      -->
   <!-- ========================================================================= -->
   <div id="modalAtualizacaoApp" class="modal-overlay modal-update-overlay" onclick="if(event.target===this) app.fecharModal('modalAtualizacaoApp')">
@@ -1408,10 +1539,10 @@
   <script src="vendor/exceljs.min.js"></script>
   <script src="js/db.js"></script>
   <script src="js/calculator.js"></script>
-  <script src="js/excel-export.js?v=2.8.0"></script>
-  <script src="js/auth.js?v=2.8.0"></script>
+  <script src="js/excel-export.js?v=2.8.1"></script>
+  <script src="js/auth.js?v=2.8.1"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js?v=2.8.0"></script>
+  <script src="js/app.js?v=2.8.1"></script>
 </body>
 </html>

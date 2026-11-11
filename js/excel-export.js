@@ -334,16 +334,26 @@ class CubagemExcelExport {
         row.height = 19;
         const bg = idx % 2 === 1 ? C.creme2 : C.creme;
 
-        const leStr = Array.isArray(item.alturasLE) ? item.alturasLE.map(v => Number(v).toFixed(2)).join('; ') : (item.le1 ? `${Number(item.le1).toFixed(2)}; ${Number(item.le2).toFixed(2)}; ${Number(item.le3).toFixed(2)}` : '');
-        const ldStr = Array.isArray(item.alturasLD) ? item.alturasLD.map(v => Number(v).toFixed(2)).join('; ') : (item.ld1 ? `${Number(item.ld1).toFixed(2)}; ${Number(item.ld2).toFixed(2)}; ${Number(item.ld3).toFixed(2)}` : '');
+        const isToras = item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0);
+        const nToras = item.totalToras || (item.toras ? item.toras.length : 0);
+        const leStr = isToras
+          ? `Toras: ${nToras} un`
+          : (Array.isArray(item.alturasLE) ? item.alturasLE.map(v => Number(v).toFixed(2)).join('; ') : (item.le1 ? `${Number(item.le1).toFixed(2)}; ${Number(item.le2).toFixed(2)}; ${Number(item.le3).toFixed(2)}` : ''));
+        const ldStr = isToras
+          ? 'Fórmula Smalian'
+          : (Array.isArray(item.alturasLD) ? item.alturasLD.map(v => Number(v).toFixed(2)).join('; ') : (item.ld1 ? `${Number(item.ld1).toFixed(2)}; ${Number(item.ld2).toFixed(2)}; ${Number(item.ld3).toFixed(2)}` : ''));
+        const somaVal = isToras ? nToras : (Number(item.somaAlturas) || 0);
+        const hmVal = isToras ? ((Number(item.diametroMedio_cm) || 0) / 100) : (Number(item.alturaMedia) || 0);
+        const obsFinal = isToras && item.plaqueta ? `${item.plaqueta}${item.observacoes ? ' • ' + item.observacoes : ''}` : (item.observacoes || '');
+
         const origBase = item.origemMadeira || 'Nativa';
         const origFinal = item.especie ? `${origBase} (${item.especie})` : origBase;
 
         const vals = [
           idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.rodovia, item.km || '', item.utm || '',
-          item.responsavel, item.placa, origFinal, leStr, ldStr, Number(item.somaAlturas) || 0,
-          Number(item.alturaMedia) || 0, Number(item.comprimento) || 0, Number(item.largura) || 0,
-          Number(item.volumeGeometrico) || 0, item.observacoes || ''
+          item.responsavel, item.placa, origFinal, leStr, ldStr, somaVal,
+          hmVal, Number(item.comprimento) || 0, Number(item.largura) || 0,
+          Number(item.volumeGeometrico) || 0, obsFinal
         ];
 
         vals.forEach((v, vi) => {
@@ -499,7 +509,10 @@ class CubagemExcelExport {
     // =========================================================================
     // ABA 4: TORAS ROLIÇAS (Smalian)
     // =========================================================================
-    if (toras.length > 0) {
+    const caminhoesComToras = caminhoes.filter(c => c.modoCarga === 'toras' || (Array.isArray(c.toras) && c.toras.length > 0));
+    const todasTorasParaAba = [...toras, ...caminhoesComToras];
+
+    if (todasTorasParaAba.length > 0) {
       const wsTor = workbook.addWorksheet('Toras Roliças', { views: [{ showGridLines: true }] });
       wsTor.columns = [
         { key: 'num', width: 6 },
@@ -548,7 +561,7 @@ class CubagemExcelExport {
       let rTorIdx = 3;
       let totalTorasLinhas = 0;
 
-      toras.forEach((pileItem) => {
+      todasTorasParaAba.forEach((pileItem) => {
         const torasIndiv = (pileItem.toras && Array.isArray(pileItem.toras) && pileItem.toras.length > 0)
           ? pileItem.toras
           : [pileItem];
@@ -567,9 +580,13 @@ class CubagemExcelExport {
           subtotalVolPilha += vVol;
           subtotalDmPilha += vDm;
 
+          const identItem = pileItem.tipo === 'caminhao'
+            ? `Caminhão ${pileItem.placa || 'S/P'}`
+            : (pileItem.identificacao || pileItem.id);
+
           const vals = [
             totalTorasLinhas,
-            pileItem.identificacao || pileItem.id,
+            identItem,
             this.formatDateBR(pileItem.data),
             pileItem.horario,
             item.plaqueta || 'S/P',
@@ -615,7 +632,9 @@ class CubagemExcelExport {
           // Mescla colunas 1 a 10 para o título do subtotal
           wsTor.mergeCells(`A${rTorIdx}:J${rTorIdx}`);
           const cTit = subRow.getCell(1);
-          cTit.value = `SUBTOTAL DA PILHA (${torasIndiv.length} toras) — ${pileItem.identificacao || pileItem.id}`;
+          cTit.value = pileItem.tipo === 'caminhao'
+            ? `SUBTOTAL DO CAMINHÃO (${torasIndiv.length} toras) — ${pileItem.placa || pileItem.id}`
+            : `SUBTOTAL DA PILHA (${torasIndiv.length} toras) — ${pileItem.identificacao || pileItem.id}`;
           cTit.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
           cTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
           cTit.alignment = { horizontal: 'right', vertical: 'middle' };
