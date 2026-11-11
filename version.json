@@ -1,12 +1,11 @@
 {
-  "v": "2.9.0",
-  "nome": "2.9.0",
+  "v": "2.9.1",
+  "nome": "2.9.1",
   "data": "2026-11-11",
   "novidades": [
-    "Projetos e Frentes Compartilhadas em Equipe: integre o trabalho de campo (ex: Marco, Norberto e Lucas vinculados ao projeto BR-153)",
-    "Sincronização em tempo real entre aparelhos: toras cubadas por um integrante ficam disponíveis imediatamente para os demais registrarem a retirada",
-    "Retirada do Material (Caminhão): digite as plaquetas das toras cubadas por qualquer membro da equipe para puxar os dados e computar o volume da carga automaticamente",
-    "Gestão dinâmica de projetos na barra superior com seletor rápido, projetos recentes e status de sincronização online/offline",
-    "Atualização de nomenclatura oficial em todo o sistema: 'Retirada do Material (Caminhão)' na interface, histórico, relatórios e planilhas Excel"
+    "Melhoria de Contraste e Legibilidade: botão '+ Adicionar Esta Tora à Pilha' com letra branca e dourada de alto contraste",
+    "Definição oficial da variável de cor creme em todos os modos de tema",
+    "Projetos e Frentes Compartilhadas em Equipe com sincronização em tempo real",
+    "Retirada do Material (Caminhão) puxando toras cubadas no pátio por plaqueta"
   ]
 }
