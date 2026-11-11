@@ -303,6 +303,52 @@ button.header-chip:active {
   color: var(--ink);
 }
 
+.header-chip.header-chip-project {
+  border-color: var(--gold);
+  color: var(--ink);
+  font-weight: 700;
+  background: rgba(150, 120, 74, 0.15);
+  cursor: pointer;
+  max-width: 155px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-chip.header-chip-project:hover {
+  background: var(--gold);
+  color: #0E2515;
+}
+
+.recent-project-pill {
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.recent-project-pill:hover {
+  border-color: var(--gold);
+  background: rgba(150, 120, 74, 0.15);
+}
+
+.recent-project-pill.active {
+  background: var(--forest);
+  border-color: var(--gold);
+  color: #FFFFFF;
+}
+
+:root:not([data-theme="light"]) .recent-project-pill.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #0E2515;
+}
+
 .dot-status {
   width: 7px;
   height: 7px;

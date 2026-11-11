@@ -11,6 +11,8 @@ class CubagemAuth {
     this.authPromise = null;
     this.syncing = false;
     this.FBV = '10.13.2';
+    this.unsubscribeProject = null;
+    this.projetoVinculado = null;
   }
 
   /**
@@ -112,10 +114,16 @@ class CubagemAuth {
 
         if (user) {
           console.log('[Auth] Usuário autenticado:', user.email);
-          // Sincronização automática em segundo plano
+          // Sincronização automática em segundo plano pessoal e do projeto
           this.syncAllWithCloud(true);
+          const projAtual = (window.app && window.app.projetoAtivo) || localStorage.getItem('cubagem.projeto_ativo') || 'BR-153';
+          this.vincularProjeto(projAtual);
         } else {
           console.log('[Auth] Usuário não conectado.');
+          if (typeof this.unsubscribeProject === 'function') {
+            this.unsubscribeProject();
+            this.unsubscribeProject = null;
+          }
         }
       });
     } catch (err) {
@@ -516,7 +524,7 @@ class CubagemAuth {
       const localMap = new Map();
       localRecords.forEach((r) => localMap.set(r.id, r));
 
-      // 2. Obter registros da nuvem
+      // 2. Obter registros da nuvem do usuário
       const snapshot = await userCol.get();
       const cloudMap = new Map();
       snapshot.forEach((doc) => {
@@ -550,6 +558,10 @@ class CubagemAuth {
         }
       }
 
+      // 5. Sincroniza também com o projeto ativo da equipe
+      const projAtual = (window.app && window.app.projetoAtivo) || localStorage.getItem('cubagem.projeto_ativo') || 'BR-153';
+      await this.syncProjectWithCloud(projAtual, true);
+
       await window.app.atualizarDashboard();
 
       if (!silencioso) {
@@ -565,6 +577,147 @@ class CubagemAuth {
     }
   }
 
+  // =========================================================================
+  // GESTÃO E SINCRONIZAÇÃO DE PROJETOS COMPARTILHADOS EM EQUIPE
+  // =========================================================================
+
+  normalizarProjetoId(nome) {
+    if (!nome) return 'br_153';
+    return String(nome).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'br_153';
+  }
+
+  async vincularProjeto(nomeProjeto) {
+    const nome = (nomeProjeto || 'BR-153').trim();
+    this.projetoVinculado = nome;
+    const projId = this.normalizarProjetoId(nome);
+
+    if (typeof this.unsubscribeProject === 'function') {
+      try { this.unsubscribeProject(); } catch (e) {}
+      this.unsubscribeProject = null;
+    }
+
+    if (!this.user || !navigator.onLine) return;
+
+    try {
+      const fb = await this.loadFirebase();
+      if (!fb) return;
+      const firestore = fb.firestore();
+
+      // Inicia escuta em tempo real para o projeto compartilhado
+      this.unsubscribeProject = firestore
+        .collection('projects')
+        .doc(projId)
+        .collection('cubagens')
+        .onSnapshot(async (snapshot) => {
+          let novos = 0;
+          for (const change of snapshot.docChanges()) {
+            const data = change.doc.data();
+            if (change.type === 'added' || change.type === 'modified') {
+              const localRec = await window.cubagemDB.get(data.id);
+              const cloudTs = data.updatedAt || data.timestamp || 0;
+              const localTs = localRec ? (localRec.updatedAt || localRec.timestamp || 0) : 0;
+              if (!localRec || cloudTs > localTs) {
+                await window.cubagemDB.add(data).catch(() => window.cubagemDB.update(data));
+                novos++;
+              }
+            }
+          }
+          if (novos > 0 && window.app) {
+            console.log(`[Cloud] ${novos} medições sincronizadas no projeto "${nome}"!`);
+            await window.app.atualizarDashboard();
+            if (window.app.currentView === 'historico') {
+              await window.app.carregarHistorico();
+            }
+            window.app.showToast(`📥 ${novos} medições da equipe recebidas no projeto ${nome}!`, 'info');
+          }
+        }, (err) => {
+          console.warn('[Cloud] Erro no listener em tempo real do projeto:', err);
+        });
+
+      // Executa sincronização completa do projeto em segundo plano
+      await this.syncProjectWithCloud(nome, true);
+    } catch (err) {
+      console.warn('[Cloud] Erro ao vincular projeto:', err);
+    }
+  }
+
+  async syncProjectWithCloud(nomeProjeto, silencioso = false) {
+    if (!this.user || !navigator.onLine) return;
+    const nome = (nomeProjeto || this.projetoVinculado || 'BR-153').trim();
+    const projId = this.normalizarProjetoId(nome);
+
+    try {
+      const fb = await this.loadFirebase();
+      if (!fb) return;
+      const firestore = fb.firestore();
+      const projCol = firestore.collection('projects').doc(projId).collection('cubagens');
+
+      // 1. Obter medições locais deste projeto
+      const localRecords = await window.cubagemDB.getAll(false);
+      const registrosDoProjeto = localRecords.filter(r => {
+        if (!r.projeto) return true; // vincula registros não tipados ao projeto atual
+        return this.normalizarProjetoId(r.projeto) === projId;
+      });
+
+      const localMap = new Map();
+      registrosDoProjeto.forEach(r => localMap.set(r.id, r));
+
+      // 2. Obter medições da nuvem do projeto
+      const snapshot = await projCol.get();
+      const cloudMap = new Map();
+      snapshot.forEach(doc => cloudMap.set(doc.id, doc.data()));
+
+      let novosDaNuvem = 0;
+      let enviadosParaNuvem = 0;
+
+      // 3. Nuvem -> Local
+      for (const [id, cloudRec] of cloudMap) {
+        const localRec = localMap.get(id);
+        const cloudTs = cloudRec.updatedAt || cloudRec.timestamp || 0;
+        const localTs = localRec ? (localRec.updatedAt || localRec.timestamp || 0) : 0;
+
+        if (!localRec || cloudTs > localTs) {
+          await window.cubagemDB.add(cloudRec).catch(() => window.cubagemDB.update(cloudRec));
+          novosDaNuvem++;
+        }
+      }
+
+      // 4. Local -> Nuvem
+      for (const [id, localRec] of localMap) {
+        const cloudRec = cloudMap.get(id);
+        const localTs = localRec.updatedAt || localRec.timestamp || 0;
+        const cloudTs = cloudRec ? (cloudRec.updatedAt || cloudRec.timestamp || 0) : 0;
+
+        if (!cloudRec || localTs > cloudTs) {
+          const recProj = {
+            ...localRec,
+            projeto: nome,
+            autorNome: localRec.autorNome || this.user.displayName || this.user.email.split('@')[0],
+            autorEmail: localRec.autorEmail || this.user.email,
+            autorUid: localRec.autorUid || this.user.uid,
+            updatedAt: Date.now()
+          };
+          await projCol.doc(id).set(recProj);
+          enviadosParaNuvem++;
+        }
+      }
+
+      if (window.app) {
+        await window.app.atualizarDashboard();
+        if (window.app.currentView === 'historico') await window.app.carregarHistorico();
+      }
+
+      if (!silencioso && window.app) {
+        window.app.showToast(`✓ Projeto ${nome} sincronizado com a equipe! (${enviadosParaNuvem} enviados, ${novosDaNuvem} recebidos)`, 'success');
+      }
+    } catch (err) {
+      console.warn('[Cloud] Erro ao sincronizar projeto com nuvem:', err);
+      if (!silencioso && window.app) {
+        window.app.showToast(`Não foi possível sincronizar o projeto "${nome}".`, 'warning');
+      }
+    }
+  }
+
   /**
    * Salva um registro diretamente na nuvem (chamado após salvar localmente)
    */
@@ -574,8 +727,25 @@ class CubagemAuth {
       const fb = await this.loadFirebase();
       if (!fb) return;
       const firestore = fb.firestore();
+
+      // 1. Grava no backup pessoal do usuário
       await firestore.collection('users').doc(this.user.uid).collection('cubagens').doc(record.id).set(record);
-      console.log('[Auth] Registro sincronizado na nuvem:', record.id);
+
+      // 2. Grava na coleção compartilhada do projeto
+      const projName = record.projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
+      const projId = this.normalizarProjetoId(projName);
+
+      const recordCompartilhado = {
+        ...record,
+        projeto: projName,
+        autorNome: record.autorNome || this.user.displayName || this.user.email.split('@')[0],
+        autorEmail: record.autorEmail || this.user.email,
+        autorUid: record.autorUid || this.user.uid,
+        updatedAt: Date.now()
+      };
+
+      await firestore.collection('projects').doc(projId).collection('cubagens').doc(record.id).set(recordCompartilhado);
+      console.log(`[Cloud] Medição ${record.id} compartilhada com a equipe no projeto "${projName}"!`);
     } catch (err) {
       console.warn('[Auth] Não foi possível enviar registro para nuvem no momento:', err);
     }
@@ -584,13 +754,19 @@ class CubagemAuth {
   /**
    * Remove um registro da nuvem (chamado após exclusão local)
    */
-  async deleteRecordFromCloud(id) {
+  async deleteRecordFromCloud(id, projeto) {
     if (!this.user || !navigator.onLine) return;
     try {
       const fb = await this.loadFirebase();
       if (!fb) return;
       const firestore = fb.firestore();
+
       await firestore.collection('users').doc(this.user.uid).collection('cubagens').doc(id).delete();
+
+      const projName = projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
+      const projId = this.normalizarProjetoId(projName);
+      await firestore.collection('projects').doc(projId).collection('cubagens').doc(id).delete();
+
       console.log('[Auth] Registro removido da nuvem:', id);
     } catch (err) {
       console.warn('[Auth] Não foi possível remover da nuvem no momento:', err);

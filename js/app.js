@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.8.1';
+    this.appVersion = '2.9.0';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -40,6 +40,15 @@ class CubagemApp {
 
     // Sistema de Autenticação e Nuvem
     this.auth = window.CubagemAuth ? new window.CubagemAuth() : null;
+
+    // Projeto / Frente Compartilhada da Equipe
+    this.projetoAtivo = localStorage.getItem('cubagem.projeto_ativo') || 'BR-153';
+    try {
+      this.projetosRecentes = JSON.parse(localStorage.getItem('cubagem.projetos_recentes') || '["BR-153", "Geral"]');
+      if (!Array.isArray(this.projetosRecentes)) this.projetosRecentes = ['BR-153', 'Geral'];
+    } catch (e) {
+      this.projetosRecentes = ['BR-153', 'Geral'];
+    }
 
     // Lista dinâmica de toras para cubagem de pilhas de toras
     this.torasPilha = [];
@@ -60,6 +69,7 @@ class CubagemApp {
   async init() {
     console.log('[Cubagem Florestal] Inicializando aplicativo multipasta...');
     document.body.setAttribute('data-active-tab', 'inicio');
+    this.atualizarUIProjeto();
 
     try {
       await window.cubagemDB.init();
@@ -672,9 +682,12 @@ class CubagemApp {
 
     const respInput = document.getElementById('cubResponsavel');
     const rodInput = document.getElementById('cubRodovia');
+    const projInput = document.getElementById('cubProjeto');
 
     if (respInput && respPadrao && !respInput.value) respInput.value = respPadrao;
     if (rodInput && rodPadrao && !rodInput.value) rodInput.value = rodPadrao;
+    if (projInput) projInput.value = this.projetoAtivo || 'BR-153';
+    this.atualizarUIProjeto();
   }
 
   // =========================================================================
@@ -836,7 +849,7 @@ class CubagemApp {
       secPil.style.display = 'none';
       secTor.style.display = 'none';
       if (lblRodovia) lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
-      document.getElementById('liveTypeBadge').textContent = this.modoCargaCaminhao === 'toras' ? 'Caminhão (Toras Rastreáveis)' : 'Carga de Caminhão';
+      document.getElementById('liveTypeBadge').textContent = this.modoCargaCaminhao === 'toras' ? 'Retirada (Toras Rastreáveis)' : 'Retirada do Material (Caminhão)';
       if (this.modoCargaCaminhao === 'toras') {
         this.renderizarListaTorasCaminhao();
       }
@@ -955,35 +968,38 @@ class CubagemApp {
     const l3 = document.getElementById('liveDetLabel3');
     const v3 = document.getElementById('liveDetVal3');
 
+    const setTxt = (el, txt) => { if (el) el.textContent = txt; };
+    const setHtml = (el, html) => { if (el) el.innerHTML = html; };
+
     if (this.tipoCubagem === 'caminhao') {
       if (this.modoCargaCaminhao === 'toras') {
         const totalToras = this.torasCaminhao.length;
         const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
-        l1.textContent = 'Total de Toras';
-        l2.textContent = 'Dm Médio';
-        l3.textContent = 'Comp. Médio';
+        setTxt(l1, 'Total de Toras');
+        setTxt(l2, 'Dm Médio');
+        setTxt(l3, 'Comp. Médio');
 
         if (totalToras > 0) {
           const lote = window.CubagemCalculator.calculateLoteToras(this.torasCaminhao);
-          volEl.textContent = lote.display.volumeGeometrico;
-          v1.textContent = `${lote.totalToras} toras`;
-          v2.textContent = `${lote.display.diametroMedio} cm`;
-          v3.textContent = `${lote.display.comprimentoMedio} m`;
-          memEl.innerHTML = [
-            `<strong>Carga por Toras Rastreáveis (Fórmula de Smalian)</strong>`,
+          setTxt(volEl, lote.display.volumeGeometrico);
+          setTxt(v1, `${lote.totalToras} toras`);
+          setTxt(v2, `${lote.display.diametroMedio} cm`);
+          setTxt(v3, `${lote.display.comprimentoMedio} m`);
+          setHtml(memEl, [
+            `<strong>Retirada por Toras Rastreáveis (Fórmula de Smalian)</strong>`,
             `Total de Toras: ${lote.totalToras} | Dm Médio: ${lote.display.diametroMedio} cm | Comp. Médio: ${lote.display.comprimentoMedio} m`,
             `Volume Total Transportado: <strong>${lote.display.volumeGeometrico} m³</strong>`
-          ].join('<br>');
+          ].join('<br>'));
         } else {
-          volEl.textContent = '0,000';
-          v1.textContent = '0 toras';
-          v2.textContent = '0,0 cm';
-          v3.textContent = '0,00 m';
-          memEl.textContent = 'Puxe as toras pelas plaquetas ou selecione na lista de toras cubadas.';
+          setTxt(volEl, '0,000');
+          setTxt(v1, '0 toras');
+          setTxt(v2, '0,0 cm');
+          setTxt(v3, '0,00 m');
+          setTxt(memEl, 'Puxe as toras pelas plaquetas ou selecione na lista de toras cubadas.');
         }
       } else {
-        const comp = document.getElementById('cubComprimentoCam').value;
-        const larg = document.getElementById('cubLarguraCam').value;
+        const comp = document.getElementById('cubComprimentoCam')?.value || '';
+        const larg = document.getElementById('cubLarguraCam')?.value || '';
         const res = window.CubagemCalculator.calculateCaminhao({
           alturasLE: this.alturasLE,
           alturasLD: this.alturasLD,
@@ -991,55 +1007,55 @@ class CubagemApp {
           larguraRaw: larg
         });
 
-        l1.textContent = 'Soma Alturas';
-        l2.textContent = 'Hm Média';
-        l3.textContent = 'Dimensões (C × L)';
+        setTxt(l1, 'Soma Alturas');
+        setTxt(l2, 'Hm Média');
+        setTxt(l3, 'Dimensões (C × L)');
 
         if (res.isValid) {
-          volEl.textContent = res.display.volumeGeometrico;
-          v1.textContent = `${res.display.somaAlturas} m`;
-          v2.textContent = `${res.display.alturaMedia} m`;
-          v3.textContent = `${res.display.comprimento} × ${res.display.largura} m`;
-          memEl.innerHTML = res.memoriaCalculo.join('<br>');
+          setTxt(volEl, res.display.volumeGeometrico);
+          setTxt(v1, `${res.display.somaAlturas} m`);
+          setTxt(v2, `${res.display.alturaMedia} m`);
+          setTxt(v3, `${res.display.comprimento} × ${res.display.largura} m`);
+          setHtml(memEl, res.memoriaCalculo.join('<br>'));
         } else {
-          volEl.textContent = '0,00';
-          v1.textContent = '0,00 m';
-          v2.textContent = '0,00 m';
-          v3.textContent = '0 × 0 m';
-          memEl.textContent = 'Preencha todas as alturas (LE e LD) e as dimensões da carga.';
+          setTxt(volEl, '0,00');
+          setTxt(v1, '0,00 m');
+          setTxt(v2, '0,00 m');
+          setTxt(v3, '0 × 0 m');
+          setTxt(memEl, 'Preencha todas as alturas (LE e LD) e as dimensões da carga.');
         }
       }
     } else if (this.tipoCubagem === 'pilha') {
-      const comp = document.getElementById('cubComprimentoPilha').value;
-      const larg = document.getElementById('cubLarguraPilha').value;
+      const comp = document.getElementById('cubComprimentoPilha')?.value || '';
+      const larg = document.getElementById('cubLarguraPilha')?.value || '';
       const res = window.CubagemCalculator.calculatePilha({
         alturas: this.alturasPilha,
         comprimentoRaw: comp,
         larguraRaw: larg
       });
 
-      l1.textContent = 'Soma Face';
-      l2.textContent = 'Hm da Pilha';
-      l3.textContent = 'Dimensões (C × P)';
+      setTxt(l1, 'Soma Face');
+      setTxt(l2, 'Hm da Pilha');
+      setTxt(l3, 'Dimensões (C × P)');
 
       if (res.isValid) {
-        volEl.textContent = res.display.volumeGeometrico;
-        v1.textContent = `${res.display.somaAlturas} m`;
-        v2.textContent = `${res.display.alturaMedia} m`;
-        v3.textContent = `${res.display.comprimento} × ${res.display.largura} m`;
-        memEl.innerHTML = res.memoriaCalculo.join('<br>');
+        setTxt(volEl, res.display.volumeGeometrico);
+        setTxt(v1, `${res.display.somaAlturas} m`);
+        setTxt(v2, `${res.display.alturaMedia} m`);
+        setTxt(v3, `${res.display.comprimento} × ${res.display.largura} m`);
+        setHtml(memEl, res.memoriaCalculo.join('<br>'));
       } else {
-        volEl.textContent = '0,00';
-        v1.textContent = '0,00 m';
-        v2.textContent = '0,00 m';
-        v3.textContent = '0 × 0 m';
-        memEl.textContent = 'Preencha as alturas da face da pilha, comprimento e profundidade.';
+        setTxt(volEl, '0,00');
+        setTxt(v1, '0,00 m');
+        setTxt(v2, '0,00 m');
+        setTxt(v3, '0 × 0 m');
+        setTxt(memEl, 'Preencha as alturas da face da pilha, comprimento e profundidade.');
       }
     } else if (this.tipoCubagem === 'tora') {
-      const d1 = document.getElementById('cubDiametroPonta1').value;
-      const d2 = document.getElementById('cubDiametroPonta2').value;
-      const comp = document.getElementById('cubComprimentoTora').value;
-      const plaqueta = document.getElementById('cubPlaqueta').value;
+      const d1 = document.getElementById('cubDiametroPonta1')?.value || '';
+      const d2 = document.getElementById('cubDiametroPonta2')?.value || '';
+      const comp = document.getElementById('cubComprimentoTora')?.value || '';
+      const plaqueta = document.getElementById('cubPlaqueta')?.value || '';
 
       const resCurrent = window.CubagemCalculator.calculateTora({
         diametroPonta1Raw: d1,
@@ -1055,32 +1071,33 @@ class CubagemApp {
 
       if (this.torasPilha.length > 0) {
         const lote = window.CubagemCalculator.calculateLoteToras(this.torasPilha);
-        volEl.textContent = lote.display.volumeTotal;
-        l1.textContent = 'Total de Toras';
-        v1.textContent = `${lote.totalToras} unid.`;
-        l2.textContent = 'Diâmetro Médio';
-        v2.textContent = lote.display.diametroMedio;
-        l3.textContent = 'Comp. Médio';
-        v3.textContent = lote.display.comprimentoMedio;
-        memEl.innerHTML = lote.memoriaCalculo.join('<br>');
-        document.getElementById('liveTypeBadge').textContent = `Pilha de Toras (${lote.totalToras} toras)`;
+        setTxt(volEl, lote.display.volumeTotal);
+        setTxt(l1, 'Total de Toras');
+        setTxt(v1, `${lote.totalToras} unid.`);
+        setTxt(l2, 'Diâmetro Médio');
+        setTxt(v2, lote.display.diametroMedio);
+        setTxt(l3, 'Comp. Médio');
+        setTxt(v3, lote.display.comprimentoMedio);
+        setHtml(memEl, lote.memoriaCalculo.join('<br>'));
+        const typeBadge = document.getElementById('liveTypeBadge');
+        if (typeBadge) typeBadge.textContent = `Pilha de Toras (${lote.totalToras} toras)`;
       } else {
-        l1.textContent = 'Diâmetro Médio';
-        l2.textContent = 'Comprimento';
-        l3.textContent = 'Plaqueta';
+        setTxt(l1, 'Diâmetro Médio');
+        setTxt(l2, 'Comprimento');
+        setTxt(l3, 'Plaqueta');
 
         if (resCurrent.isValid) {
-          volEl.textContent = resCurrent.display.volumeGeometrico;
-          v1.textContent = resCurrent.display.diametroMedio;
-          v2.textContent = resCurrent.display.comprimento;
-          v3.textContent = resCurrent.plaqueta;
-          memEl.innerHTML = resCurrent.memoriaCalculo.join('<br>');
+          setTxt(volEl, resCurrent.display.volumeGeometrico);
+          setTxt(v1, resCurrent.display.diametroMedio);
+          setTxt(v2, resCurrent.display.comprimento);
+          setTxt(v3, resCurrent.plaqueta);
+          setHtml(memEl, resCurrent.memoriaCalculo.join('<br>'));
         } else {
-          volEl.textContent = '0,000';
-          v1.textContent = '0 cm';
-          v2.textContent = '0 m';
-          v3.textContent = plaqueta || '-';
-          memEl.textContent = 'Preencha os dados da tora e toque em "+ Adicionar Esta Tora à Pilha".';
+          setTxt(volEl, '0,000');
+          setTxt(v1, '0 cm');
+          setTxt(v2, '0 m');
+          setTxt(v3, plaqueta || '-');
+          setTxt(memEl, 'Preencha os dados da tora e toque em "+ Adicionar Esta Tora à Pilha".');
         }
       }
     }
@@ -1097,6 +1114,12 @@ class CubagemApp {
     const utm = (document.getElementById('cubUtm')?.value.trim()) || '';
     const responsavel = document.getElementById('cubResponsavel').value.trim();
     const observacoes = document.getElementById('cubObservacoes').value.trim();
+    const projeto = (document.getElementById('cubProjeto')?.value.trim()) || this.projetoAtivo || 'BR-153';
+    this.definirProjetoAtivo(projeto, false);
+
+    const autorNome = this.auth?.user?.displayName || (this.auth?.user?.email ? this.auth.user.email.split('@')[0] : '') || responsavel;
+    const autorEmail = this.auth?.user?.email || '';
+    const autorUid = this.auth?.user?.uid || '';
 
     if (!data || !horario || !rodovia || !responsavel) {
       this.showToast('Preencha os campos operacionais obrigatórios (Data, Hora, Local e Responsável).', 'warning');
@@ -1131,6 +1154,7 @@ class CubagemApp {
           modoCarga: 'toras',
           origemMadeira: this.origemMadeira || 'Nativa',
           especie: especieFinal,
+          projeto, autorNome, autorEmail, autorUid,
           data, horario, rodovia, km, utm, responsavel,
           placa: placa || 'NÃO INFORMADA',
           observacoes,
@@ -1139,15 +1163,16 @@ class CubagemApp {
           comprimento: lote.comprimentoMedio,
           largura: 0,
           volumeGeometrico: lote.volumeGeometrico,
-          tipoVolume: 'Volume Smalian (Toras no Caminhão)',
+          tipoVolume: 'Volume Smalian (Retirada Caminhão)',
           toras: [...this.torasCaminhao],
           plaqueta: `Plaquetas: ${plaquetasResumo}`,
-          identificacao: `Caminhão ${placa || 'S/ Placa'} (${lote.totalToras} Toras)`,
+          identificacao: `Retirada Caminhão ${placa || 'S/ Placa'} (${lote.totalToras} Toras)`,
           memoriaCalculo: [
-            `Caminhão ${placa || 'S/ Placa'} — Carga por Toras Rastreáveis`,
+            `Retirada do Material (Caminhão) ${placa || 'S/ Placa'} — Toras Rastreáveis`,
+            `Projeto / Frente: ${projeto}`,
             `Total de Toras Carregadas: ${lote.totalToras}`,
             `Diâmetro Médio (Dm): ${lote.display.diametroMedio} cm | Comprimento Médio: ${lote.display.comprimentoMedio} m`,
-            `Volume Total do Caminhão: ${lote.display.volumeGeometrico} m³ (Fórmula de Smalian individual por tora)`
+            `Volume Total da Retirada: ${lote.display.volumeGeometrico} m³ (Fórmula de Smalian individual por tora)`
           ],
           timestamp: Date.now()
         };
@@ -1173,8 +1198,10 @@ class CubagemApp {
           modoCarga: 'geometrica',
           origemMadeira: this.origemMadeira || 'Nativa',
           especie: '',
+          projeto, autorNome, autorEmail, autorUid,
           data, horario, rodovia, km, utm, responsavel,
           placa: placa || 'NÃO INFORMADA',
+          identificacao: `Retirada Caminhão ${placa || 'S/ Placa'}`,
           observacoes,
           alturasLE: calc.alturasLE,
           alturasLD: calc.alturasLD,
@@ -1215,6 +1242,7 @@ class CubagemApp {
         tipo: 'pilha',
         origemMadeira: this.origemMadeira || 'Nativa',
         especie: '',
+        projeto, autorNome, autorEmail, autorUid,
         data, horario, rodovia, km, utm, responsavel,
         identificacao: identPilha,
         placa: identPilha,
@@ -1285,6 +1313,7 @@ class CubagemApp {
         id: window.cubagemDB.generateId('PILHA-TORA'),
         tipo: 'tora',
         especie: especieFinal,
+        projeto, autorNome, autorEmail, autorUid,
         data, horario, rodovia, km, utm, responsavel,
         identificacao: identPilhaTora,
         placa: identPilhaTora,
@@ -1316,7 +1345,7 @@ class CubagemApp {
           for (const extraId of this.mergedSourceRecordIds) {
             await window.cubagemDB.delete(extraId);
             if (this.auth) {
-              this.auth.deleteRecordFromCloud(extraId).catch(() => {});
+              this.auth.deleteRecordFromCloud(extraId, record.projeto).catch(() => {});
             }
           }
         }
@@ -1331,8 +1360,8 @@ class CubagemApp {
       const vFmt = window.CubagemCalculator.formatNumber(record.volumeGeometrico, record.tipo === 'tora' ? 3 : 2);
       this.showToast(
         isEditing
-          ? `Cubagem atualizada com sucesso! Volume Total: ${vFmt} m³`
-          : `Cubagem de ${record.tipo.toUpperCase()} salva com sucesso! Volume Total: ${vFmt} m³`,
+          ? `Medição atualizada com sucesso no projeto "${projeto}"! Volume Total: ${vFmt} m³`
+          : `${record.tipo === 'caminhao' ? 'Retirada do Material' : 'Cubagem de ' + record.tipo.toUpperCase()} salva no projeto "${projeto}"! Volume Total: ${vFmt} m³`,
         'success'
       );
 
@@ -1455,6 +1484,12 @@ class CubagemApp {
       if (elUtm) elUtm.value = item.utm || '';
       if (elResp && item.responsavel) elResp.value = item.responsavel;
       if (elObs) elObs.value = item.observacoes || '';
+
+      const elProj = document.getElementById('cubProjeto');
+      if (elProj && item.projeto) {
+        elProj.value = item.projeto;
+        this.definirProjetoAtivo(item.projeto, false);
+      }
 
       this.setOrigemMadeira(item.origemMadeira || 'Nativa');
 
@@ -1929,19 +1964,19 @@ class CubagemApp {
     const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
     const isSelected = this.selectedHistoryIds.has(item.id);
 
-    let tagTipo = '🚚 Caminhão';
+    let tagTipo = '🚚 Retirada (Caminhão)';
     let tituloItem = item.placa || 'SEM PLACA';
     let subItem = `${item.rodovia} ${item.km ? '• km ' + item.km : ''}`;
 
     if (tipo === 'caminhao') {
       if (isTorasCam) {
         const nToras = item.totalToras || (item.toras ? item.toras.length : 0);
-        tagTipo = `🚚 Caminhão • ${nToras} Toras`;
+        tagTipo = `🚚 Retirada • ${nToras} Toras`;
         tituloItem = `${item.placa || 'SEM PLACA'} (${nToras} toras)`;
         subItem = `${item.rodovia} • Smalian • ${item.especie || item.origemMadeira || 'Nativa'}`;
       } else {
         const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
-        tagTipo = `🚚 Caminhão${origStr}`;
+        tagTipo = `🚚 Retirada (Caminhão)${origStr}`;
       }
     } else if (tipo === 'pilha') {
       const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
@@ -1969,7 +2004,7 @@ class CubagemApp {
           <div>
             <div class="history-plate">${tituloItem}</div>
             <div class="history-resp">${subItem}</div>
-            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">Resp: ${item.responsavel || '-'}</div>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">Resp: ${item.responsavel || '-'}${item.projeto ? ` • 📁 ${item.projeto}` : ''}${item.autorNome && item.autorNome !== item.responsavel ? ` • (${item.autorNome})` : ''}</div>
           </div>
           <div class="history-vol-badge">
             <div class="history-vol-num">${volFormatado}</div>
@@ -1997,9 +2032,12 @@ class CubagemApp {
     const isTora = tipo === 'tora' || isTorasCam;
     const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
 
-    document.getElementById('detalheModalTitulo').textContent = `Detalhes: ${tipo.toUpperCase()}`;
+    document.getElementById('detalheModalTitulo').textContent = tipo === 'caminhao' ? 'Detalhes: Retirada (Caminhão)' : `Detalhes: ${tipo.toUpperCase()}`;
 
     let detalheHtml = '';
+    const projMetaHtml = item.projeto ? `<strong>Projeto / Frente:</strong> <span style="font-weight: 700; color: var(--gold);">${item.projeto}</span><br>` : '';
+    const autorMetaHtml = item.autorNome && item.autorNome !== item.responsavel ? `<strong>Registrado por:</strong> ${item.autorNome} (Equipe)<br>` : '';
+
     if (tipo === 'caminhao') {
       if (isTorasCam) {
         const torasArr = Array.isArray(item.toras) ? item.toras : [];
@@ -2013,6 +2051,8 @@ class CubagemApp {
 
         detalheHtml = `
           <div style="margin-bottom: 12px;">
+            ${projMetaHtml}
+            ${autorMetaHtml}
             <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
             <strong>Modalidade:</strong> <span style="font-weight: 700; color: var(--gold);">Toras Rastreáveis (Fórmula de Smalian)</span><br>
             <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
@@ -2045,6 +2085,8 @@ class CubagemApp {
         const ldStr = Array.isArray(item.alturasLD) ? item.alturasLD.map(v => fNum(v) + ' m').join(', ') : '-';
         detalheHtml = `
           <div style="margin-bottom: 12px;">
+            ${projMetaHtml}
+            ${autorMetaHtml}
             <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
             <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
             ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
@@ -2071,6 +2113,8 @@ class CubagemApp {
       const altStr = Array.isArray(item.alturas) ? item.alturas.map(v => fNum(v) + ' m').join(', ') : '-';
       detalheHtml = `
         <div style="margin-bottom: 12px;">
+          ${projMetaHtml}
+          ${autorMetaHtml}
           <strong>Identificação:</strong> ${item.identificacao || item.placa || 'Pilha'}<br>
           <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
           ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
@@ -2095,6 +2139,8 @@ class CubagemApp {
       const nToras = item.totalToras || (item.toras ? item.toras.length : 1);
       detalheHtml = `
         <div style="margin-bottom: 12px;">
+          ${projMetaHtml}
+          ${autorMetaHtml}
           <strong>Identificação Individual:</strong> ${item.identificacao || item.plaqueta || item.id}<br>
           ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
           <strong>Nº da Plaqueta:</strong> ${item.plaqueta || 'S/P'}<br>
@@ -2561,7 +2607,7 @@ class CubagemApp {
 
     const typeBadge = document.getElementById('liveTypeBadge');
     if (typeBadge && this.tipoCubagem === 'caminhao') {
-      typeBadge.textContent = modo === 'toras' ? 'Caminhão (Toras Rastreáveis)' : 'Carga de Caminhão';
+      typeBadge.textContent = modo === 'toras' ? 'Retirada (Toras Rastreáveis)' : 'Retirada do Material (Caminhão)';
     }
 
     if (modo === 'toras') {
@@ -2669,7 +2715,9 @@ class CubagemApp {
             comprimento: Number(t.comprimento) || 0,
             volumeGeometrico: Number(t.volumeGeometrico) || 0,
             statusCarga: infoCarga ? 'carregada' : 'disponivel',
-            carregadaEm: infoCarga ? infoCarga.placa : null
+            carregadaEm: infoCarga ? infoCarga.placa : null,
+            responsavel: rec.autorNome || rec.responsavel || 'Equipe',
+            projeto: rec.projeto || 'BR-153'
           });
         });
       } else if (rec.diametroPonta1_cm || rec.volumeGeometrico || rec.plaqueta) {
@@ -2689,7 +2737,9 @@ class CubagemApp {
             comprimento: Number(rec.comprimento) || 0,
             volumeGeometrico: Number(rec.volumeGeometrico) || 0,
             statusCarga: infoCarga ? 'carregada' : 'disponivel',
-            carregadaEm: infoCarga ? infoCarga.placa : null
+            carregadaEm: infoCarga ? infoCarga.placa : null,
+            responsavel: rec.autorNome || rec.responsavel || 'Equipe',
+            projeto: rec.projeto || 'BR-153'
           });
         }
       }
@@ -2752,7 +2802,9 @@ class CubagemApp {
         diametroMedio_cm: tora.diametroMedio_cm,
         comprimento: tora.comprimento,
         volumeGeometrico: tora.volumeGeometrico,
-        origemId: tora.registroOrigemId
+        origemId: tora.registroOrigemId,
+        responsavel: tora.responsavel || 'Equipe',
+        projeto: tora.projeto || 'BR-153'
       };
 
       this.torasCaminhao.push(itemTora);
@@ -2841,7 +2893,7 @@ class CubagemApp {
           <div class="cam-tora-info">
             <div class="cam-tora-especie">${t.especie || 'Não informada'}</div>
             <div class="cam-tora-medidas">
-              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m
+              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m${t.responsavel ? ' • Por: ' + t.responsavel : ''}
             </div>
           </div>
         </div>
@@ -2970,7 +3022,7 @@ class CubagemApp {
               ${tagStatus}
             </div>
             <div style="font-size: 0.72rem; color: var(--muted); margin-top: 3px;">
-              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m • Medição: ${window.CubagemExcelExport.formatDateBR(t.registroData)}
+              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m • Medição: ${window.CubagemExcelExport.formatDateBR(t.registroData)}${t.responsavel ? ' • Por: ' + t.responsavel : ''}${t.projeto ? ' (' + t.projeto + ')' : ''}
             </div>
           </div>
           <div style="text-align: right; font-family: var(--mono); font-weight: 700; color: var(--gold); font-size: 0.88rem; white-space: nowrap;">
@@ -3127,6 +3179,148 @@ class CubagemApp {
     } else {
       this.fecharModal('modalAuth');
     }
+  }
+
+  // =========================================================================
+  // GESTÃO DE PROJETOS COMPARTILHADOS EM EQUIPE
+  // =========================================================================
+
+  atualizarUIProjeto() {
+    const nome = this.projetoAtivo || 'BR-153';
+    const headerBtnName = document.getElementById('headerProjectName');
+    if (headerBtnName) headerBtnName.textContent = nome;
+
+    const cubProjInput = document.getElementById('cubProjeto');
+    if (cubProjInput && !cubProjInput.value) cubProjInput.value = nome;
+
+    const modalDisplay = document.getElementById('modalProjetoNomeDisplay');
+    if (modalDisplay) modalDisplay.textContent = nome;
+
+    // Atualiza contagem local de medições do projeto
+    if (window.cubagemDB && typeof window.cubagemDB.getAll === 'function') {
+      window.cubagemDB.getAll(false).then((all) => {
+        const projId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+          ? this.auth.normalizarProjetoId(nome)
+          : String(nome).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+        
+        const count = all.filter(r => {
+          const rProj = r.projeto || 'BR-153';
+          const rId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+            ? this.auth.normalizarProjetoId(rProj)
+            : String(rProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+          return rId === projId;
+        }).length;
+
+        const infoEl = document.getElementById('modalProjetoInfoLocal');
+        if (infoEl) {
+          infoEl.textContent = `${count} ${count === 1 ? 'medição vinculada' : 'medições vinculadas'} a este projeto neste aparelho.`;
+        }
+      }).catch(() => {});
+    }
+  }
+
+  definirProjetoAtivo(nomeProjeto, sincronizarNuvem = true) {
+    const limpo = (nomeProjeto || 'BR-153').trim();
+    if (!limpo) return;
+
+    this.projetoAtivo = limpo;
+    try {
+      localStorage.setItem('cubagem.projeto_ativo', limpo);
+      if (!this.projetosRecentes.includes(limpo)) {
+        this.projetosRecentes.unshift(limpo);
+        if (this.projetosRecentes.length > 8) this.projetosRecentes.pop();
+        localStorage.setItem('cubagem.projetos_recentes', JSON.stringify(this.projetosRecentes));
+      }
+    } catch (e) {}
+
+    const cubProjInput = document.getElementById('cubProjeto');
+    if (cubProjInput) cubProjInput.value = limpo;
+
+    this.atualizarUIProjeto();
+
+    if (sincronizarNuvem && this.auth && typeof this.auth.vincularProjeto === 'function') {
+      this.auth.vincularProjeto(limpo);
+    }
+  }
+
+  sincronizarInputProjetoComApp(valor) {
+    const limpo = (valor || '').trim();
+    if (limpo && limpo !== this.projetoAtivo) {
+      this.definirProjetoAtivo(limpo, true);
+      this.showToast(`Projeto ativo alterado para "${limpo}".`, 'info');
+    }
+  }
+
+  abrirModalProjeto() {
+    this.atualizarUIProjeto();
+    const inputTrocar = document.getElementById('inputTrocarProjeto');
+    if (inputTrocar) inputTrocar.value = '';
+
+    const containerRecentes = document.getElementById('containerProjetosRecentes');
+    if (containerRecentes) {
+      if (!this.projetosRecentes || this.projetosRecentes.length === 0) {
+        this.projetosRecentes = ['BR-153', 'Geral'];
+      }
+      containerRecentes.innerHTML = this.projetosRecentes.map(p => `
+        <button type="button" class="recent-project-pill ${p === this.projetoAtivo ? 'active' : ''}" onclick="app.ativarProjetoPill('${this.escapeHtml(p)}')">
+          📁 ${this.escapeHtml(p)}
+        </button>
+      `).join('');
+    }
+
+    const badgeStatus = document.getElementById('modalProjetoStatusBadge');
+    if (badgeStatus) {
+      const isOnline = navigator.onLine;
+      const hasUser = this.auth && this.auth.user;
+      if (!isOnline) {
+        badgeStatus.textContent = 'Modo Offline';
+        badgeStatus.style.background = 'rgba(150, 120, 74, 0.2)';
+        badgeStatus.style.color = 'var(--gold)';
+      } else if (hasUser) {
+        badgeStatus.textContent = `Online • ${this.auth.user.displayName || this.auth.user.email.split('@')[0]}`;
+        badgeStatus.style.background = 'rgba(74, 150, 90, 0.2)';
+        badgeStatus.style.color = '#5cb85c';
+      } else {
+        badgeStatus.textContent = 'Sem Login (Salvo Localmente)';
+        badgeStatus.style.background = 'rgba(150, 120, 74, 0.2)';
+        badgeStatus.style.color = 'var(--gold)';
+      }
+    }
+
+    this.abrirModal('modalProjeto');
+  }
+
+  ativarProjetoPill(nome) {
+    this.definirProjetoAtivo(nome, true);
+    this.abrirModalProjeto();
+    this.showToast(`Projeto alterado para "${nome}".`, 'success');
+  }
+
+  salvarNovoProjeto() {
+    const input = document.getElementById('inputTrocarProjeto');
+    const nome = input ? input.value.trim() : '';
+    if (!nome) {
+      this.showToast('Digite o nome do projeto para ativar.', 'warning');
+      return;
+    }
+    this.definirProjetoAtivo(nome, true);
+    if (input) input.value = '';
+    this.abrirModalProjeto();
+    this.showToast(`✓ Projeto "${nome}" ativado com sucesso!`, 'success');
+  }
+
+  async sincronizarProjetoAgora() {
+    if (!navigator.onLine) {
+      this.showToast('Sem conexão de internet no momento. As medições locais continuam seguras.', 'warning');
+      return;
+    }
+    if (!this.auth || !this.auth.user) {
+      this.showToast('Faça login com sua conta para sincronizar projetos com a equipe.', 'info');
+      this.abrirModalAuth();
+      return;
+    }
+    await this.auth.syncProjectWithCloud(this.projetoAtivo, false);
+    this.atualizarUIProjeto();
   }
 
   abrirModalNovidades() {
@@ -4110,7 +4304,7 @@ class CubagemApp {
               <td class="excel-cell-center font-mono">1</td>
               <td style="font-weight: 700; background: #F9FAFB;">Modalidade</td>
               <td colspan="5" class="excel-cell-text" style="font-weight: 600; color: #0E2515;">
-                ${item.tipoVolume || (tipo === 'caminhao' ? 'Carga de Caminhão' : tipo === 'pilha' ? 'Pilha de Madeira' : 'Toras Roliças (Smalian)')}
+                ${item.tipoVolume || (tipo === 'caminhao' ? 'Retirada do Material (Caminhão)' : tipo === 'pilha' ? 'Pilha de Madeira' : 'Toras Roliças (Smalian)')}
               </td>
             </tr>
             <tr>
@@ -4309,7 +4503,7 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">1</td>
               <td colspan="11" class="excel-brand-title-cell">
-                BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE CARGA DE CAMINHÃO
+                BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — RETIRADA DO MATERIAL (CAMINHÃO)
               </td>
             </tr>
             <tr>
@@ -4323,6 +4517,7 @@ class CubagemApp {
               <td colspan="11" class="excel-meta-cell">
                 <strong>Data:</strong> ${dataBR} &bull; 
                 <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
+                ${item.projeto ? `<strong>Projeto:</strong> ${item.projeto} &bull; ` : ''}
                 <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
                 <strong>UTM:</strong> ${item.utm || 'Não reg.'} &bull; 
                 <strong>Resp:</strong> ${item.responsavel || '-'}

@@ -1,12 +1,12 @@
 {
-  "v": "2.8.1",
-  "nome": "2.8.1",
+  "v": "2.9.0",
+  "nome": "2.9.0",
   "data": "2026-11-11",
   "novidades": [
-    "Cubagem de Caminhão por Toras Rastreáveis: puxe automaticamente toras cubadas no pátio digitando o número das plaquetas (ex: 01, 05, 09, 17, 45)",
-    "Seleção visual de toras em modal com filtro de toras disponíveis no pátio vs já carregadas",
-    "Cálculo automático do volume total do caminhão pela fórmula de Smalian individual por tora",
-    "Romaneio oficial de transporte de toras no caminhão na prévia e na exportação Excel (.xlsx)",
-    "Nome oficial BIOKURI Pesquisa e Soluções Ambientais em todas as planilhas e memória de cálculo"
+    "Projetos e Frentes Compartilhadas em Equipe: integre o trabalho de campo (ex: Marco, Norberto e Lucas vinculados ao projeto BR-153)",
+    "Sincronização em tempo real entre aparelhos: toras cubadas por um integrante ficam disponíveis imediatamente para os demais registrarem a retirada",
+    "Retirada do Material (Caminhão): digite as plaquetas das toras cubadas por qualquer membro da equipe para puxar os dados e computar o volume da carga automaticamente",
+    "Gestão dinâmica de projetos na barra superior com seletor rápido, projetos recentes e status de sincronização online/offline",
+    "Atualização de nomenclatura oficial em todo o sistema: 'Retirada do Material (Caminhão)' na interface, histórico, relatórios e planilhas Excel"
   ]
 }

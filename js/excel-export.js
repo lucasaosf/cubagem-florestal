@@ -120,7 +120,9 @@ class CubagemExcelExport {
     const perStr = isSingleDay
       ? `Data: ${dayStr}  •  Volume Total Consolidado do Dia: ${vTot.toFixed(2)} m³`
       : (startDate && endDate ? `${this.formatDateBR(startDate)} a ${this.formatDateBR(endDate)}` : 'Período Completo');
-    r2.value = `BIOKURI Pesquisa e Soluções Ambientais  •  Período: ${perStr}  •  Resp. Técnico: ${responsavel || 'Lucas Aøsf'} (CRBio 127233/01-D)`;
+    const projStr = records.find(r => r.projeto)?.projeto || (window.app && window.app.projetoAtivo) || '';
+    const projSuffix = projStr ? `  •  Projeto: ${projStr}` : '';
+    r2.value = `BIOKURI Pesquisa e Soluções Ambientais  •  Período: ${perStr}${projSuffix}  •  Resp. Técnico: ${responsavel || 'Lucas Aøsf'} (CRBio 127233/01-D)`;
     r2.font = { name: FONT_NAME, size: 9, italic: true, color: { argb: C.creme2 } };
     r2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
     r2.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -142,7 +144,7 @@ class CubagemExcelExport {
     });
 
     const resRows = [
-      ['🚚 Cargas de Caminhões', caminhoes.length, vCam, caminhoes.length > 0 ? vCam / caminhoes.length : 0],
+      ['🚚 Retirada do Material (Caminhões)', caminhoes.length, vCam, caminhoes.length > 0 ? vCam / caminhoes.length : 0],
       ['🪵 Pilhas de Madeira', pilhas.length, vPil, pilhas.length > 0 ? vPil / pilhas.length : 0],
       ['🌲 Toras Roliças (Smalian)', toras.length, vTor, toras.length > 0 ? vTor / toras.length : 0]
     ];
@@ -228,7 +230,7 @@ class CubagemExcelExport {
         const r = wsResumo.getRow(rowIdx);
         r.height = 20;
         const bg = idx % 2 === 0 ? C.creme : C.creme2;
-        const tipoLabel = rec.tipo === 'tora' ? 'Toras (Smalian)' : (rec.tipo === 'pilha' ? 'Pilha de Madeira' : 'Carga Caminhão');
+        const tipoLabel = rec.tipo === 'tora' ? 'Toras (Smalian)' : (rec.tipo === 'pilha' ? 'Pilha de Madeira' : 'Retirada (Caminhão)');
         const identStr = rec.placa || rec.identificacao || rec.plaqueta || `Medição ${idx + 1}`;
         const dtStr = `${this.formatDateBR(rec.data)} ${rec.horario || ''}`;
         const vNum = Number(rec.volumeGeometrico) || 0;
@@ -283,10 +285,10 @@ class CubagemExcelExport {
     }
 
     // =========================================================================
-    // ABA 2: CARGAS DE CAMINHÕES
+    // ABA 2: RETIRADA DO MATERIAL (CAMINHÕES)
     // =========================================================================
     if (caminhoes.length > 0 || records.length === 0) {
-      const wsCam = workbook.addWorksheet('Caminhões', { views: [{ showGridLines: true }] });
+      const wsCam = workbook.addWorksheet('Retirada Caminhões', { views: [{ showGridLines: true }] });
       wsCam.columns = [
         { key: 'num', width: 6 },
         { key: 'id', width: 22 },
@@ -310,7 +312,7 @@ class CubagemExcelExport {
 
       wsCam.mergeCells('A1:R1');
       const hCam = wsCam.getCell('A1');
-      hCam.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE CARGAS DE CAMINHÕES';
+      hCam.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — RETIRADA DO MATERIAL (CAMINHÕES)';
       hCam.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
       hCam.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
       hCam.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -378,7 +380,7 @@ class CubagemExcelExport {
         totCamRow.height = 26;
         wsCam.mergeCells(`A${rCamIdx}:P${rCamIdx}`);
         const cTotCamTit = totCamRow.getCell(1);
-        cTotCamTit.value = `TOTAL GERAL DE CARGAS DE CAMINHÕES (${caminhoes.length} CARGAS MEDIDAS):`;
+        cTotCamTit.value = `TOTAL GERAL DE RETIRADAS DE MATERIAL (CAMINHÕES) (${caminhoes.length} CARGAS MEDIDAS):`;
         cTotCamTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
         cTotCamTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
         cTotCamTit.alignment = { horizontal: 'right', vertical: 'middle' };
@@ -581,7 +583,7 @@ class CubagemExcelExport {
           subtotalDmPilha += vDm;
 
           const identItem = pileItem.tipo === 'caminhao'
-            ? `Caminhão ${pileItem.placa || 'S/P'}`
+            ? `Retirada Caminhão ${pileItem.placa || 'S/P'}`
             : (pileItem.identificacao || pileItem.id);
 
           const vals = [
@@ -633,7 +635,7 @@ class CubagemExcelExport {
           wsTor.mergeCells(`A${rTorIdx}:J${rTorIdx}`);
           const cTit = subRow.getCell(1);
           cTit.value = pileItem.tipo === 'caminhao'
-            ? `SUBTOTAL DO CAMINHÃO (${torasIndiv.length} toras) — ${pileItem.placa || pileItem.id}`
+            ? `SUBTOTAL DA RETIRADA (CAMINHÃO) (${torasIndiv.length} toras) — ${pileItem.placa || pileItem.id}`
             : `SUBTOTAL DA PILHA (${torasIndiv.length} toras) — ${pileItem.identificacao || pileItem.id}`;
           cTit.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
           cTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
@@ -742,22 +744,25 @@ class CubagemExcelExport {
       ? (fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`)
       : `Cubagem_Florestal_${startDate || 'Geral'}_a_${endDate || 'Geral'}.xlsx`;
 
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = finalFileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => {
-      window.URL.revokeObjectURL(downloadUrl);
-    }, 60000);
+    if (options.download !== false) {
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = finalFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+      }, 60000);
+    }
 
     return {
       success: true,
       fileName: finalFileName,
       recordsCount: records.length,
-      totalVolume: vTot
+      totalVolume: vTot,
+      workbook
     };
   }
 }

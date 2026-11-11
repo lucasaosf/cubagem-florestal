@@ -9,19 +9,19 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E2515">
   <meta name="background-color" content="#0E2515">
   <meta name="description" content="Aplicativo florestal para cubagem de caminhões, pilhas e toras roliças. Desenvolvido por Lucas Aøsf para BIOKURI Pesquisa e Soluções Ambientais.">
-  <link rel="manifest" href="manifest.webmanifest?v=2.8.1">
-  <link rel="icon" href="icons/favicon.png?v=2.8.1" type="image/png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.8.1">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.8.1">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.8.1">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.8.1">
+  <link rel="manifest" href="manifest.webmanifest?v=2.9.0">
+  <link rel="icon" href="icons/favicon.png?v=2.9.0" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.9.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.9.0">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.9.0">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.9.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="#0E2515">
   <meta name="msapplication-TileColor" content="#0E2515">
-  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.7.8">
+  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.9.0">
 
   <script>
     (function(){
@@ -82,6 +82,12 @@
       </div>
 
       <div class="header-tools">
+        <!-- Botão de Projeto da Equipe -->
+        <button type="button" class="header-chip header-chip-project" id="headerProjectBtn" onclick="app.abrirModalProjeto()" title="Projeto Ativo da Equipe (Toque para trocar ou sincronizar)">
+          <span style="color: var(--gold);">📁</span>
+          <span id="headerProjectName">BR-153</span>
+        </button>
+
         <!-- Botão de Atualizar Sempre Presente -->
         <button type="button" class="header-chip header-chip-update" onclick="app.verificarOuAbrirPopUpAtualizacao()" title="Verificar atualizações do aplicativo">
           <span>🔄</span><span class="update-chip-text">Atualizar</span>
@@ -232,7 +238,7 @@
               <circle cx="5.5" cy="18.5" r="2.5"/>
               <circle cx="18.5" cy="18.5" r="2.5"/>
             </svg>
-            <span>Caminhão</span>
+            <span>Retirada (Caminhão)</span>
           </button>
 
           <button type="button" class="type-pill" id="btnTypePilha" onclick="app.setTipoCubagem('pilha')">
@@ -269,6 +275,17 @@
 
             <div class="form-row">
               <div class="form-group">
+                <label class="form-label" for="cubProjeto">📁 Projeto / Frente da Equipe <span class="required">*</span></label>
+                <input type="text" id="cubProjeto" class="form-control" placeholder="Ex: BR-153 ou Pátio Sul" required onchange="app.sincronizarInputProjetoComApp(this.value)">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cubResponsavel">Responsável <span class="required">*</span></label>
+                <input type="text" id="cubResponsavel" class="form-control" placeholder="Nome do profissional" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
                 <label class="form-label" for="cubRodovia" id="lblRodovia">Local / Pátio <span class="required">*</span></label>
                 <input type="text" id="cubRodovia" class="form-control" placeholder="Ex: BR 153 ou Pátio 02" required>
               </div>
@@ -288,10 +305,6 @@
                   </button>
                 </div>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="cubResponsavel">Responsável <span class="required">*</span></label>
-                <input type="text" id="cubResponsavel" class="form-control" placeholder="Nome do profissional" required>
-              </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
@@ -301,10 +314,10 @@
           </div>
 
           <!-- ======================================================== -->
-          <!-- 2A. MEDIÇÕES PARA CAMINHÃO (LE + LD DINÂMICOS)          -->
+          <!-- 2A. MEDIÇÕES PARA RETIRADA DO MATERIAL (CAMINHÃO)        -->
           <!-- ======================================================== -->
           <div id="sectionCaminhao" class="card">
-            <h3 class="card-title">2. Medição da Carga do Caminhão</h3>
+            <h3 class="card-title">2. Retirada do Material (Caminhão)</h3>
 
             <div class="form-row" style="margin-bottom: 14px;">
               <div class="form-group" style="margin-bottom: 0;">
@@ -326,7 +339,7 @@
 
             <!-- Modalidade de Carga do Caminhão (Geométrica vs Toras Rastreáveis) -->
             <div class="form-group" style="margin-bottom: 16px;">
-              <label class="form-label">Tipo de Carga / Cubagem do Caminhão <span class="required">*</span></label>
+              <label class="form-label">Tipo de Retirada do Material (Caminhão) <span class="required">*</span></label>
               <div class="toggle-pills-row">
                 <button type="button" class="btn-toggle-pill active" id="btnModoCargaCamGeometrica" onclick="app.setModoCargaCaminhao('geometrica')">
                   📐 Carga Geométrica (Alturas LE / LD)
@@ -382,7 +395,7 @@
             <!-- MODO B: CARGA POR TORAS RASTREÁVEIS (PUXAR POR PLAQUETA) -->
             <div id="containerCargaTorasCam" style="display: none;">
               <p class="section-desc" style="margin-bottom: 12px;">
-                Digite os números das plaquetas das toras carregadas (já cubadas) para puxar automaticamente as medidas e calcular o volume total do caminhão.
+                Digite os números das plaquetas das toras carregadas (já cubadas) para puxar automaticamente as medidas e calcular o volume total da retirada (caminhão).
               </p>
 
               <div class="measure-box-container" style="background: var(--surface-1); border-color: var(--gold);">
@@ -428,7 +441,7 @@
                 <!-- Lista de Toras Carregadas -->
                 <div class="measure-box-header" style="margin-bottom: 6px;">
                   <span class="measure-box-title" style="font-size: 0.92rem;">
-                    <span style="color: var(--gold);">🌲</span> Toras Carregadas no Caminhão
+                    <span style="color: var(--gold);">🌲</span> Toras Carregadas na Retirada (Caminhão)
                   </span>
                   <span class="helper" id="camToraHeaderCounter">0 toras</span>
                 </div>
@@ -593,7 +606,7 @@
           <div class="calc-result-card" id="liveCalcCard">
             <div class="calc-result-header">
               <span class="calc-result-tag" id="liveCalcTag">Cálculo Automático</span>
-              <span class="calc-result-type-badge" id="liveTypeBadge">Carga de Caminhão</span>
+              <span class="calc-result-type-badge" id="liveTypeBadge">Retirada do Material (Caminhão)</span>
             </div>
 
             <div class="calc-volume-display">
@@ -647,7 +660,7 @@
       <section id="view-historico" class="view-section">
         <div class="section-header">
           <h2 class="section-title">Histórico de Cubagens</h2>
-          <p class="section-desc">Consulte, pesquise e filtre caminhões, pilhas e toras salvas.</p>
+          <p class="section-desc">Consulte, pesquise e filtre retiradas de caminhões, pilhas e toras salvas.</p>
         </div>
 
         <div class="history-controls">
@@ -666,7 +679,7 @@
 
           <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px;">
             <button class="btn-action-small active-filter" data-hfilter="todos" onclick="app.filtrarHistoricoTipo('todos')">Todos</button>
-            <button class="btn-action-small" data-hfilter="caminhao" onclick="app.filtrarHistoricoTipo('caminhao')">🚚 Caminhões</button>
+            <button class="btn-action-small" data-hfilter="caminhao" onclick="app.filtrarHistoricoTipo('caminhao')">🚚 Retirada (Caminhões)</button>
             <button class="btn-action-small" data-hfilter="pilha" onclick="app.filtrarHistoricoTipo('pilha')">🪵 Pilhas</button>
             <button class="btn-action-small" data-hfilter="tora" onclick="app.filtrarHistoricoTipo('tora')">🌲 Toras</button>
           </div>
@@ -703,7 +716,7 @@
       <section id="view-relatorios" class="view-section">
         <div class="section-header">
           <h2 class="section-title">Relatórios &amp; Exportação Excel</h2>
-          <p class="section-desc">Gere planilhas .xlsx multipasta oficiais (Resumo, Caminhões, Pilhas e Toras).</p>
+          <p class="section-desc">Gere planilhas .xlsx multipasta oficiais (Resumo, Retirada de Caminhões, Pilhas e Toras).</p>
         </div>
 
         <div class="card">
@@ -733,7 +746,7 @@
             <label class="form-label" for="reportTipoSelect">Modalidade a Exportar</label>
             <select id="reportTipoSelect" class="form-control" onchange="app.atualizarRelatorioPeriodo()">
               <option value="todos">Todas as Modalidades (Planilha Completa com Abas)</option>
-              <option value="caminhao">Apenas Cargas de Caminhões</option>
+              <option value="caminhao">Apenas Retiradas de Material (Caminhões)</option>
               <option value="pilha">Apenas Pilhas de Madeira</option>
               <option value="tora">Apenas Toras Roliças (Smalian)</option>
             </select>
@@ -892,7 +905,7 @@
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
-            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.5</span><br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.9.0</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
@@ -1449,7 +1462,7 @@
             <span>🌲</span> Escolher Toras Cubadas
           </h3>
           <p class="modal-subtitle" style="font-size: 0.8rem; color: var(--muted); margin-top: 2px;">
-            Selecione as toras medidas no pátio para carregar no caminhão.
+            Selecione as toras medidas no pátio para registrar a retirada no caminhão.
           </p>
         </div>
         <button class="modal-close-btn" onclick="app.fecharModal('modalSelecionarTorasCaminhao')" aria-label="Fechar">&times;</button>
@@ -1464,7 +1477,7 @@
             <div class="modal-toras-tabs">
               <button type="button" class="modal-tora-pill active" id="modalPillTodas" onclick="app.setFiltroStatusTorasModal('todas')">Todas as Toras</button>
               <button type="button" class="modal-tora-pill" id="modalPillDisponiveis" onclick="app.setFiltroStatusTorasModal('disponiveis')">🟢 No Pátio (Disponíveis)</button>
-              <button type="button" class="modal-tora-pill" id="modalPillCarregadas" onclick="app.setFiltroStatusTorasModal('carregadas')">🚚 Já Carregadas</button>
+              <button type="button" class="modal-tora-pill" id="modalPillCarregadas" onclick="app.setFiltroStatusTorasModal('carregadas')">🚚 Já Retiradas</button>
             </div>
             <div style="display: flex; gap: 6px;">
               <button type="button" class="btn-action-small" onclick="app.marcarTodasTorasModal(true)" style="font-size: 0.75rem;">Marcar Visíveis</button>
@@ -1485,6 +1498,70 @@
           <button type="button" class="btn btn-secondary" onclick="app.fecharModal('modalSelecionarTorasCaminhao')">Cancelar</button>
           <button type="button" class="btn btn-primary" id="btnConfirmarTorasModal" onclick="app.confirmarSelecaoTorasModal()">
             Confirmar Seleção
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: PROJETO / FRENTE COMPARTILHADA DA EQUIPE                           -->
+  <!-- ========================================================================= -->
+  <div id="modalProjeto" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalProjeto')">
+    <div class="modal-dialog" onclick="event.stopPropagation()" style="max-width: 480px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span>📁</span> Projeto / Frente da Equipe
+          </h3>
+          <p class="modal-subtitle" style="font-size: 0.8rem; color: var(--muted); margin-top: 2px;">
+            Compartilhamento de cubagens em tempo real entre todos os integrantes da frente.
+          </p>
+        </div>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalProjeto')" aria-label="Fechar">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 18px 20px;">
+        <div style="background: var(--surface-2); border: 1.5px solid var(--gold); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
+          <div style="font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; font-weight: 700;">Projeto Atual Ativo</div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="modalProjetoNomeDisplay" style="font-size: 1.3rem; font-weight: 700; color: var(--gold); font-family: var(--display);">BR-153</span>
+            <span id="modalProjetoStatusBadge" class="badge" style="background: rgba(14, 37, 21, 0.4); color: var(--sand); border: 1px solid var(--line); font-size: 0.72rem; padding: 4px 8px;">Sincronizado</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--muted); margin-top: 6px;" id="modalProjetoInfoLocal">
+            Medições locais vinculadas: calculando...
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" for="inputTrocarProjeto">Trocar ou Criar Novo Projeto</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="inputTrocarProjeto" class="form-control" placeholder="Ex: BR-153, Pátio 2, Lote Sul" style="font-weight: 600;">
+            <button type="button" class="btn btn-primary" style="white-space: nowrap; padding: 0 16px;" onclick="app.salvarNovoProjeto()">
+              Ativar
+            </button>
+          </div>
+          <span class="helper" style="font-size: 0.75rem; margin-top: 4px; display: block;">Digite o nome exato compartilhado com sua equipe (ex: Marco, Norberto e Lucas usam "BR-153").</span>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 0.78rem; font-weight: 600; color: var(--ink); margin-bottom: 8px;">Projetos Recentes:</div>
+          <div id="containerProjetosRecentes" style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <!-- Pílulas preenchidas dinamicamente -->
+          </div>
+        </div>
+
+        <div style="background: rgba(150, 120, 74, 0.08); border-left: 3px solid var(--gold); padding: 10px 12px; border-radius: 4px; font-size: 0.78rem; color: var(--ink); line-height: 1.45; margin-bottom: 16px;">
+          💡 <strong>Como funciona o trabalho em equipe:</strong><br>
+          Quando alguém da equipe (ex: Marco) cubar toras de 100 a 200 no projeto <strong>BR-153</strong>, qualquer outro integrante logado no mesmo projeto pode registrar a retirada do material (caminhão) informando os números das plaquetas sem precisar cubar tudo de novo. Funciona mesmo offline no campo, sincronizando assim que houver rede!
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-secondary" style="font-size: 0.82rem;" onclick="app.sincronizarProjetoAgora()">
+            🔄 Sincronizar Agora
+          </button>
+          <button type="button" class="btn btn-secondary" style="font-size: 0.82rem;" onclick="app.fecharModal('modalProjeto')">
+            Fechar
           </button>
         </div>
       </div>
@@ -1539,10 +1616,10 @@
   <script src="vendor/exceljs.min.js"></script>
   <script src="js/db.js"></script>
   <script src="js/calculator.js"></script>
-  <script src="js/excel-export.js?v=2.8.1"></script>
-  <script src="js/auth.js?v=2.8.1"></script>
+  <script src="js/excel-export.js?v=2.9.0"></script>
+  <script src="js/auth.js?v=2.9.0"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js?v=2.8.1"></script>
+  <script src="js/app.js?v=2.9.0"></script>
 </body>
 </html>
