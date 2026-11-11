@@ -2166,28 +2166,36 @@ body[data-active-tab="inicio"] .cover-screen,
   margin: 10px 0 0;
 }
 
-/* Painel mostrando apenas o total cubado */
+/* Painel de Balanço e Fluxo de Madeira do Pátio (Entrada, Saída e Falta Retirar) */
 .cover-stat-panel {
   width: 100%;
-  max-width: 400px;
-  background: rgba(14, 37, 21, 0.55);
-  border: 1.5px solid rgba(178, 194, 165, 0.3);
+  max-width: 420px;
+  background: rgba(14, 37, 21, 0.65);
+  border: 1.5px solid rgba(197, 160, 89, 0.4);
   border-radius: 18px;
-  padding: 12px 20px;
+  padding: 14px 16px 12px;
   margin: 10px 0 12px;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  align-items: stretch;
+  gap: 8px;
 }
 
 :root[data-theme="light"] .cover-stat-panel {
-  background: rgba(242, 235, 221, 0.72);
-  border-color: rgba(14, 37, 21, 0.2);
-  box-shadow: 0 4px 16px rgba(14, 37, 21, 0.08);
+  background: rgba(242, 235, 221, 0.88);
+  border-color: rgba(14, 37, 21, 0.25);
+  box-shadow: 0 6px 20px rgba(14, 37, 21, 0.1);
+}
+
+.cover-balanco-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
 }
 
 .cover-stat-badge {
@@ -2202,6 +2210,7 @@ body[data-active-tab="inicio"] .cover-screen,
 .cover-stat-main {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 6px;
 }
 
@@ -2225,7 +2234,7 @@ body[data-active-tab="inicio"] .cover-screen,
 }
 
 .cover-stat-sub {
-  font-size: 12.5px;
+  font-size: 12px;
   color: #CDD8C1;
   font-weight: 500;
 }
@@ -2234,49 +2243,138 @@ body[data-active-tab="inicio"] .cover-screen,
   color: #5B675A;
 }
 
-/* Linha de Fluxo do Pátio (Retiradas x Saldo) */
-.cover-fluxo-row {
+.cover-balanco-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 2px 0;
+  position: relative;
+  width: 100%;
+}
+
+.cover-balanco-divider::before,
+.cover-balanco-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(178, 194, 165, 0.22);
+}
+
+:root[data-theme="light"] .cover-balanco-divider::before,
+:root[data-theme="light"] .cover-balanco-divider::after {
+  border-bottom-color: rgba(14, 37, 21, 0.15);
+}
+
+.cover-balanco-divider span {
+  padding: 0 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  opacity: 0.9;
+  text-transform: uppercase;
+}
+
+/* Grid de Saída e Falta Retirar */
+.cover-balanco-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.cover-balanco-item {
+  background: rgba(19, 47, 28, 0.6);
+  border: 1px solid rgba(178, 194, 165, 0.2);
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  transition: transform 0.15s ease;
+}
+
+:root[data-theme="light"] .cover-balanco-item {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(14, 37, 21, 0.15);
+}
+
+.cover-balanco-item.saida {
+  border-top: 3px solid #E5A93C;
+}
+
+.cover-balanco-item.saldo {
+  border-top: 3px solid #52B788;
+}
+
+.cover-balanco-item-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gold);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(178, 194, 165, 0.22);
-  width: 100%;
-  font-size: 11.5px;
-  color: #CDD8C1;
-}
-
-:root[data-theme="light"] .cover-fluxo-row {
-  border-top-color: rgba(14, 37, 21, 0.15);
-  color: #5B675A;
-}
-
-.cover-fluxo-item {
-  display: inline-flex;
-  align-items: center;
   gap: 4px;
 }
 
-.cover-fluxo-label {
-  font-size: 11px;
-  opacity: 0.9;
-  letter-spacing: 0.02em;
+:root[data-theme="light"] .cover-balanco-item-label {
+  color: #7A5726;
 }
 
-.cover-fluxo-val {
+.cover-balanco-item-val-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  margin: 1px 0;
+}
+
+.cover-balanco-item-val {
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 700;
+  color: #F3EEE3;
+  line-height: 1.1;
+}
+
+:root[data-theme="light"] .cover-balanco-item-val {
+  color: #0E2515;
+}
+
+.cover-balanco-item-unit {
+  font-family: var(--body);
+  font-size: 12px;
   font-weight: 700;
   color: var(--gold);
 }
 
-:root[data-theme="light"] .cover-fluxo-val {
-  color: #8C6A37;
+.cover-balanco-item-sub {
+  font-size: 11px;
+  color: #CDD8C1;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
-.cover-fluxo-divider {
-  opacity: 0.4;
-  color: var(--muted);
+:root[data-theme="light"] .cover-balanco-item-sub {
+  color: #5B675A;
+}
+
+@media (max-width: 360px) {
+  .cover-balanco-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .cover-balanco-item-val {
+    font-size: 19px;
+  }
+}
+
+/* Linha de Fluxo do Pátio (Legado) */
+.cover-fluxo-row {
+  display: none;
 }
 
 /* Grupo de Ações / Botões */

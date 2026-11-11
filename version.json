@@ -1,10 +1,10 @@
 {
-  "v": "2.10.0",
-  "nome": "2.10.0",
+  "v": "2.10.1",
+  "nome": "2.10.1",
   "data": "2026-11-11",
   "novidades": [
-    "Botão Adicionar Tora à Pilha de Altíssimo Contraste: novo visual Dourado Ouro no Modo Escuro e Verde Floresta no Modo Claro com texto em destaque máximo, 100% legível sob luz solar direta",
-    "Prevenção Total de 'undefined m³' e Unidades Duplicadas: volume total em tempo real sempre formatado com precisão e tratamento de unidades de diâmetro e comprimento",
-    "Auto-Reparação Automática dos Registros e Comprimento Médio: exibição imediata do volume efetivo real das toras na retirada e cálculo dinâmico de comprimento e diâmetro médio nos cards do histórico"
+    "Painel de Balanço Completo do Pátio na Tela Inicial: exibição visual integrada do Total Cubado (Entrada), Total Retirado (Saída) e Quanto Falta Retirar (Saldo no Pátio)",
+    "Controle Operacional em Tempo Real: cálculo imediato do saldo restante em m³ e percentual pendente de retirada",
+    "Design Otimizado para Celulares e Campo: cards de fluxo com badges distintos e tipografia legível sob sol direto"
   ]
 }

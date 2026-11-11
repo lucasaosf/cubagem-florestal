@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.0';
+    this.appVersion = '2.10.1';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1940,33 +1940,64 @@ class CubagemApp {
     try {
       const stats = await window.cubagemDB.getStats();
 
-      // Atualiza valores do painel da Capa Inicial
+      // Formatação inteligente com precisão de campo (2 ou 3 casas)
+      const fVol = (v) => {
+        if (!v || isNaN(v) || v <= 0) return '0,00';
+        const has3Dec = Math.abs(Math.round(v * 100) / 100 - Math.round(v * 1000) / 1000) > 0.0001;
+        return window.CubagemCalculator.formatNumber(v, has3Dec ? 3 : 2);
+      };
+
+      // 1. TOTAL CUBADO (ENTRADA NO PÁTIO: PILHAS + TORAS)
       const totalCubadoEl = document.getElementById('coverTotalCubado');
       const coverStatSubEl = document.getElementById('coverStatSub');
       const coverHistCountEl = document.getElementById('coverHistCount');
 
-      const totalItemsEntrada = (stats.totalPilhas || 0) + (stats.totalToras || 0);
-      const totalCargasText = totalItemsEntrada === 0
-        ? 'Nenhuma cubagem de entrada registrada'
-        : (totalItemsEntrada === 1 ? '1 cubagem de entrada no pátio' : `${totalItemsEntrada} cubagens de entrada no pátio`);
+      const totalPilhas = stats.totalPilhas || 0;
+      const totalToras = stats.totalToras || 0;
+      const totalItemsEntrada = totalPilhas + totalToras;
 
-      // O volume na capa é estritamente a CUBAGEM GERAL DE ENTRADA (Pilhas + Toras)
+      let subEntradaText = 'Nenhuma cubagem de entrada registrada';
+      if (totalItemsEntrada > 0) {
+        const partes = [];
+        if (totalPilhas > 0) partes.push(`${totalPilhas} ${totalPilhas === 1 ? 'pilha' : 'pilhas'}`);
+        if (totalToras > 0) partes.push(`${totalToras} ${totalToras === 1 ? 'lote de toras' : 'lotes de toras'}`);
+        subEntradaText = `${partes.join(' e ')} no pátio`;
+      }
+
       const volEntrada = stats.totalVolumeEntrada !== undefined ? stats.totalVolumeEntrada : (stats.totalVolume || 0);
-      if (totalCubadoEl) totalCubadoEl.textContent = window.CubagemCalculator.formatNumber(volEntrada, 2);
-      if (coverStatSubEl) coverStatSubEl.textContent = totalCargasText;
+      if (totalCubadoEl) totalCubadoEl.textContent = fVol(volEntrada);
+      if (coverStatSubEl) coverStatSubEl.textContent = subEntradaText;
       if (coverHistCountEl) coverHistCountEl.textContent = stats.totalCount || 0;
 
-      // Painel de fluxo do pátio (Retiradas vs Saldo Restante)
-      const coverFluxoResumo = document.getElementById('coverFluxoResumo');
+      // 2. TOTAL RETIRADO (SAÍDA: CAMINHÕES)
       const coverRetiradasVol = document.getElementById('coverRetiradasVol');
+      const coverRetiradasSub = document.getElementById('coverRetiradasSub');
+      const volSaida = stats.totalVolumeSaida !== undefined ? stats.totalVolumeSaida : (stats.volCaminhoes || 0);
+      const nCaminhoes = stats.totalCaminhoes || 0;
+
+      if (coverRetiradasVol) coverRetiradasVol.textContent = fVol(volSaida);
+      if (coverRetiradasSub) {
+        coverRetiradasSub.textContent = nCaminhoes === 0
+          ? '0 retiradas (caminhões)'
+          : `${nCaminhoes} ${nCaminhoes === 1 ? 'caminhão retirado' : 'caminhões retirados'}`;
+      }
+
+      // 3. FALTA RETIRAR (SALDO RESTANTE NO PÁTIO)
       const coverSaldoPatio = document.getElementById('coverSaldoPatio');
-      if (coverFluxoResumo) {
-        if ((stats.volCaminhoes || 0) > 0 || volEntrada > 0) {
-          coverFluxoResumo.style.display = 'flex';
-          if (coverRetiradasVol) coverRetiradasVol.textContent = `${window.CubagemCalculator.formatNumber(stats.volCaminhoes || 0, 2)} m³`;
-          if (coverSaldoPatio) coverSaldoPatio.textContent = `${window.CubagemCalculator.formatNumber(stats.saldoPatio || (volEntrada - (stats.volCaminhoes || 0)), 2)} m³`;
+      const coverSaldoSub = document.getElementById('coverSaldoSub');
+      const saldo = stats.saldoPatio !== undefined ? stats.saldoPatio : (volEntrada - volSaida);
+
+      if (coverSaldoPatio) {
+        coverSaldoPatio.textContent = fVol(saldo > 0 ? saldo : 0);
+      }
+      if (coverSaldoSub) {
+        if (volEntrada <= 0) {
+          coverSaldoSub.textContent = 'Aguardando medições';
+        } else if (saldo <= 0.001 && volSaida > 0) {
+          coverSaldoSub.textContent = '✓ Pátio 100% retirado';
         } else {
-          coverFluxoResumo.style.display = 'none';
+          const perc = volEntrada > 0 ? Math.min(100, Math.round((saldo / volEntrada) * 100)) : 0;
+          coverSaldoSub.textContent = `${perc}% restante no pátio`;
         }
       }
 
