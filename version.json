@@ -1,12 +1,12 @@
 {
-  "v": "2.9.3",
-  "nome": "2.9.3",
+  "v": "2.9.4",
+  "nome": "2.9.4",
   "data": "2026-11-11",
   "novidades": [
-    "Painel de Informações da Frente no botão da pasta: visualização de volume total (m³), toras cubadas, retiradas com caminhão e saldo restante no pátio",
-    "Extrair Geral do Projeto (.xlsx): botão para exportar a planilha multipasta consolidada de todas as medições da frente com um único toque",
-    "Extrair Medições Selecionadas (.xlsx): caixas de seleção interativas para escolher medições específicas da frente e gerar a planilha Excel correspondente",
-    "Ver Prévia da Planilha da Frente: conferência dos cálculos, abas e romaneios antes de baixar",
-    "Organização em Abas no Modal de Projetos: 'Painel & Extração', 'Integrantes (Criador)' e 'Trocar Frente'"
+    "Atribuir Cubagens Existentes ao Projeto: opção de selecionar medições já realizadas (sem projeto ou de outras frentes) e vinculá-las imediatamente ao projeto ativo",
+    "Atribuição em Lote no Histórico: botão '📁 Atribuir ao Projeto' na barra de seleção múltipla para vincular medições marcadas diretamente à frente de trabalho",
+    "Layout Responsivo Zero-Zoom: tela perfeitamente adaptada para celulares e computadores sem necessidade de dar ou tirar zoom manual",
+    "Prevenção de Auto-Zoom no Mobile: campos de entrada padronizados em 16px no celular, evitando que navegadores aproximem a tela ao digitar",
+    "Legibilidade Máxima: reforço no contraste do botão '+ Adicionar Esta Tora à Pilha' com texto branco e borda dourada"
   ]
 }

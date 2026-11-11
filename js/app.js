@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.3';
+    this.appVersion = '2.9.4';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -46,6 +46,8 @@ class CubagemApp {
     this.selectedProjectRecordIds = new Set();
     this.abaProjetoAtiva = 'painel';
     this.registrosProjetoCache = [];
+    this.selectedVincularIds = new Set();
+    this.vincularRecordsCache = [];
     try {
       this.projetosRecentes = JSON.parse(localStorage.getItem('cubagem.projetos_recentes') || '["BR-153", "Geral"]');
       if (!Array.isArray(this.projetosRecentes)) this.projetosRecentes = ['BR-153', 'Geral'];
@@ -3635,6 +3637,261 @@ class CubagemApp {
 
     this.fecharModal('modalProjeto');
     this.mostrarPreviaPlanilha(records);
+  }
+
+  /**
+   * Abre o modal para selecionar e atribuir cubagens que foram feitas sem projeto (ou em outras frentes)
+   */
+  async abrirModalVincularCubagensProjeto() {
+    const nomeProj = (this.projetoAtivo || 'BR-153').trim();
+    const destEl = document.getElementById('vincularDestinoNome');
+    if (destEl) destEl.textContent = nomeProj;
+
+    this.selectedVincularIds.clear();
+
+    const projIdAtivo = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+      ? this.auth.normalizarProjetoId(nomeProj)
+      : String(nomeProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+
+    let allRecords = [];
+    if (window.cubagemDB && typeof window.cubagemDB.getAll === 'function') {
+      allRecords = await window.cubagemDB.getAll(false);
+    }
+
+    // Filtra cubagens que NÃO pertencem ao projeto ativo (sem projeto ou de outro projeto)
+    const foraDoProjeto = allRecords.filter(r => {
+      const rProj = r.projeto || '';
+      const rId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+        ? this.auth.normalizarProjetoId(rProj)
+        : String(rProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+      return rId !== projIdAtivo;
+    });
+
+    foraDoProjeto.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    this.vincularRecordsCache = foraDoProjeto;
+
+    if (foraDoProjeto.length === 0) {
+      this.showToast(`Todas as medições cadastradas no aparelho já estão vinculadas ao projeto "${nomeProj}".`, 'info');
+      return;
+    }
+
+    const filtroInput = document.getElementById('filtroVincularInput');
+    if (filtroInput) filtroInput.value = '';
+
+    this.renderizarListaVincularCubagens();
+    this.abrirModal('modalVincularCubagensProjeto');
+  }
+
+  /**
+   * Renderiza a lista de cubagens disponíveis fora do projeto para vinculação
+   */
+  renderizarListaVincularCubagens() {
+    const container = document.getElementById('listaVincularContainer');
+    const totalCountEl = document.getElementById('vincularTotalCount');
+    const filtroInput = document.getElementById('filtroVincularInput');
+    const term = filtroInput ? filtroInput.value.trim().toLowerCase() : '';
+
+    if (!container) return;
+
+    let items = this.vincularRecordsCache || [];
+    if (term) {
+      items = items.filter(r => {
+        const p = String(r.plaqueta || '').toLowerCase();
+        const pl = String(r.placa || '').toLowerCase();
+        const id = String(r.identificacao || '').toLowerCase();
+        const esp = String(r.especie || '').toLowerCase();
+        const aut = String(r.autorNome || r.responsavel || '').toLowerCase();
+        return p.includes(term) || pl.includes(term) || id.includes(term) || esp.includes(term) || aut.includes(term);
+      });
+    }
+
+    if (totalCountEl) totalCountEl.textContent = `${items.length}`;
+
+    const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 24px 12px; color: var(--muted); font-size: 0.84rem; background: var(--surface-2); border-radius: 8px; border: 1px dashed var(--line);">
+          Nenhuma cubagem encontrada para os filtros aplicados.
+        </div>
+      `;
+      this.atualizarContadorSelecaoVincular();
+      return;
+    }
+
+    container.innerHTML = items.map(r => {
+      const isSelected = this.selectedVincularIds.has(r.id);
+      const dataStr = r.data ? window.CubagemExcelExport.formatDateBR(r.data) : (r.dataCriacao ? new Date(r.dataCriacao).toLocaleDateString('pt-BR') : '');
+      const autor = r.autorNome || r.responsavel || 'Lucas Aøsf';
+      const projOrigem = r.projeto ? `Projeto: ${r.projeto}` : 'Sem Projeto Atribuído';
+      
+      let tipoBadge = '🌲 Tora';
+      let icone = '🌲';
+      let titulo = r.plaqueta ? `Plaqueta #${r.plaqueta}` : (r.identificacao || `Tora #${r.numero || 1}`);
+
+      if (r.tipo === 'caminhao') {
+        icone = '🚚';
+        tipoBadge = 'Retirada Caminhão';
+        titulo = r.placa ? `Caminhão ${r.placa}` : `Caminhão ${r.identificacao || r.id}`;
+      } else if (r.tipo === 'pilha') {
+        icone = '🪵';
+        tipoBadge = 'Pilha';
+        const nToras = Array.isArray(r.toras) ? r.toras.length : 1;
+        titulo = `${r.identificacao || 'Pilha'} (${nToras} toras)`;
+      }
+
+      const volStr = `${fNum(r.volumeGeometrico, 3)} m³`;
+
+      return `
+        <div class="proj-medicao-card ${isSelected ? 'selected' : ''}" id="vincCard_${r.id}" onclick="app.toggleSelecaoVincular('${r.id}', event)">
+          <input type="checkbox" class="proj-medicao-checkbox" id="vincChk_${r.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoVincular('${r.id}', event)">
+          <div class="proj-medicao-info">
+            <div class="proj-medicao-top">
+              <div class="proj-medicao-title">
+                <span>${icone}</span> <strong>${this.escapeHtml(titulo)}</strong>
+                <span style="font-size: 0.72rem; color: var(--gold); margin-left: 4px;">(${tipoBadge})</span>
+              </div>
+              <div class="proj-medicao-vol">${volStr}</div>
+            </div>
+            <div class="proj-medicao-sub">
+              <strong style="color: var(--gold);">${projOrigem}</strong> • 📅 ${dataStr} • 👤 ${this.escapeHtml(autor)}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    this.atualizarContadorSelecaoVincular();
+  }
+
+  filtrarListaVincularCubagens() {
+    this.renderizarListaVincularCubagens();
+  }
+
+  toggleSelecaoVincular(id, event) {
+    if (this.selectedVincularIds.has(id)) {
+      this.selectedVincularIds.delete(id);
+    } else {
+      this.selectedVincularIds.add(id);
+    }
+
+    const card = document.getElementById(`vincCard_${id}`);
+    const chk = document.getElementById(`vincChk_${id}`);
+    const isSel = this.selectedVincularIds.has(id);
+
+    if (card) card.classList.toggle('selected', isSel);
+    if (chk) chk.checked = isSel;
+
+    this.atualizarContadorSelecaoVincular();
+  }
+
+  selecionarTodasVincular(selecionar = true) {
+    const items = this.vincularRecordsCache || [];
+    if (selecionar) {
+      items.forEach(r => this.selectedVincularIds.add(r.id));
+    } else {
+      this.selectedVincularIds.clear();
+    }
+
+    items.forEach(r => {
+      const card = document.getElementById(`vincCard_${r.id}`);
+      const chk = document.getElementById(`vincChk_${r.id}`);
+      const isSel = this.selectedVincularIds.has(r.id);
+      if (card) card.classList.toggle('selected', isSel);
+      if (chk) chk.checked = isSel;
+    });
+
+    this.atualizarContadorSelecaoVincular();
+  }
+
+  atualizarContadorSelecaoVincular() {
+    const badge = document.getElementById('vincularSelBadge');
+    if (badge) {
+      badge.textContent = `${this.selectedVincularIds.size}`;
+    }
+
+    const btnConf = document.getElementById('btnConfirmarVinculacaoProj');
+    if (btnConf) {
+      btnConf.style.opacity = this.selectedVincularIds.size > 0 ? '1' : '0.6';
+    }
+  }
+
+  async confirmarVinculacaoCubagensProjeto() {
+    if (this.selectedVincularIds.size === 0) {
+      this.showToast('Selecione ao menos uma cubagem para atribuir a este projeto.', 'warning');
+      return;
+    }
+
+    const nomeProj = (this.projetoAtivo || 'BR-153').trim();
+    const ids = [...this.selectedVincularIds];
+    const btn = document.getElementById('btnConfirmarVinculacaoProj');
+    if (btn) btn.disabled = true;
+
+    try {
+      let count = 0;
+      for (const id of ids) {
+        const rec = await window.cubagemDB.get(id);
+        if (rec) {
+          rec.projeto = nomeProj;
+          rec.updatedAt = Date.now();
+          await window.cubagemDB.update(rec);
+          if (this.auth && typeof this.auth.syncRecordToCloud === 'function') {
+            await this.auth.syncRecordToCloud(rec);
+          }
+          count++;
+        }
+      }
+
+      this.fecharModal('modalVincularCubagensProjeto');
+      this.showToast(`✓ ${count} ${count === 1 ? 'cubagem atribuída' : 'cubagens atribuídas'} com sucesso ao projeto "${nomeProj}"!`, 'success');
+
+      // Atualiza o painel do projeto aberto
+      await this.carregarDadosPainelProjeto();
+      this.atualizarUIProjeto();
+    } catch (err) {
+      console.error('Erro ao vincular cubagens:', err);
+      this.showToast(`Erro ao atribuir cubagens: ${err.message || err}`, 'danger');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async atribuirSelecionadasAoProjetoModal() {
+    if (this.selectedHistoryIds.size === 0) {
+      this.showToast('Selecione ao menos uma cubagem no histórico marcando a caixinha.', 'warning');
+      return;
+    }
+
+    const nomeProj = (this.projetoAtivo || 'BR-153').trim();
+    const qtd = this.selectedHistoryIds.size;
+
+    if (!confirm(`Deseja atribuir as ${qtd} medições selecionadas ao projeto "${nomeProj}"?`)) {
+      return;
+    }
+
+    try {
+      let count = 0;
+      for (const id of this.selectedHistoryIds) {
+        const rec = await window.cubagemDB.get(id);
+        if (rec) {
+          rec.projeto = nomeProj;
+          rec.updatedAt = Date.now();
+          await window.cubagemDB.update(rec);
+          if (this.auth && typeof this.auth.syncRecordToCloud === 'function') {
+            await this.auth.syncRecordToCloud(rec);
+          }
+          count++;
+        }
+      }
+
+      this.showToast(`✓ ${count} medições atribuídas ao projeto "${nomeProj}" com sucesso!`, 'success');
+      this.desmarcarTodasHistorico();
+      await this.carregarHistorico();
+      this.atualizarUIProjeto();
+    } catch (err) {
+      console.error('Erro ao atribuir selecionadas ao projeto:', err);
+      this.showToast(`Erro ao atribuir ao projeto: ${err.message || err}`, 'danger');
+    }
   }
 
   /**

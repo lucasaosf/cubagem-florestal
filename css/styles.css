@@ -140,13 +140,26 @@
 }
 
 html, body {
+  width: 100%;
+  max-width: 100%;
   min-height: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
   font-family: var(--body);
   background-color: var(--bg);
   color: var(--ink);
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Previne zoom automático do navegador mobile ao tocar em campos de texto */
+@media (max-width: 768px) {
+  input, select, textarea, .form-control {
+    font-size: 16px !important;
+  }
 }
 
 /* Layout */
@@ -154,10 +167,17 @@ html, body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  width: 100%;
   max-width: 680px;
   margin: 0 auto;
   position: relative;
   background-color: var(--bg);
+}
+
+@media (min-width: 1024px) {
+  .app-container {
+    max-width: 860px;
+  }
 }
 
 /* Header Superior */
@@ -354,8 +374,46 @@ button.header-chip:active {
 }
 
 /* Gestão de Integrantes e Criador de Projeto (BIOKURI) */
-.modal-dialog-projeto {
-  max-width: 520px;
+.modal-dialog-projeto,
+.modal-dialog-vincular {
+  max-width: 580px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .modal-dialog-projeto,
+  .modal-dialog-vincular {
+    max-width: 760px !important;
+    width: 92vw !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .modal-dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    margin: 0 !important;
+  }
+  .modal-body {
+    padding: 12px 14px !important;
+  }
+  .project-modal-tabs {
+    padding: 3px !important;
+    gap: 3px !important;
+  }
+  .proj-tab-btn {
+    padding: 7px 3px !important;
+    font-size: 0.72rem !important;
+  }
+  .project-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+  }
+  .project-kpi-card {
+    padding: 8px 6px !important;
+  }
 }
 
 .project-current-card {
@@ -1241,6 +1299,19 @@ textarea.form-control {
   height: 52px !important;
   width: 100% !important;
   transition: all 0.15s ease !important;
+  background: linear-gradient(135deg, #1D4B28 0%, #103219 100%) !important;
+  color: #FFFFFF !important;
+  border: 2px solid #C5A059 !important;
+}
+
+.btn-add-tora span {
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+}
+
+.btn-add-tora svg {
+  stroke: #E5C384 !important;
+  stroke-width: 2.5 !important;
 }
 
 /* Modo Escuro (Padrão e Forçado): Fundo Verde Escuro com Letra Creme/Branca de Alto Contraste */
@@ -4530,6 +4601,26 @@ body:not([data-active-tab="inicio"]) .install-balloon {
 .btn-bulk-merge:hover,
 .btn-bulk-merge:active {
   filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-bulk-project {
+  background: rgba(14, 37, 21, 0.4);
+  color: var(--sand);
+  border: 1px solid var(--gold);
+  font-weight: 700;
+}
+
+:root[data-theme="light"] .btn-bulk-project {
+  background: rgba(150, 120, 74, 0.12);
+  color: #0E2515;
+  border-color: var(--gold);
+}
+
+.btn-bulk-project:hover,
+.btn-bulk-project:active {
+  background: var(--gold);
+  color: #0E2515;
   transform: translateY(-1px);
 }
 
