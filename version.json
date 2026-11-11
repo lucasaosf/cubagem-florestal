@@ -1,11 +1,12 @@
 {
-  "v": "2.9.1",
-  "nome": "2.9.1",
+  "v": "2.9.2",
+  "nome": "2.9.2",
   "data": "2026-11-11",
   "novidades": [
-    "Melhoria de Contraste e Legibilidade: botão '+ Adicionar Esta Tora à Pilha' com letra branca e dourada de alto contraste",
-    "Definição oficial da variável de cor creme em todos os modos de tema",
-    "Projetos e Frentes Compartilhadas em Equipe com sincronização em tempo real",
-    "Retirada do Material (Caminhão) puxando toras cubadas no pátio por plaqueta"
+    "Criador Oficial do Projeto: você é o proprietário da frente e tem autoridade total sobre o projeto",
+    "Opção Exclusiva de Adicionar Contas: somente o criador do projeto tem permissão para adicionar e remover outros integrantes",
+    "Segurança e Controle de Acesso: contas não autorizadas pelo criador não acessam os dados da frente",
+    "Sincronização em Tempo Real de Integrantes: novas contas autorizadas pelo criador entram em vigor imediatamente",
+    "Painel de Integrantes no Modal do Projeto: visualização clara de avatares, papéis (👑 Criador vs ✓ Integrante) e botões de gestão"
   ]
 }

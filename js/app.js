@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.1';
+    this.appVersion = '2.9.2';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -3217,6 +3217,12 @@ class CubagemApp {
         }
       }).catch(() => {});
     }
+
+    // Atualiza seção de integrantes se o modal estiver aberto
+    const modalProj = document.getElementById('modalProjeto');
+    if (modalProj && modalProj.classList.contains('open')) {
+      this.renderizarSecaoMembrosProjeto(nome);
+    }
   }
 
   definirProjetoAtivo(nomeProjeto, sincronizarNuvem = true) {
@@ -3251,8 +3257,10 @@ class CubagemApp {
     }
   }
 
-  abrirModalProjeto() {
+  async abrirModalProjeto() {
     this.atualizarUIProjeto();
+    await this.renderizarSecaoMembrosProjeto(this.projetoAtivo);
+
     const inputTrocar = document.getElementById('inputTrocarProjeto');
     if (inputTrocar) inputTrocar.value = '';
 
@@ -3290,22 +3298,245 @@ class CubagemApp {
     this.abrirModal('modalProjeto');
   }
 
-  ativarProjetoPill(nome) {
+  /**
+   * Renderiza a seção de membros com regras estritas: somente o criador pode adicionar contas
+   */
+  async renderizarSecaoMembrosProjeto(nomeProjeto) {
+    const container = document.getElementById('containerSecaoMembrosProjeto');
+    if (!container) return;
+
+    const nome = (nomeProjeto || this.projetoAtivo || 'BR-153').trim();
+    let meta = null;
+
+    if (this.auth && typeof this.auth.obterMetaProjeto === 'function') {
+      meta = await this.auth.obterMetaProjeto(nome);
+    } else {
+      meta = {
+        id: 'br_153',
+        nome: nome,
+        criadorNome: 'Lucas Aøsf',
+        criadorEmail: 'lucasaosf@gmail.com',
+        membros: [{ nome: 'Lucas Aøsf', email: 'lucasaosf@gmail.com', role: 'criador' }]
+      };
+    }
+
+    const isCriador = this.auth ? this.auth.isUsuarioCriador(meta) : true;
+    const isLogado = !!(this.auth && this.auth.user);
+    const membros = (meta && Array.isArray(meta.membros)) ? meta.membros : [];
+
+    // Atualiza badge de papel no cabeçalho do modal
+    const roleBadge = document.getElementById('modalProjetoRoleBadge');
+    if (roleBadge) {
+      if (isCriador) {
+        roleBadge.className = 'badge-role-criador';
+        roleBadge.textContent = '👑 Você é o Criador';
+      } else if (isLogado) {
+        roleBadge.className = 'badge-role-membro';
+        roleBadge.textContent = '✓ Integrante Autorizado';
+      } else {
+        roleBadge.className = 'badge-role-criador';
+        roleBadge.textContent = 'Modo Local';
+      }
+    }
+
+    // Atualiza info do criador oficial
+    const criadorInfoEl = document.getElementById('modalProjetoCriadorInfo');
+    if (criadorInfoEl) {
+      const criadorNome = meta.criadorNome || 'Lucas Aøsf';
+      const criadorEmail = meta.criadorEmail || 'lucasaosf@gmail.com';
+      criadorInfoEl.innerHTML = `👑 Criador Oficial: <strong>${this.escapeHtml(criadorNome)}</strong> <span style="color: var(--muted); font-size: 0.74rem;">(${this.escapeHtml(criadorEmail)})</span>`;
+    }
+
+    // Constrói lista visual dos integrantes
+    let membrosHtml = '';
+    if (membros.length === 0) {
+      membrosHtml = `<div style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 12px;">Nenhum integrante adicional cadastrado nesta frente.</div>`;
+    } else {
+      membrosHtml = membros.map(m => {
+        const nomeMembro = m.nome || (m.email ? m.email.split('@')[0] : 'Integrante');
+        const isOwner = m.role === 'criador';
+        const inicial = (nomeMembro || 'U').charAt(0).toUpperCase();
+
+        return `
+          <div class="project-member-row">
+            <div class="project-member-avatar">${inicial}</div>
+            <div class="project-member-details">
+              <div class="project-member-name">
+                <strong>${this.escapeHtml(nomeMembro)}</strong>
+                ${isOwner ? '<span class="badge-tag-owner">👑 Criador</span>' : '<span class="badge-tag-member">✓ Integrante</span>'}
+              </div>
+              <div class="project-member-email">${this.escapeHtml(m.email || '')}</div>
+            </div>
+            ${(isCriador && !isOwner) ? `
+              <button type="button" class="btn-remove-member" onclick="app.removerMembroProjeto('${this.escapeHtml(m.email)}', '${this.escapeHtml(nomeMembro)}')" title="Remover este integrante do projeto">
+                Remover
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Constrói painel de adição conforme permissão do usuário
+    let painelAdicaoHtml = '';
+    if (isCriador) {
+      painelAdicaoHtml = `
+        <div class="project-add-member-box">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--gold); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>➕</span> Adicionar Nova Conta (Exclusivo do Criador)
+          </div>
+          <p style="font-size: 0.74rem; color: var(--muted); margin-bottom: 8px; line-height: 1.35;">
+            Somente você, como criador do projeto, pode autorizar outras contas. Informe o e-mail Google ou de acesso do integrante da sua frente (ex: Marco, Norberto):
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <input type="email" id="inputNovoMembroEmail" class="form-control" placeholder="E-mail da conta (ex: norberto@gmail.com)" style="flex: 2; min-width: 180px; font-size: 0.85rem;">
+              <input type="text" id="inputNovoMembroNome" class="form-control" placeholder="Nome (ex: Norberto)" style="flex: 1; min-width: 110px; font-size: 0.85rem;">
+            </div>
+            <button type="button" class="btn btn-primary btn-block" style="padding: 10px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="app.adicionarMembroProjeto()">
+              <span>✓</span> Autorizar Conta neste Projeto
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (isLogado) {
+      painelAdicaoHtml = `
+        <div class="project-locked-notice">
+          <span style="font-size: 1.3rem;">🔒</span>
+          <div>
+            <strong>Somente o criador pode adicionar ou remover contas.</strong><br>
+            O criador deste projeto é <strong>${this.escapeHtml(meta.criadorNome || meta.criadorEmail)}</strong>. Sua conta está autorizada para medições e retiradas em campo.
+          </div>
+        </div>
+      `;
+    } else {
+      painelAdicaoHtml = `
+        <div class="project-login-notice">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <span style="font-size: 1.2rem;">🔑</span>
+            <strong>Entre na sua conta para gerenciar integrantes:</strong>
+          </div>
+          <p style="font-size: 0.74rem; color: var(--muted); margin-bottom: 8px;">
+            Conecte-se com sua conta Google ou e-mail para validar seus projetos na nuvem e adicionar sua equipe.
+          </p>
+          <button type="button" class="btn btn-sm btn-primary" onclick="app.abrirModalAuth()">
+            Fazer Login com Google ou E-mail
+          </button>
+        </div>
+      `;
+    }
+
+    container.innerHTML = `
+      <div class="project-members-wrapper">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h4 style="font-size: 0.88rem; font-weight: 700; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px;">
+            <span>👥</span> Integrantes Autorizados (${membros.length})
+          </h4>
+          <span style="font-size: 0.72rem; color: var(--gold); font-weight: 700;">
+            ${isCriador ? '👑 Controle do Criador' : 'Acesso Autorizado'}
+          </span>
+        </div>
+
+        <div class="project-members-list">
+          ${membrosHtml}
+        </div>
+
+        ${painelAdicaoHtml}
+      </div>
+    `;
+  }
+
+  async adicionarMembroProjeto() {
+    const emailEl = document.getElementById('inputNovoMembroEmail');
+    const nomeEl = document.getElementById('inputNovoMembroNome');
+
+    const email = emailEl ? emailEl.value.trim() : '';
+    const nome = nomeEl ? nomeEl.value.trim() : '';
+
+    if (!email) {
+      this.showToast('Por favor, informe o e-mail da conta do integrante.', 'warning');
+      if (emailEl) emailEl.focus();
+      return;
+    }
+
+    try {
+      if (!this.auth) throw new Error('Módulo de autenticação indisponível.');
+      const res = await this.auth.adicionarMembroAoProjeto(this.projetoAtivo, email, nome);
+      this.showToast(`✓ Conta "${res.membro.nome || res.membro.email}" autorizada com sucesso no projeto ${this.projetoAtivo}!`, 'success');
+      if (emailEl) emailEl.value = '';
+      if (nomeEl) nomeEl.value = '';
+      await this.renderizarSecaoMembrosProjeto(this.projetoAtivo);
+    } catch (err) {
+      this.showToast(err.message || 'Erro ao adicionar integrante.', 'danger');
+    }
+  }
+
+  async removerMembroProjeto(email, nome) {
+    const ident = nome ? `${nome} (${email})` : email;
+    if (!confirm(`Deseja remover ${ident} do projeto ${this.projetoAtivo}?\nEsta conta não terá mais acesso às medições deste projeto.`)) {
+      return;
+    }
+
+    try {
+      if (!this.auth) throw new Error('Módulo de autenticação indisponível.');
+      await this.auth.removerMembroDoProjeto(this.projetoAtivo, email);
+      this.showToast(`Conta de ${ident} removida do projeto.`, 'info');
+      await this.renderizarSecaoMembrosProjeto(this.projetoAtivo);
+    } catch (err) {
+      this.showToast(err.message || 'Erro ao remover integrante.', 'danger');
+    }
+  }
+
+  async tornarSeCriadorDoProjeto() {
+    try {
+      if (!this.auth) throw new Error('Módulo de autenticação indisponível.');
+      await this.auth.reivindicarCriacaoProjeto(this.projetoAtivo);
+      this.showToast(`👑 Sua conta foi registrada como Criadora oficial do projeto ${this.projetoAtivo}!`, 'success');
+      await this.renderizarSecaoMembrosProjeto(this.projetoAtivo);
+    } catch (err) {
+      this.showToast(err.message || 'Erro ao registrar autoria.', 'danger');
+    }
+  }
+
+  async ativarProjetoPill(nome) {
+    if (this.auth) {
+      const meta = await this.auth.obterMetaProjeto(nome);
+      const isCriador = this.auth.isUsuarioCriador(meta);
+      const isMembro = this.auth.isUsuarioMembroAutorizado(meta);
+
+      if (this.auth.user && !isCriador && !isMembro) {
+        this.showToast(`⛔ Acesso restrito: o projeto "${nome}" pertence a ${meta.criadorNome || meta.criadorEmail}. Somente o criador pode autorizar sua conta nele.`, 'danger', 6000);
+        return;
+      }
+    }
+
     this.definirProjetoAtivo(nome, true);
-    this.abrirModalProjeto();
+    await this.abrirModalProjeto();
     this.showToast(`Projeto alterado para "${nome}".`, 'success');
   }
 
-  salvarNovoProjeto() {
+  async salvarNovoProjeto() {
     const input = document.getElementById('inputTrocarProjeto');
     const nome = input ? input.value.trim() : '';
     if (!nome) {
       this.showToast('Digite o nome do projeto para ativar.', 'warning');
       return;
     }
+
+    if (this.auth) {
+      const meta = await this.auth.obterMetaProjeto(nome);
+      const isCriador = this.auth.isUsuarioCriador(meta);
+      const isMembro = this.auth.isUsuarioMembroAutorizado(meta);
+
+      if (this.auth.user && !isCriador && !isMembro) {
+        this.showToast(`⛔ Acesso restrito: o projeto "${nome}" pertence a ${meta.criadorNome || meta.criadorEmail}. Somente o criador pode autorizar sua conta nele.`, 'danger', 6000);
+        return;
+      }
+    }
+
     this.definirProjetoAtivo(nome, true);
     if (input) input.value = '';
-    this.abrirModalProjeto();
+    await this.abrirModalProjeto();
     this.showToast(`✓ Projeto "${nome}" ativado com sucesso!`, 'success');
   }
 

@@ -353,6 +353,210 @@ button.header-chip:active {
   color: #0E2515;
 }
 
+/* Gestão de Integrantes e Criador de Projeto (BIOKURI) */
+.modal-dialog-projeto {
+  max-width: 520px;
+}
+
+.project-current-card {
+  background: var(--surface-2);
+  border: 1.5px solid var(--gold);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.badge-role-criador {
+  background: rgba(197, 160, 89, 0.22);
+  color: var(--gold);
+  border: 1.5px solid var(--gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 12px;
+  display: inline-block;
+  letter-spacing: 0.3px;
+}
+
+.badge-role-membro {
+  background: rgba(74, 150, 90, 0.22);
+  color: #5cb85c;
+  border: 1.5px solid #5cb85c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 12px;
+  display: inline-block;
+  letter-spacing: 0.3px;
+}
+
+.project-members-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.project-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  padding-right: 4px;
+}
+
+.project-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: all 0.15s ease;
+}
+
+.project-member-row:hover {
+  border-color: var(--gold);
+}
+
+.project-member-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #14351B;
+  border: 1.5px solid var(--gold);
+  color: #FFFFFF;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+:root[data-theme="light"] .project-member-avatar {
+  background: #0E2515;
+  color: #F2EBDD;
+}
+
+.project-member-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-member-name {
+  font-size: 0.86rem;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge-tag-owner {
+  background: rgba(197, 160, 89, 0.25);
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  letter-spacing: 0.2px;
+}
+
+.badge-tag-member {
+  background: rgba(74, 150, 90, 0.18);
+  color: #5cb85c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 8px;
+  border: 1px solid rgba(74, 150, 90, 0.5);
+  letter-spacing: 0.2px;
+}
+
+.project-member-email {
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.btn-remove-member {
+  background: rgba(220, 53, 69, 0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+:root[data-theme="light"] .btn-remove-member {
+  color: #dc3545;
+}
+
+.btn-remove-member:hover {
+  background: #dc3545;
+  color: #FFFFFF;
+  border-color: #dc3545;
+}
+
+.project-add-member-box {
+  background: rgba(197, 160, 89, 0.08);
+  border: 1.5px dashed var(--gold);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+
+.project-locked-notice {
+  background: rgba(150, 120, 74, 0.09);
+  border-left: 3.5px solid var(--gold);
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.77rem;
+  color: var(--ink);
+  line-height: 1.45;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.project-login-notice {
+  background: rgba(150, 120, 74, 0.1);
+  border: 1.5px solid var(--gold);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--ink);
+  line-height: 1.45;
+  margin-top: 8px;
+}
+
+.project-info-card {
+  background: rgba(150, 120, 74, 0.08);
+  border-left: 3px solid var(--gold);
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  color: var(--ink);
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+
 .dot-status {
   width: 7px;
   height: 7px;

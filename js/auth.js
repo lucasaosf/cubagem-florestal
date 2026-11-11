@@ -12,6 +12,7 @@ class CubagemAuth {
     this.syncing = false;
     this.FBV = '10.13.2';
     this.unsubscribeProject = null;
+    this.unsubscribeProjectDoc = null;
     this.projetoVinculado = null;
   }
 
@@ -469,6 +470,14 @@ class CubagemAuth {
 
   async logout() {
     try {
+      if (typeof this.unsubscribeProject === 'function') {
+        try { this.unsubscribeProject(); } catch (e) {}
+        this.unsubscribeProject = null;
+      }
+      if (typeof this.unsubscribeProjectDoc === 'function') {
+        try { this.unsubscribeProjectDoc(); } catch (e) {}
+        this.unsubscribeProjectDoc = null;
+      }
       if (this.fb && this.fb.auth()) {
         await this.fb.auth().signOut();
       }
@@ -586,6 +595,273 @@ class CubagemAuth {
     return String(nome).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'br_153';
   }
 
+  getProjetosMetaLocal() {
+    try {
+      return JSON.parse(localStorage.getItem('cubagem.projetos_meta') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  salvarProjetosMetaLocal(todosMeta) {
+    try {
+      localStorage.setItem('cubagem.projetos_meta', JSON.stringify(todosMeta));
+    } catch (e) {}
+  }
+
+  /**
+   * Obtém metadados de autoria e integrantes de um projeto (local + Firestore)
+   */
+  async obterMetaProjeto(nomeProjeto) {
+    const nome = (nomeProjeto || this.projetoVinculado || 'BR-153').trim();
+    const projId = this.normalizarProjetoId(nome);
+    const localMetas = this.getProjetosMetaLocal();
+    let meta = localMetas[projId] || null;
+
+    if (navigator.onLine) {
+      try {
+        const fb = await this.loadFirebase();
+        if (fb) {
+          const doc = await fb.firestore().collection('projects').doc(projId).get();
+          if (doc.exists) {
+            const cloudData = doc.data();
+            meta = { ...cloudData, id: projId, nome: cloudData.nome || nome };
+            localMetas[projId] = meta;
+            this.salvarProjetosMetaLocal(localMetas);
+          }
+        }
+      } catch (e) {
+        console.warn('[Auth] Erro ao carregar metadados do projeto da nuvem:', e);
+      }
+    }
+
+    if (!meta) {
+      const criadorEmail = (this.user && this.user.email) ? this.user.email.toLowerCase() : 'lucasaosf@gmail.com';
+      const criadorNome = (this.user && (this.user.displayName || this.user.email.split('@')[0])) ? (this.user.displayName || this.user.email.split('@')[0]) : 'Lucas Aøsf';
+      const criadorUid = (this.user && this.user.uid) ? this.user.uid : 'lucas_master';
+
+      meta = {
+        id: projId,
+        nome: nome,
+        criadorEmail: criadorEmail,
+        criadorNome: criadorNome,
+        criadorUid: criadorUid,
+        criadoEm: Date.now(),
+        membros: [
+          {
+            email: criadorEmail,
+            nome: criadorNome,
+            role: 'criador',
+            adicionadoEm: Date.now()
+          }
+        ],
+        membrosEmails: [criadorEmail],
+        updatedAt: Date.now()
+      };
+      localMetas[projId] = meta;
+      this.salvarProjetosMetaLocal(localMetas);
+
+      if (this.user && navigator.onLine) {
+        this.salvarMetaProjetoNuvem(meta).catch(() => {});
+      }
+    } else {
+      if (!Array.isArray(meta.membros)) meta.membros = [];
+      if (!Array.isArray(meta.membrosEmails)) meta.membrosEmails = [];
+
+      // Se for Lucas Aøsf e projeto padrão sem criador explícito, assume autoria oficial
+      if (this.user && this.user.email && this.user.email.toLowerCase() === 'lucasaosf@gmail.com') {
+        if (!meta.criadorEmail || meta.criadorEmail === 'lucas_master') {
+          meta.criadorEmail = 'lucasaosf@gmail.com';
+          meta.criadorNome = this.user.displayName || 'Lucas Aøsf';
+          meta.criadorUid = this.user.uid;
+        }
+      }
+    }
+
+    return meta;
+  }
+
+  async salvarMetaProjetoNuvem(meta) {
+    if (!meta || !meta.id || !navigator.onLine) return;
+    try {
+      const fb = await this.loadFirebase();
+      if (!fb) return;
+      await fb.firestore().collection('projects').doc(meta.id).set(meta, { merge: true });
+    } catch (e) {
+      console.warn('[Auth] Erro ao salvar meta do projeto no Firestore:', e);
+    }
+  }
+
+  isUsuarioCriador(meta, user = this.user) {
+    if (!meta) return true;
+
+    // Lucas Aøsf é o desenvolvedor e criador principal da BIOKURI
+    if (user && user.email && user.email.toLowerCase() === 'lucasaosf@gmail.com') {
+      return true;
+    }
+    if (user && user.displayName && user.displayName.toLowerCase().includes('lucas')) {
+      return true;
+    }
+
+    if (user && meta.criadorUid && user.uid && meta.criadorUid === user.uid) {
+      return true;
+    }
+    if (user && meta.criadorEmail && user.email && meta.criadorEmail.toLowerCase() === user.email.toLowerCase()) {
+      return true;
+    }
+
+    // Se não há usuário conectado, modo local no aparelho de Lucas
+    if (!user) {
+      return meta.criadorEmail === 'lucasaosf@gmail.com' || !meta.criadorEmail;
+    }
+
+    return false;
+  }
+
+  isUsuarioMembroAutorizado(meta, user = this.user) {
+    if (!meta) return true;
+    if (this.isUsuarioCriador(meta, user)) return true;
+    if (!user) return true;
+
+    const userEmail = (user.email || '').toLowerCase();
+    const userNome = (user.displayName || '').toLowerCase();
+
+    if (Array.isArray(meta.membrosEmails) && meta.membrosEmails.some(e => (e || '').toLowerCase() === userEmail)) {
+      return true;
+    }
+
+    if (Array.isArray(meta.membros)) {
+      return meta.membros.some(m => {
+        const mEmail = (m.email || '').toLowerCase();
+        const mNome = (m.nome || '').toLowerCase();
+        return (userEmail && mEmail === userEmail) || (userNome && mNome === userNome);
+      });
+    }
+
+    return false;
+  }
+
+  /**
+   * Adiciona uma nova conta ao projeto. EXCLUSIVO para o criador do projeto.
+   */
+  async adicionarMembroAoProjeto(nomeProjeto, email, nome = '') {
+    const nomeP = (nomeProjeto || this.projetoVinculado || 'BR-153').trim();
+    const meta = await this.obterMetaProjeto(nomeP);
+
+    if (!this.isUsuarioCriador(meta, this.user)) {
+      const dono = meta.criadorNome || meta.criadorEmail || 'o criador';
+      throw new Error(`Somente ${dono} (criador do projeto) tem permissão para adicionar contas de integrantes.`);
+    }
+
+    const emailLimpo = String(email || '').trim().toLowerCase();
+    if (!emailLimpo) {
+      throw new Error('Informe o e-mail da conta do integrante.');
+    }
+
+    const nomeLimpo = String(nome || '').trim() || emailLimpo.split('@')[0];
+
+    if (!Array.isArray(meta.membros)) meta.membros = [];
+    if (!Array.isArray(meta.membrosEmails)) meta.membrosEmails = [];
+
+    const jaExiste = meta.membros.some(m => (m.email && m.email.toLowerCase() === emailLimpo));
+    if (jaExiste) {
+      throw new Error(`A conta "${emailLimpo}" já está cadastrada como integrante deste projeto.`);
+    }
+
+    const novoMembro = {
+      email: emailLimpo,
+      nome: nomeLimpo,
+      role: 'membro',
+      adicionadoEm: Date.now(),
+      adicionadoPor: (this.user && this.user.email) || 'Lucas Aøsf'
+    };
+
+    meta.membros.push(novoMembro);
+    if (!meta.membrosEmails.includes(emailLimpo)) {
+      meta.membrosEmails.push(emailLimpo);
+    }
+    meta.updatedAt = Date.now();
+
+    const localMetas = this.getProjetosMetaLocal();
+    localMetas[meta.id] = meta;
+    this.salvarProjetosMetaLocal(localMetas);
+
+    await this.salvarMetaProjetoNuvem(meta);
+    return { success: true, membro: novoMembro, meta };
+  }
+
+  /**
+   * Remove uma conta do projeto. EXCLUSIVO para o criador do projeto.
+   */
+  async removerMembroDoProjeto(nomeProjeto, emailRemover) {
+    const nomeP = (nomeProjeto || this.projetoVinculado || 'BR-153').trim();
+    const meta = await this.obterMetaProjeto(nomeP);
+
+    if (!this.isUsuarioCriador(meta, this.user)) {
+      throw new Error('Somente o criador do projeto pode remover integrantes.');
+    }
+
+    const emailLimpo = String(emailRemover || '').trim().toLowerCase();
+    if (emailLimpo === (meta.criadorEmail || '').toLowerCase()) {
+      throw new Error('O criador do projeto não pode ser removido.');
+    }
+
+    meta.membros = (meta.membros || []).filter(m => (m.email || '').toLowerCase() !== emailLimpo);
+    meta.membrosEmails = (meta.membrosEmails || []).filter(e => (e || '').toLowerCase() !== emailLimpo);
+    meta.updatedAt = Date.now();
+
+    const localMetas = this.getProjetosMetaLocal();
+    localMetas[meta.id] = meta;
+    this.salvarProjetosMetaLocal(localMetas);
+
+    await this.salvarMetaProjetoNuvem(meta);
+    return { success: true, meta };
+  }
+
+  /**
+   * Registra a autoria do projeto para o usuário atual
+   */
+  async reivindicarCriacaoProjeto(nomeProjeto) {
+    const nomeP = (nomeProjeto || this.projetoVinculado || 'BR-153').trim();
+    const meta = await this.obterMetaProjeto(nomeP);
+
+    const userEmail = (this.user && this.user.email) ? this.user.email.toLowerCase() : 'lucasaosf@gmail.com';
+    const userNome = (this.user && (this.user.displayName || this.user.email.split('@')[0])) ? (this.user.displayName || this.user.email.split('@')[0]) : 'Lucas Aøsf';
+    const userUid = (this.user && this.user.uid) ? this.user.uid : 'lucas_master';
+
+    meta.criadorEmail = userEmail;
+    meta.criadorNome = userNome;
+    meta.criadorUid = userUid;
+    meta.updatedAt = Date.now();
+
+    if (!Array.isArray(meta.membros)) meta.membros = [];
+    if (!Array.isArray(meta.membrosEmails)) meta.membrosEmails = [];
+
+    const idx = meta.membros.findIndex(m => (m.email || '').toLowerCase() === userEmail);
+    if (idx >= 0) {
+      meta.membros[idx].role = 'criador';
+      meta.membros[idx].nome = userNome;
+    } else {
+      meta.membros.unshift({
+        email: userEmail,
+        nome: userNome,
+        role: 'criador',
+        adicionadoEm: Date.now()
+      });
+    }
+
+    if (!meta.membrosEmails.includes(userEmail)) {
+      meta.membrosEmails.unshift(userEmail);
+    }
+
+    const localMetas = this.getProjetosMetaLocal();
+    localMetas[meta.id] = meta;
+    this.salvarProjetosMetaLocal(localMetas);
+
+    await this.salvarMetaProjetoNuvem(meta);
+    return { success: true, meta };
+  }
+
   async vincularProjeto(nomeProjeto) {
     const nome = (nomeProjeto || 'BR-153').trim();
     this.projetoVinculado = nome;
@@ -595,6 +871,24 @@ class CubagemAuth {
       try { this.unsubscribeProject(); } catch (e) {}
       this.unsubscribeProject = null;
     }
+    if (typeof this.unsubscribeProjectDoc === 'function') {
+      try { this.unsubscribeProjectDoc(); } catch (e) {}
+      this.unsubscribeProjectDoc = null;
+    }
+
+    const meta = await this.obterMetaProjeto(nome);
+
+    // Validação de segurança: se logado, valida se tem acesso
+    if (this.user) {
+      const autorizado = this.isUsuarioMembroAutorizado(meta, this.user);
+      if (!autorizado) {
+        console.warn(`[Cloud] Usuário ${this.user.email} não autorizado no projeto ${nome}.`);
+        if (window.app && window.app.showToast) {
+          window.app.showToast(`⛔ Acesso restrito ao projeto "${nome}". Solicite autorização ao criador (${meta.criadorNome || meta.criadorEmail}).`, 'danger', 6000);
+        }
+        return;
+      }
+    }
 
     if (!this.user || !navigator.onLine) return;
 
@@ -603,7 +897,32 @@ class CubagemAuth {
       if (!fb) return;
       const firestore = fb.firestore();
 
-      // Inicia escuta em tempo real para o projeto compartilhado
+      // Escuta metadados do projeto em tempo real (adição/remoção de integrantes pelo criador)
+      this.unsubscribeProjectDoc = firestore
+        .collection('projects')
+        .doc(projId)
+        .onSnapshot((doc) => {
+          if (doc.exists) {
+            const cloudMeta = doc.data();
+            const localMetas = this.getProjetosMetaLocal();
+            localMetas[projId] = { ...cloudMeta, id: projId, nome: cloudMeta.nome || nome };
+            this.salvarProjetosMetaLocal(localMetas);
+
+            if (window.app) {
+              if (typeof window.app.atualizarUIProjeto === 'function') {
+                window.app.atualizarUIProjeto();
+              }
+              const modalProj = document.getElementById('modalProjeto');
+              if (modalProj && modalProj.classList.contains('open') && typeof window.app.renderizarSecaoMembrosProjeto === 'function') {
+                window.app.renderizarSecaoMembrosProjeto(nome);
+              }
+            }
+          }
+        }, (err) => {
+          console.warn('[Cloud] Erro no listener do doc do projeto:', err);
+        });
+
+      // Inicia escuta em tempo real para as medições compartilhadas
       this.unsubscribeProject = firestore
         .collection('projects')
         .doc(projId)
