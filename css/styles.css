@@ -2224,6 +2224,51 @@ body[data-active-tab="inicio"] .cover-screen,
   color: #5B675A;
 }
 
+/* Linha de Fluxo do Pátio (Retiradas x Saldo) */
+.cover-fluxo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(178, 194, 165, 0.22);
+  width: 100%;
+  font-size: 11.5px;
+  color: #CDD8C1;
+}
+
+:root[data-theme="light"] .cover-fluxo-row {
+  border-top-color: rgba(14, 37, 21, 0.15);
+  color: #5B675A;
+}
+
+.cover-fluxo-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cover-fluxo-label {
+  font-size: 11px;
+  opacity: 0.9;
+  letter-spacing: 0.02em;
+}
+
+.cover-fluxo-val {
+  font-weight: 700;
+  color: var(--gold);
+}
+
+:root[data-theme="light"] .cover-fluxo-val {
+  color: #8C6A37;
+}
+
+.cover-fluxo-divider {
+  opacity: 0.4;
+  color: var(--muted);
+}
+
 /* Grupo de Ações / Botões */
 .cover-actions-group {
   width: 100%;

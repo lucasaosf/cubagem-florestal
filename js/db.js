@@ -189,9 +189,11 @@ class CubagemDB {
     const all = await this.getAll(true);
     const todayStr = new Date().toISOString().slice(0, 10);
 
-    let totalVolume = 0;
+    let totalVolumeEntrada = 0; // Pilhas + Toras (Entrada de madeira no pátio)
+    let totalVolumeSaida = 0;   // Retirada do Material / Caminhões (Saída de madeira)
     let todayCount = 0;
-    let todayVolume = 0;
+    let todayVolumeEntrada = 0;
+    let todayVolumeSaida = 0;
 
     let totalCaminhoes = 0;
     let totalPilhas = 0;
@@ -203,38 +205,57 @@ class CubagemDB {
 
     for (const item of all) {
       const vol = Number(item.volumeGeometrico) || 0;
-      totalVolume += vol;
       const t = item.tipo || 'caminhao';
 
       if (t === 'caminhao') {
         totalCaminhoes++;
         volCaminhoes += vol;
+        totalVolumeSaida += vol;
+        if (item.data === todayStr) {
+          todayVolumeSaida += vol;
+        }
       } else if (t === 'pilha') {
         totalPilhas++;
         volPilhas += vol;
+        totalVolumeEntrada += vol;
+        if (item.data === todayStr) {
+          todayVolumeEntrada += vol;
+        }
       } else if (t === 'tora') {
         totalToras++;
         volToras += vol;
+        totalVolumeEntrada += vol;
+        if (item.data === todayStr) {
+          todayVolumeEntrada += vol;
+        }
       }
 
       if (item.data === todayStr) {
         todayCount++;
-        todayVolume += vol;
       }
     }
 
+    const saldoPatio = totalVolumeEntrada - totalVolumeSaida;
+    const totalEntradas = totalPilhas + totalToras;
+
     return {
       totalCount: all.length,
-      totalVolume,
+      // totalVolume representa exclusivamente a CUBAGEM GERAL DE ENTRADA (Pilhas + Toras)
+      totalVolume: totalVolumeEntrada,
+      totalVolumeEntrada,
+      totalVolumeSaida,
+      saldoPatio,
       todayCount,
-      todayVolume,
+      todayVolume: todayVolumeEntrada,
+      todayVolumeEntrada,
+      todayVolumeSaida,
       totalCaminhoes,
       totalPilhas,
       totalToras,
       volCaminhoes,
       volPilhas,
       volToras,
-      averageVolume: all.length > 0 ? totalVolume / all.length : 0,
+      averageVolume: totalEntradas > 0 ? totalVolumeEntrada / totalEntradas : 0,
       recentItems: all.slice(0, 6)
     };
   }

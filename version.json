@@ -1,11 +1,11 @@
 {
-  "v": "2.9.7",
-  "nome": "2.9.7",
+  "v": "2.9.8",
+  "nome": "2.9.8",
   "data": "2026-11-11",
   "novidades": [
-    "Cálculo Dinâmico em Tempo Real do Volume das Toras: correção do valor 'undefined m³' na carga do caminhão, exibindo o volume acumulado exato a cada tora selecionada",
-    "Contador e Volume na Seleção: o modal de toras cubadas agora calcula e exibe em tempo real o volume somado (m³) enquanto você marca as plaquetas",
-    "Ajuste de Unidades: eliminação de unidades duplicadas (cm cm, m m) nos resumos de diâmetro e comprimento médios",
-    "Persistência Confiável: garantia de que o volume geométrico total da carga é salvo sem campos indefinidos"
+    "Separação de Entrada vs Saída de Madeira: a Retirada de Material (Caminhão) não é mais somada à Cubagem Geral de Entrada, garantindo fidelidade contábil e dendrométrica no pátio",
+    "Painel de Fluxo e Saldo no Início: a tela inicial agora exibe a Cubagem Geral de Entrada (Pátio), o total de Retiradas e o Saldo Restante de madeira",
+    "Indicadores de Frente e Relatórios: os painéis dos projetos e relatórios detalham com precisão o volume total de entrada, saídas e o saldo físico em pátio",
+    "Planilhas Excel Aprimoradas: o Resumo Consolidado no Excel agora apresenta linhas distintas para Total Entrada, Total Saída (Retiradas) e Saldo no Pátio"
   ]
 }

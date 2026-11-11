@@ -81,7 +81,8 @@ class CubagemExcelExport {
     const vCam = sumVol(caminhoes);
     const vPil = sumVol(pilhas);
     const vTor = sumVol(toras);
-    const vTot = vCam + vPil + vTor;
+    const vTotEntrada = vPil + vTor;
+    const vSaldoPatio = vTotEntrada - vCam;
 
     // =========================================================================
     // ABA 1: RESUMO CONSOLIDADO
@@ -118,7 +119,7 @@ class CubagemExcelExport {
     wsResumo.mergeCells('A2:D2');
     const r2 = wsResumo.getCell('A2');
     const perStr = isSingleDay
-      ? `Data: ${dayStr}  •  Volume Total Consolidado do Dia: ${vTot.toFixed(2)} m³`
+      ? `Data: ${dayStr}  •  Entrada: ${vTotEntrada.toFixed(2)} m³  •  Retiradas: ${vCam.toFixed(2)} m³  •  Saldo: ${vSaldoPatio.toFixed(2)} m³`
       : (startDate && endDate ? `${this.formatDateBR(startDate)} a ${this.formatDateBR(endDate)}` : 'Período Completo');
     const projStr = records.find(r => r.projeto)?.projeto || (window.app && window.app.projetoAtivo) || '';
     const projSuffix = projStr ? `  •  Projeto: ${projStr}` : '';
@@ -144,9 +145,9 @@ class CubagemExcelExport {
     });
 
     const resRows = [
-      ['🚚 Retirada do Material (Caminhões)', caminhoes.length, vCam, caminhoes.length > 0 ? vCam / caminhoes.length : 0],
-      ['🪵 Pilhas de Madeira', pilhas.length, vPil, pilhas.length > 0 ? vPil / pilhas.length : 0],
-      ['🌲 Toras Roliças (Smalian)', toras.length, vTor, toras.length > 0 ? vTor / toras.length : 0]
+      ['🪵 Pilhas de Madeira (Entrada)', pilhas.length, vPil, pilhas.length > 0 ? vPil / pilhas.length : 0],
+      ['🌲 Toras Roliças (Entrada)', toras.length, vTor, toras.length > 0 ? vTor / toras.length : 0],
+      ['🚚 Retirada do Material (Saída / Caminhões)', caminhoes.length, vCam, caminhoes.length > 0 ? vCam / caminhoes.length : 0]
     ];
 
     let rowIdx = 5;
@@ -169,33 +170,91 @@ class CubagemExcelExport {
       rowIdx++;
     });
 
-    // Linha Total Geral do Resumo
-    const rTot = wsResumo.getRow(rowIdx);
-    rTot.height = 24;
-    rTot.getCell(1).value = 'TOTAL CONSOLIDADO';
-    rTot.getCell(1).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
-    rTot.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
-    rTot.getCell(1).border = doubleBottomBorder;
+    // 1. Linha Total Entrada no Pátio (Pilhas + Toras)
+    const totalEntradasCount = pilhas.length + toras.length;
+    const rTotEntrada = wsResumo.getRow(rowIdx);
+    rTotEntrada.height = 23;
+    rTotEntrada.getCell(1).value = 'TOTAL ENTRADA NO PÁTIO';
+    rTotEntrada.getCell(1).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rTotEntrada.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+    rTotEntrada.getCell(1).border = thinBorder;
 
-    rTot.getCell(2).value = records.length;
-    rTot.getCell(2).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
-    rTot.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
-    rTot.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-    rTot.getCell(2).border = doubleBottomBorder;
+    rTotEntrada.getCell(2).value = totalEntradasCount;
+    rTotEntrada.getCell(2).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rTotEntrada.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+    rTotEntrada.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    rTotEntrada.getCell(2).border = thinBorder;
 
-    rTot.getCell(3).value = vTot;
-    rTot.getCell(3).font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
-    rTot.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
-    rTot.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
-    rTot.getCell(3).numFmt = '#,##0.00 "m³"';
-    rTot.getCell(3).border = doubleBottomBorder;
+    rTotEntrada.getCell(3).value = vTotEntrada;
+    rTotEntrada.getCell(3).font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
+    rTotEntrada.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
+    rTotEntrada.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
+    rTotEntrada.getCell(3).numFmt = '#,##0.00 "m³"';
+    rTotEntrada.getCell(3).border = thinBorder;
 
-    rTot.getCell(4).value = records.length > 0 ? vTot / records.length : 0;
-    rTot.getCell(4).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
-    rTot.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
-    rTot.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
-    rTot.getCell(4).numFmt = '#,##0.00 "m³"';
-    rTot.getCell(4).border = doubleBottomBorder;
+    rTotEntrada.getCell(4).value = totalEntradasCount > 0 ? vTotEntrada / totalEntradasCount : 0;
+    rTotEntrada.getCell(4).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rTotEntrada.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+    rTotEntrada.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
+    rTotEntrada.getCell(4).numFmt = '#,##0.00 "m³"';
+    rTotEntrada.getCell(4).border = thinBorder;
+    rowIdx++;
+
+    // 2. Linha Total Saída (Retiradas com Caminhão)
+    const rTotSaida = wsResumo.getRow(rowIdx);
+    rTotSaida.height = 23;
+    rTotSaida.getCell(1).value = 'TOTAL SAÍDA (RETIRADAS)';
+    rTotSaida.getCell(1).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rTotSaida.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8C4A37' } }; // Terracota / Vinho suave
+    rTotSaida.getCell(1).border = thinBorder;
+
+    rTotSaida.getCell(2).value = caminhoes.length;
+    rTotSaida.getCell(2).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rTotSaida.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8C4A37' } };
+    rTotSaida.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    rTotSaida.getCell(2).border = thinBorder;
+
+    rTotSaida.getCell(3).value = vCam;
+    rTotSaida.getCell(3).font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
+    rTotSaida.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8C4A37' } };
+    rTotSaida.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
+    rTotSaida.getCell(3).numFmt = '#,##0.00 "m³"';
+    rTotSaida.getCell(3).border = thinBorder;
+
+    rTotSaida.getCell(4).value = caminhoes.length > 0 ? vCam / caminhoes.length : 0;
+    rTotSaida.getCell(4).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rTotSaida.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8C4A37' } };
+    rTotSaida.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
+    rTotSaida.getCell(4).numFmt = '#,##0.00 "m³"';
+    rTotSaida.getCell(4).border = thinBorder;
+    rowIdx++;
+
+    // 3. Linha Saldo no Pátio (Entrada - Saída)
+    const rSaldo = wsResumo.getRow(rowIdx);
+    rSaldo.height = 24;
+    rSaldo.getCell(1).value = 'SALDO NO PÁTIO (ENTRADA - SAÍDA)';
+    rSaldo.getCell(1).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rSaldo.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
+    rSaldo.getCell(1).border = doubleBottomBorder;
+
+    rSaldo.getCell(2).value = '—';
+    rSaldo.getCell(2).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rSaldo.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
+    rSaldo.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    rSaldo.getCell(2).border = doubleBottomBorder;
+
+    rSaldo.getCell(3).value = vSaldoPatio;
+    rSaldo.getCell(3).font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
+    rSaldo.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
+    rSaldo.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
+    rSaldo.getCell(3).numFmt = '#,##0.00 "m³"';
+    rSaldo.getCell(3).border = doubleBottomBorder;
+
+    rSaldo.getCell(4).value = '—';
+    rSaldo.getCell(4).font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+    rSaldo.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
+    rSaldo.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+    rSaldo.getCell(4).border = doubleBottomBorder;
 
     // Demonstrativo detalhado das medições selecionadas / do dia
     if (records.length > 0) {

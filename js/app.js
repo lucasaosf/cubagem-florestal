@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.7';
+    this.appVersion = '2.9.8';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1927,18 +1927,34 @@ class CubagemApp {
       const coverStatSubEl = document.getElementById('coverStatSub');
       const coverHistCountEl = document.getElementById('coverHistCount');
 
-      const totalItems = (stats.totalCaminhoes || 0) + (stats.totalPilhas || 0) + (stats.totalToras > 0 ? 1 : 0);
-      const totalCargasText = totalItems === 0
-        ? 'Nenhuma medição registrada'
-        : (totalItems === 1 ? '1 medição registrada no aparelho' : `${totalItems} medições registradas no aparelho`);
+      const totalItemsEntrada = (stats.totalPilhas || 0) + (stats.totalToras || 0);
+      const totalCargasText = totalItemsEntrada === 0
+        ? 'Nenhuma cubagem de entrada registrada'
+        : (totalItemsEntrada === 1 ? '1 cubagem de entrada no pátio' : `${totalItemsEntrada} cubagens de entrada no pátio`);
 
-      if (totalCubadoEl) totalCubadoEl.textContent = window.CubagemCalculator.formatNumber(stats.totalVolume, 2);
+      // O volume na capa é estritamente a CUBAGEM GERAL DE ENTRADA (Pilhas + Toras)
+      const volEntrada = stats.totalVolumeEntrada !== undefined ? stats.totalVolumeEntrada : (stats.totalVolume || 0);
+      if (totalCubadoEl) totalCubadoEl.textContent = window.CubagemCalculator.formatNumber(volEntrada, 2);
       if (coverStatSubEl) coverStatSubEl.textContent = totalCargasText;
-      if (coverHistCountEl) coverHistCountEl.textContent = totalItems;
+      if (coverHistCountEl) coverHistCountEl.textContent = stats.totalCount || 0;
+
+      // Painel de fluxo do pátio (Retiradas vs Saldo Restante)
+      const coverFluxoResumo = document.getElementById('coverFluxoResumo');
+      const coverRetiradasVol = document.getElementById('coverRetiradasVol');
+      const coverSaldoPatio = document.getElementById('coverSaldoPatio');
+      if (coverFluxoResumo) {
+        if ((stats.volCaminhoes || 0) > 0 || volEntrada > 0) {
+          coverFluxoResumo.style.display = 'flex';
+          if (coverRetiradasVol) coverRetiradasVol.textContent = `${window.CubagemCalculator.formatNumber(stats.volCaminhoes || 0, 2)} m³`;
+          if (coverSaldoPatio) coverSaldoPatio.textContent = `${window.CubagemCalculator.formatNumber(stats.saldoPatio || (volEntrada - (stats.volCaminhoes || 0)), 2)} m³`;
+        } else {
+          coverFluxoResumo.style.display = 'none';
+        }
+      }
 
       // Mantém compatibilidade com outros elementos se presentes
       const kpiVol = document.getElementById('kpiTotalVolume');
-      if (kpiVol) kpiVol.innerHTML = `${window.CubagemCalculator.formatNumber(stats.totalVolume, 2)} <span class="kpi-unit">m³</span>`;
+      if (kpiVol) kpiVol.innerHTML = `${window.CubagemCalculator.formatNumber(volEntrada, 2)} <span class="kpi-unit">m³</span>`;
       const elCam = document.getElementById('kpiTotalCaminhoes');
       if (elCam) elCam.textContent = stats.totalCaminhoes;
       const elPil = document.getElementById('kpiTotalPilhas');
@@ -1950,7 +1966,7 @@ class CubagemApp {
       const elTorVol = document.getElementById('kpiTorasVolume');
       if (elTorVol) elTorVol.textContent = `${window.CubagemCalculator.formatNumber(stats.volToras, 3)} m³ Smalian`;
       const elVolDet = document.getElementById('kpiVolumeDetail');
-      if (elVolDet) elVolDet.textContent = `${stats.totalCaminhoes} cam • ${stats.totalPilhas} pilhas • ${stats.totalToras} toras`;
+      if (elVolDet) elVolDet.textContent = `${stats.totalCaminhoes} cam (saída) • ${stats.totalPilhas} pilhas • ${stats.totalToras} toras`;
 
       const container = document.getElementById('dashboardRecentList');
       if (!container) return;
@@ -2367,13 +2383,41 @@ class CubagemApp {
     }
 
     const count = records.length;
-    const totalVol = records.reduce((acc, r) => acc + (Number(r.volumeGeometrico) || 0), 0);
-    const mediaVol = count > 0 ? totalVol / count : 0;
+    let volEntrada = 0;
+    let volSaida = 0;
+    let countEntrada = 0;
+    let countSaida = 0;
 
-    document.getElementById('repKpiVolume').innerHTML = `${window.CubagemCalculator.formatNumber(totalVol, 2)} <span class="kpi-unit">m³</span>`;
-    document.getElementById('repKpiCaminhoes').textContent = count;
-    document.getElementById('repKpiMedia').innerHTML = `${window.CubagemCalculator.formatNumber(mediaVol, 2)} <span class="kpi-unit">m³</span>`;
-    document.getElementById('repPreviewCountBadge').textContent = `${count} registros`;
+    records.forEach(r => {
+      const v = Number(r.volumeGeometrico) || 0;
+      if (r.tipo === 'caminhao') {
+        volSaida += v;
+        countSaida++;
+      } else {
+        volEntrada += v;
+        countEntrada++;
+      }
+    });
+
+    const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+    const kpiVolEl = document.getElementById('repKpiVolume');
+    const kpiCamEl = document.getElementById('repKpiCaminhoes');
+    const kpiMedEl = document.getElementById('repKpiMedia');
+    const badgeEl = document.getElementById('repPreviewCountBadge');
+
+    if (tipoSelect === 'caminhao') {
+      const mediaVol = countSaida > 0 ? volSaida / countSaida : 0;
+      if (kpiVolEl) kpiVolEl.innerHTML = `${fNum(volSaida, 2)} <span class="kpi-unit">m³</span>`;
+      if (kpiMedEl) kpiMedEl.innerHTML = `${fNum(mediaVol, 2)} <span class="kpi-unit">m³</span>`;
+    } else {
+      // Para 'todos' ou pilhas/toras, o volume principal é a ENTRADA
+      const mediaVol = countEntrada > 0 ? volEntrada / countEntrada : 0;
+      if (kpiVolEl) kpiVolEl.innerHTML = `${fNum(volEntrada, 2)} <span class="kpi-unit">m³</span>`;
+      if (kpiMedEl) kpiMedEl.innerHTML = `${fNum(mediaVol, 2)} <span class="kpi-unit">m³</span>`;
+    }
+
+    if (kpiCamEl) kpiCamEl.textContent = count;
+    if (badgeEl) badgeEl.textContent = `${count} registros`;
 
     const previewContainer = document.getElementById('reportPreviewList');
     if (!previewContainer) return;
@@ -3422,7 +3466,7 @@ class CubagemApp {
     const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
 
     // Cálculos consolidados da frente
-    let volTotal = 0;
+    let volTotalEntrada = 0;
     let torasCubadasCount = 0;
     let retiradasCargasCount = 0;
     let retiradasVolTotal = 0;
@@ -3431,7 +3475,6 @@ class CubagemApp {
 
     records.forEach(r => {
       const vol = Number(r.volumeGeometrico) || 0;
-      volTotal += vol;
 
       const autor = r.autorNome || r.responsavel || 'Lucas Aøsf';
       const statsAutor = responsaveisMap.get(autor) || { vol: 0, count: 0 };
@@ -3448,6 +3491,7 @@ class CubagemApp {
           });
         }
       } else {
+        volTotalEntrada += vol;
         if (Array.isArray(r.toras) && r.toras.length > 0) {
           torasCubadasCount += r.toras.length;
         } else {
@@ -3457,6 +3501,7 @@ class CubagemApp {
     });
 
     const torasNoPatioRestante = Math.max(0, torasCubadasCount - torasCarregadasPlaquetas.size);
+    const saldoVolumePatio = volTotalEntrada - retiradasVolTotal;
 
     // Atualiza KPIs
     const kpiVol = document.getElementById('projKpiVolTotal');
@@ -3465,10 +3510,10 @@ class CubagemApp {
     const kpiPatio = document.getElementById('projKpiPatioRestante');
     const totalCountEl = document.getElementById('projTotalRecordsCount');
 
-    if (kpiVol) kpiVol.textContent = `${fNum(volTotal, 3)} m³`;
+    if (kpiVol) kpiVol.textContent = `${fNum(volTotalEntrada, 3)} m³`;
     if (kpiToras) kpiToras.textContent = `${torasCubadasCount}`;
     if (kpiRetiradas) kpiRetiradas.textContent = `${retiradasCargasCount} (${fNum(retiradasVolTotal, 2)} m³)`;
-    if (kpiPatio) kpiPatio.textContent = `${torasNoPatioRestante}`;
+    if (kpiPatio) kpiPatio.textContent = `${torasNoPatioRestante} (${fNum(saldoVolumePatio, 2)} m³)`;
     if (totalCountEl) totalCountEl.textContent = `${records.length}`;
 
     // Atualiza Resumo de Contribuição da Equipe
