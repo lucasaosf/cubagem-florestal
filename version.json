@@ -1,11 +1,11 @@
 {
-  "v": "2.9.6",
-  "nome": "2.9.6",
+  "v": "2.9.7",
+  "nome": "2.9.7",
   "data": "2026-11-11",
   "novidades": [
-    "Atualização 100% Automática: o aplicativo agora se atualiza sozinho e silenciosamente em segundo plano sempre que houver conexão com a internet",
-    "Header Limpo: remoção do botão manual 'Atualizar' do cabeçalho superior para maior conforto visual e espaço no celular",
-    "Detecção Ativa: verificação instantânea ao abrir o app, ao alternar de aba ou ao restabelecer a conexão de rede",
-    "Ativação Imediata do Service Worker: novas melhorias e correções entram em vigor sem necessidade de confirmação manual"
+    "Cálculo Dinâmico em Tempo Real do Volume das Toras: correção do valor 'undefined m³' na carga do caminhão, exibindo o volume acumulado exato a cada tora selecionada",
+    "Contador e Volume na Seleção: o modal de toras cubadas agora calcula e exibe em tempo real o volume somado (m³) enquanto você marca as plaquetas",
+    "Ajuste de Unidades: eliminação de unidades duplicadas (cm cm, m m) nos resumos de diâmetro e comprimento médios",
+    "Persistência Confiável: garantia de que o volume geométrico total da carga é salvo sem campos indefinidos"
   ]
 }

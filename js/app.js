@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.6';
+    this.appVersion = '2.9.7';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1037,14 +1037,15 @@ class CubagemApp {
 
         if (totalToras > 0) {
           const lote = window.CubagemCalculator.calculateLoteToras(this.torasCaminhao);
-          setTxt(volEl, lote.display.volumeGeometrico);
+          const volStr = lote.display.volumeTotal || lote.display.volumeGeometrico || window.CubagemCalculator.formatNumber(lote.volumeTotal || 0, 3);
+          setTxt(volEl, volStr);
           setTxt(v1, `${lote.totalToras} toras`);
-          setTxt(v2, `${lote.display.diametroMedio} cm`);
-          setTxt(v3, `${lote.display.comprimentoMedio} m`);
+          setTxt(v2, lote.display.diametroMedio);
+          setTxt(v3, lote.display.comprimentoMedio);
           setHtml(memEl, [
             `<strong>Retirada por Toras Rastreáveis (Fórmula de Smalian)</strong>`,
-            `Total de Toras: ${lote.totalToras} | Dm Médio: ${lote.display.diametroMedio} cm | Comp. Médio: ${lote.display.comprimentoMedio} m`,
-            `Volume Total Transportado: <strong>${lote.display.volumeGeometrico} m³</strong>`
+            `Total de Toras: ${lote.totalToras} | Dm Médio: ${lote.display.diametroMedio} | Comp. Médio: ${lote.display.comprimentoMedio}`,
+            `Volume Total Transportado: <strong>${volStr} m³</strong>`
           ].join('<br>'));
         } else {
           setTxt(volEl, '0,000');
@@ -1218,7 +1219,8 @@ class CubagemApp {
           diametroMedio_cm: lote.diametroMedio,
           comprimento: lote.comprimentoMedio,
           largura: 0,
-          volumeGeometrico: lote.volumeGeometrico,
+          volumeGeometrico: lote.volumeGeometrico || lote.volumeTotal || 0,
+          volumeTotal: lote.volumeTotal || lote.volumeGeometrico || 0,
           tipoVolume: 'Volume Smalian (Retirada Caminhão)',
           toras: [...this.torasCaminhao],
           plaqueta: `Plaquetas: ${plaquetasResumo}`,
@@ -2931,8 +2933,9 @@ class CubagemApp {
       const statsEl = document.getElementById('camToraDmCompStats');
       const espEl = document.getElementById('camToraEspeciesResumo');
 
-      if (volDisp) volDisp.textContent = `${lote.display.volumeGeometrico} m³`;
-      if (statsEl) statsEl.textContent = `Dm Médio: ${lote.display.diametroMedio} cm • Comp. Médio: ${lote.display.comprimentoMedio} m`;
+      const volStr = lote.display.volumeTotal || lote.display.volumeGeometrico || window.CubagemCalculator.formatNumber(lote.volumeTotal || lote.volumeGeometrico || 0, 3);
+      if (volDisp) volDisp.textContent = `${volStr} m³`;
+      if (statsEl) statsEl.textContent = `Dm Médio: ${lote.display.diametroMedio} • Comp. Médio: ${lote.display.comprimentoMedio}`;
 
       const especiesUnicas = [...new Set(this.torasCaminhao.map(t => t.especie).filter(Boolean))];
       if (espEl) {
@@ -3139,7 +3142,10 @@ class CubagemApp {
     let volTotal = 0;
     this.modalTorasSelecionadas.forEach(p => {
       const t = this.catalogoTorasCache.find(c => this.compararPlaquetas(p, c.plaqueta));
-      if (t) volTotal += (Number(t.volumeGeometrico) || 0);
+      if (t) {
+        const v = Number(t.volumeGeometrico) || Number(t.volumeTotal) || 0;
+        volTotal += v;
+      }
     });
 
     const fNum = (n, d = 3) => window.CubagemCalculator.formatNumber(n, d);
@@ -3147,7 +3153,7 @@ class CubagemApp {
       resumoEl.textContent = `${count} ${count === 1 ? 'tora selecionada' : 'toras selecionadas'} • ${fNum(volTotal)} m³`;
     }
     if (btnConfirm) {
-      btnConfirm.textContent = `Confirmar Seleção (${count})`;
+      btnConfirm.textContent = `Confirmar Seleção (${count} toras • ${fNum(volTotal)} m³)`;
     }
   }
 

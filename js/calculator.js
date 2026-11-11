@@ -271,10 +271,14 @@ class CubagemCalculator {
         isValid: false,
         totalToras: 0,
         volumeTotal: 0,
+        volumeGeometrico: 0,
         diametroMedio: 0,
+        diametroMedio_cm: 0,
         comprimentoMedio: 0,
         display: {
           volumeTotal: '0,000',
+          volumeGeometrico: '0,000',
+          volumeTotalPreciso: '0,0000',
           totalToras: '0 toras',
           diametroMedio: '0,0 cm',
           comprimentoMedio: '0,00 m'
@@ -296,24 +300,31 @@ class CubagemCalculator {
     const dmGeral = somaDm / totalToras;
     const compMedio = somaComp / totalToras;
 
+    const volFmt = this.formatNumber(somaVolume, 3);
+    const dmFmt = `${this.formatNumber(dmGeral, 1)} cm`;
+    const compFmt = `${this.formatNumber(compMedio, 2)} m`;
+
     return {
       isValid: true,
       tipo: 'tora',
       totalToras,
       volumeTotal: somaVolume,
+      volumeGeometrico: somaVolume,
+      diametroMedio: dmGeral,
       diametroMedio_cm: dmGeral,
       comprimentoMedio: compMedio,
       display: {
-        volumeTotal: this.formatNumber(somaVolume, 3),
+        volumeTotal: volFmt,
+        volumeGeometrico: volFmt,
         volumeTotalPreciso: this.formatPrecision(somaVolume, 4),
-        totalToras: `${totalToras} toras adicionadas na pilha`,
-        diametroMedio: `${this.formatNumber(dmGeral, 1)} cm`,
-        comprimentoMedio: `${this.formatNumber(compMedio, 2)} m`
+        totalToras: `${totalToras} ${totalToras === 1 ? 'tora' : 'toras'}`,
+        diametroMedio: dmFmt,
+        comprimentoMedio: compFmt
       },
       memoriaCalculo: [
-        `Pilha de Toras: Total de ${totalToras} indivíduos mensurados`,
-        `Diâmetro Médio da Pilha: ${this.formatNumber(dmGeral, 1)} cm | Comprimento Médio: ${this.formatNumber(compMedio, 2)} m`,
-        `Volume Total Acumulado (Smalian) = ${this.formatNumber(somaVolume, 3)} m³`
+        `Pilha / Carga de Toras: Total de ${totalToras} indivíduos mensurados`,
+        `Diâmetro Médio: ${dmFmt} | Comprimento Médio: ${compFmt}`,
+        `Volume Total Acumulado (Smalian) = ${volFmt} m³`
       ]
     };
   }
