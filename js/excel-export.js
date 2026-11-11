@@ -71,11 +71,10 @@ class CubagemExcelExport {
     const toras = records.filter(r => r.tipo === 'tora');
 
     const sumVol = arr => arr.reduce((acc, x) => {
-      if (x.tipo === 'tora' && Array.isArray(x.toras) && x.toras.length > 0) {
-        const sumT = x.toras.reduce((s, t) => s + (Number(t.volumeGeometrico) || 0), 0);
-        return acc + (Number(x.volumeGeometrico) || sumT);
-      }
-      return acc + (Number(x.volumeGeometrico) || 0);
+      const v = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+        ? window.CubagemCalculator.obterVolumeEfetivo(x)
+        : (Number(x.volumeGeometrico) || 0);
+      return acc + v;
     }, 0);
 
     const vCam = sumVol(caminhoes);
@@ -292,7 +291,9 @@ class CubagemExcelExport {
         const tipoLabel = rec.tipo === 'tora' ? 'Toras (Smalian)' : (rec.tipo === 'pilha' ? 'Pilha de Madeira' : 'Retirada (Caminhão)');
         const identStr = rec.placa || rec.identificacao || rec.plaqueta || `Medição ${idx + 1}`;
         const dtStr = `${this.formatDateBR(rec.data)} ${rec.horario || ''}`;
-        const vNum = Number(rec.volumeGeometrico) || 0;
+        const vNum = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+          ? window.CubagemCalculator.obterVolumeEfetivo(rec)
+          : (Number(rec.volumeGeometrico) || 0);
         const isToraRec = rec.tipo === 'tora';
 
         const vals = [
@@ -414,7 +415,7 @@ class CubagemExcelExport {
           idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.rodovia, item.km || '', item.utm || '',
           item.responsavel, item.placa, origFinal, leStr, ldStr, somaVal,
           hmVal, Number(item.comprimento) || 0, Number(item.largura) || 0,
-          Number(item.volumeGeometrico) || 0, obsFinal
+          (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function' ? window.CubagemCalculator.obterVolumeEfetivo(item) : (Number(item.volumeGeometrico) || 0)), obsFinal
         ];
 
         vals.forEach((v, vi) => {

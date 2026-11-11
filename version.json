@@ -1,11 +1,11 @@
 {
-  "v": "2.9.8",
-  "nome": "2.9.8",
+  "v": "2.9.9",
+  "nome": "2.9.9",
   "data": "2026-11-11",
   "novidades": [
-    "Separação de Entrada vs Saída de Madeira: a Retirada de Material (Caminhão) não é mais somada à Cubagem Geral de Entrada, garantindo fidelidade contábil e dendrométrica no pátio",
-    "Painel de Fluxo e Saldo no Início: a tela inicial agora exibe a Cubagem Geral de Entrada (Pátio), o total de Retiradas e o Saldo Restante de madeira",
-    "Indicadores de Frente e Relatórios: os painéis dos projetos e relatórios detalham com precisão o volume total de entrada, saídas e o saldo físico em pátio",
-    "Planilhas Excel Aprimoradas: o Resumo Consolidado no Excel agora apresenta linhas distintas para Total Entrada, Total Saída (Retiradas) e Saldo no Pátio"
+    "Recálculo e Correção do Volume de Retirada (Caminhões): resolução do valor 0,00 m³ nos cards e histórico, garantindo que o volume total das toras seja exibido com exatidão",
+    "Motor Matemático Resiliente (Volume Efetivo): cálculo dinâmico e auto-recálculo das toras mesmo para medições antigas salvas com campos pendentes",
+    "Auto-Reparação Automática do Banco: o sistema detecta e repara em segundo plano qualquer medição que esteja com cubagem zerada no aparelho e na nuvem",
+    "Comprimento Médio Visível: exibição do comprimento médio nas identificações de lotes de toras no histórico"
   ]
 }

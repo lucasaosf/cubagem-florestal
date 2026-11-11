@@ -291,14 +291,34 @@ class CubagemCalculator {
     let somaComp = 0;
 
     toras.forEach((t) => {
-      somaVolume += Number(t.volumeGeometrico) || 0;
-      somaDm += Number(t.diametroMedio_cm) || 0;
-      somaComp += Number(t.comprimento) || 0;
+      let volTora = this.parseNumber(t.volumeGeometrico) || this.parseNumber(t.volumeTotal) || this.parseNumber(t.volume) || 0;
+      const d1 = this.parseNumber(t.diametroPonta1_cm) || 0;
+      const d2 = this.parseNumber(t.diametroPonta2_cm) || 0;
+      const dm = this.parseNumber(t.diametroMedio_cm) || ((d1 + d2) / 2) || 0;
+      const comp = this.parseNumber(t.comprimento) || 0;
+
+      // Se a tora não tem volume calculado gravado, calcula na hora usando Smalian
+      if ((!volTora || isNaN(volTora) || volTora <= 0) && comp > 0) {
+        const d1_m = (d1 > 0 ? d1 : dm) / 100;
+        const d2_m = (d2 > 0 ? d2 : dm) / 100;
+        if (d1_m > 0 && d2_m > 0) {
+          const g1 = (Math.PI * Math.pow(d1_m, 2)) / 4.0;
+          const g2 = (Math.PI * Math.pow(d2_m, 2)) / 4.0;
+          volTora = ((g1 + g2) / 2.0) * comp;
+          t.volumeGeometrico = volTora;
+        }
+      }
+
+      if (!isNaN(volTora) && volTora > 0) {
+        somaVolume += volTora;
+      }
+      if (!isNaN(dm) && dm > 0) somaDm += dm;
+      if (!isNaN(comp) && comp > 0) somaComp += comp;
     });
 
     const totalToras = toras.length;
-    const dmGeral = somaDm / totalToras;
-    const compMedio = somaComp / totalToras;
+    const dmGeral = totalToras > 0 ? (somaDm / totalToras) : 0;
+    const compMedio = totalToras > 0 ? (somaComp / totalToras) : 0;
 
     const volFmt = this.formatNumber(somaVolume, 3);
     const dmFmt = `${this.formatNumber(dmGeral, 1)} cm`;
@@ -327,6 +347,58 @@ class CubagemCalculator {
         `Volume Total Acumulado (Smalian) = ${volFmt} m³`
       ]
     };
+  }
+
+  /**
+   * Obtém o volume efetivo real de qualquer medição (caminhão, pilha ou tora),
+   * recalculando ou somando indivíduos dinamicamente se o campo volumeGeometrico estiver ausente ou zerado.
+   */
+  static obterVolumeEfetivo(item) {
+    if (!item) return 0;
+    let v = this.parseNumber(item.volumeGeometrico);
+    if (!isNaN(v) && v > 0) return v;
+    let vt = this.parseNumber(item.volumeTotal);
+    if (!isNaN(vt) && vt > 0) return vt;
+
+    // Se tiver lista de toras (caminhão de toras ou pilha de toras)
+    if (Array.isArray(item.toras) && item.toras.length > 0) {
+      const lote = this.calculateLoteToras(item.toras);
+      if (lote && lote.volumeTotal > 0) return lote.volumeTotal;
+    }
+
+    // Se for caminhão geométrico
+    if ((item.tipo === 'caminhao' || !item.tipo) && (item.comprimento && item.largura)) {
+      const calc = this.calculateCaminhao({
+        alturasLE: item.alturasLE || [],
+        alturasLD: item.alturasLD || [],
+        comprimentoRaw: item.comprimento,
+        larguraRaw: item.largura
+      });
+      if (calc.isValid && calc.volumeGeometrico > 0) return calc.volumeGeometrico;
+    }
+
+    // Se for pilha
+    if (item.tipo === 'pilha' && (item.comprimento && item.largura)) {
+      const calc = this.calculatePilha({
+        alturas: item.alturas || [],
+        comprimentoRaw: item.comprimento,
+        larguraRaw: item.largura
+      });
+      if (calc.isValid && calc.volumeGeometrico > 0) return calc.volumeGeometrico;
+    }
+
+    // Se for tora individual
+    if (item.tipo === 'tora' && item.comprimento && (item.diametroPonta1_cm || item.diametroMedio_cm)) {
+      const calc = this.calculateTora({
+        diametroPonta1Raw: item.diametroPonta1_cm || item.diametroMedio_cm,
+        diametroPonta2Raw: item.diametroPonta2_cm || item.diametroMedio_cm,
+        comprimentoRaw: item.comprimento,
+        plaqueta: item.plaqueta || ''
+      });
+      if (calc.isValid && calc.volumeGeometrico > 0) return calc.volumeGeometrico;
+    }
+
+    return 0;
   }
 
   /**

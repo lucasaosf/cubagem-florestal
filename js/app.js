@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.8';
+    this.appVersion = '2.9.9';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -99,6 +99,7 @@ class CubagemApp {
     }
 
     await this.carregarPreferenciasIniciais();
+    await this.autoRepararRegistrosZerados();
     await this.atualizarDashboard();
 
     const searchInput = document.getElementById('historySearchInput');
@@ -1205,6 +1206,8 @@ class CubagemApp {
           ? (plaquetasList.length > 4 ? `${plaquetasList[0]}, ${plaquetasList[1]}... (${lote.totalToras} toras)` : plaquetasList.join(', '))
           : 'SEM PLAQUETA';
 
+        const volFinal = lote.volumeTotal || lote.volumeGeometrico || (window.CubagemCalculator ? window.CubagemCalculator.obterVolumeEfetivo({ toras: this.torasCaminhao }) : 0);
+
         record = {
           id: window.cubagemDB.generateId('CAM'),
           tipo: 'caminhao',
@@ -1216,11 +1219,12 @@ class CubagemApp {
           placa: placa || 'NÃO INFORMADA',
           observacoes,
           totalToras: lote.totalToras,
-          diametroMedio_cm: lote.diametroMedio,
+          diametroMedio_cm: lote.diametroMedio || lote.diametroMedio_cm,
           comprimento: lote.comprimentoMedio,
+          comprimentoMedio: lote.comprimentoMedio,
           largura: 0,
-          volumeGeometrico: lote.volumeGeometrico || lote.volumeTotal || 0,
-          volumeTotal: lote.volumeTotal || lote.volumeGeometrico || 0,
+          volumeGeometrico: volFinal,
+          volumeTotal: volFinal,
           tipoVolume: 'Volume Smalian (Retirada Caminhão)',
           toras: [...this.torasCaminhao],
           plaqueta: `Plaquetas: ${plaquetasResumo}`,
@@ -1229,8 +1233,8 @@ class CubagemApp {
             `Retirada do Material (Caminhão) ${placa || 'S/ Placa'} — Toras Rastreáveis`,
             `Projeto / Frente: ${projeto}`,
             `Total de Toras Carregadas: ${lote.totalToras}`,
-            `Diâmetro Médio (Dm): ${lote.display.diametroMedio} cm | Comprimento Médio: ${lote.display.comprimentoMedio} m`,
-            `Volume Total da Retirada: ${lote.display.volumeGeometrico} m³ (Fórmula de Smalian individual por tora)`
+            `Diâmetro Médio (Dm): ${lote.display.diametroMedio} | Comprimento Médio: ${lote.display.comprimentoMedio}`,
+            `Volume Total da Retirada: ${window.CubagemCalculator.formatNumber(volFinal, 3)} m³ (Fórmula de Smalian individual por tora)`
           ],
           timestamp: Date.now()
         };
@@ -1989,6 +1993,50 @@ class CubagemApp {
   }
 
   // =========================================================================
+  // AUTO-REPARAÇÃO DE MEDIÇÕES COM CUBAGEM ZERADA OU CORROMPIDA
+  // =========================================================================
+  async autoRepararRegistrosZerados() {
+    try {
+      const all = await window.cubagemDB.getAll(false);
+      let reparados = 0;
+      for (const item of all) {
+        let mudou = false;
+        const volAtual = Number(item.volumeGeometrico) || 0;
+
+        if (volAtual <= 0) {
+          const volEfetivo = window.CubagemCalculator ? window.CubagemCalculator.obterVolumeEfetivo(item) : 0;
+          if (volEfetivo > 0) {
+            item.volumeGeometrico = volEfetivo;
+            item.volumeTotal = volEfetivo;
+            if (Array.isArray(item.toras) && item.toras.length > 0) {
+              const lote = window.CubagemCalculator.calculateLoteToras(item.toras);
+              if (!item.totalToras) item.totalToras = lote.totalToras;
+              if (!item.diametroMedio_cm) item.diametroMedio_cm = lote.diametroMedio_cm;
+              if (!item.comprimento && lote.comprimentoMedio) item.comprimento = lote.comprimentoMedio;
+              if (!item.comprimentoMedio && lote.comprimentoMedio) item.comprimentoMedio = lote.comprimentoMedio;
+            }
+            mudou = true;
+          }
+        }
+
+        if (mudou) {
+          await window.cubagemDB.update(item);
+          if (this.auth && typeof this.auth.syncRecordToCloud === 'function') {
+            this.auth.syncRecordToCloud(item).catch(() => {});
+          }
+          reparados++;
+        }
+      }
+
+      if (reparados > 0) {
+        console.log(`[AutoRepair] ✓ ${reparados} medição(ões) com volume zerado foram recalculadas e corrigidas no banco!`);
+      }
+    } catch (err) {
+      console.warn('[AutoRepair] Erro na auto-reparação:', err);
+    }
+  }
+
+  // =========================================================================
   // HISTÓRICO
   // =========================================================================
   async carregarHistorico() {
@@ -2017,6 +2065,10 @@ class CubagemApp {
 
       container.innerHTML = items.map((item) => this.gerarCardItemHTML(item)).join('');
       this.atualizarBarraSelecao();
+
+      if (items.some(it => !it.volumeGeometrico || Number(it.volumeGeometrico) <= 0)) {
+        this.autoRepararRegistrosZerados();
+      }
     } catch (err) {
       console.error('Erro no histórico:', err);
     }
@@ -2034,7 +2086,10 @@ class CubagemApp {
     const tipo = item.tipo || 'caminhao';
     const isTorasCam = tipo === 'caminhao' && (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0));
     const isTora = tipo === 'tora' || isTorasCam;
-    const volFormatado = window.CubagemCalculator.formatNumber(item.volumeGeometrico, isTora ? 3 : 2);
+    const volNum = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+      ? window.CubagemCalculator.obterVolumeEfetivo(item)
+      : (Number(item.volumeGeometrico) || 0);
+    const volFormatado = window.CubagemCalculator.formatNumber(volNum, isTora ? 3 : 2);
     const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
     const isSelected = this.selectedHistoryIds.has(item.id);
 
@@ -2062,7 +2117,9 @@ class CubagemApp {
       tagTipo = '🌲 Tora (Smalian)';
       tituloItem = `Plaqueta: ${item.plaqueta || 'S/P'}`;
       const espStr = item.especie ? ` • ${item.especie}` : '';
-      subItem = `D: ${item.diametroMedio_cm ? Number(item.diametroMedio_cm).toFixed(1) + ' cm' : '-'} • L: ${item.comprimento || '-'} m${espStr}`;
+      const compVal = item.comprimento || item.comprimentoMedio;
+      const compStr = compVal ? `${Number(compVal).toFixed(2)} m` : '-';
+      subItem = `D: ${item.diametroMedio_cm ? Number(item.diametroMedio_cm).toFixed(1) + ' cm' : '-'} • L: ${compStr}${espStr}`;
     }
 
     return `
@@ -2105,6 +2162,9 @@ class CubagemApp {
     const isTorasCam = tipo === 'caminhao' && (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0));
     const isTora = tipo === 'tora' || isTorasCam;
     const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+    const volDet = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+      ? window.CubagemCalculator.obterVolumeEfetivo(item)
+      : (Number(item.volumeGeometrico) || 0);
 
     document.getElementById('detalheModalTitulo').textContent = tipo === 'caminhao' ? 'Detalhes: Retirada (Caminhão)' : `Detalhes: ${tipo.toUpperCase()}`;
 
@@ -2139,12 +2199,12 @@ class CubagemApp {
           <div class="calc-result-card">
             <div class="calc-result-header">
               <span class="calc-result-tag">Volume Total das Toras</span>
-              <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 3)} m³</span>
+              <span class="calc-result-type-badge">${fNum(volDet, 3)} m³</span>
             </div>
             <div style="font-size: 0.85rem; line-height: 1.6; margin-bottom: 10px;">
               <strong>Total de Toras Carregadas:</strong> ${nToras} toras<br>
               <strong>Diâmetro Médio (Dm):</strong> ${fNum(item.diametroMedio_cm, 1)} cm<br>
-              <strong>Comprimento Médio:</strong> ${fNum(item.comprimento, 2)} m
+              <strong>Comprimento Médio:</strong> ${fNum(item.comprimento || item.comprimentoMedio, 2)} m
             </div>
             ${torasArr.length > 0 ? `
               <div style="border-top: 1.5px solid var(--line); padding-top: 8px;">
@@ -2172,7 +2232,7 @@ class CubagemApp {
           <div class="calc-result-card">
             <div class="calc-result-header">
               <span class="calc-result-tag">Volume Geométrico</span>
-              <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 2)} m³</span>
+              <span class="calc-result-type-badge">${fNum(volDet, 2)} m³</span>
             </div>
             <div style="font-size: 0.85rem; line-height: 1.6;">
               <strong>Alturas LE:</strong> ${leStr}<br>
@@ -2200,7 +2260,7 @@ class CubagemApp {
         <div class="calc-result-card">
           <div class="calc-result-header">
             <span class="calc-result-tag">Volume Estéreo</span>
-            <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 2)} m³</span>
+            <span class="calc-result-type-badge">${fNum(volDet, 2)} m³</span>
           </div>
           <div style="font-size: 0.85rem; line-height: 1.6;">
             <strong>Alturas da Face:</strong> ${altStr}<br>
@@ -2226,7 +2286,7 @@ class CubagemApp {
         <div class="calc-result-card">
           <div class="calc-result-header">
             <span class="calc-result-tag">Volume Total da Pilha</span>
-            <span class="calc-result-type-badge">${fNum(item.volumeGeometrico, 3)} m³</span>
+            <span class="calc-result-type-badge">${fNum(volDet, 3)} m³</span>
           </div>
           <div style="font-size: 0.85rem; line-height: 1.6;">
             <strong>Total de Indivíduos:</strong> ${nToras} toras<br>
@@ -3474,7 +3534,9 @@ class CubagemApp {
     const responsaveisMap = new Map();
 
     records.forEach(r => {
-      const vol = Number(r.volumeGeometrico) || 0;
+      const vol = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+        ? window.CubagemCalculator.obterVolumeEfetivo(r)
+        : (Number(r.volumeGeometrico) || 0);
 
       const autor = r.autorNome || r.responsavel || 'Lucas Aøsf';
       const statsAutor = responsaveisMap.get(autor) || { vol: 0, count: 0 };

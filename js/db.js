@@ -204,7 +204,9 @@ class CubagemDB {
     let volToras = 0;
 
     for (const item of all) {
-      const vol = Number(item.volumeGeometrico) || 0;
+      const vol = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+        ? window.CubagemCalculator.obterVolumeEfetivo(item)
+        : (Number(item.volumeGeometrico) || 0);
       const t = item.tipo || 'caminhao';
 
       if (t === 'caminhao') {
