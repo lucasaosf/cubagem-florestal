@@ -1214,6 +1214,11 @@ class CubagemApp {
           return;
         }
 
+        this.torasCaminhao.forEach(t => {
+          if (!t.viagem) t.viagem = viagemTexto;
+          if (!t.numeroViagem) t.numeroViagem = numeroViagem;
+        });
+
         const lote = window.CubagemCalculator.calculateLoteToras(this.torasCaminhao);
         const plaquetasList = this.torasCaminhao.map(t => t.plaqueta).filter(Boolean);
         const especiesUnicas = [...new Set(this.torasCaminhao.map(t => t.especie).filter(Boolean))];
@@ -1881,12 +1886,34 @@ class CubagemApp {
       if (elComp) elComp.value = principal.comprimento || secundarias[0]?.comprimento || '';
       if (elLarg) elLarg.value = principal.largura || secundarias[0]?.largura || '';
 
-      const todasLE = records.flatMap(r => Array.isArray(r.alturasLE) ? r.alturasLE : [r.alturasLE]).filter(v => v !== '' && !isNaN(v));
-      const todasLD = records.flatMap(r => Array.isArray(r.alturasLD) ? r.alturasLD : [r.alturasLD]).filter(v => v !== '' && !isNaN(v));
+      const temToras = records.some(r => r.modoCarga === 'toras' || (Array.isArray(r.toras) && r.toras.length > 0));
+      if (temToras) {
+        this.setModoCargaCaminhao('toras');
+        const todasTorasCam = [];
+        records.forEach(r => {
+          const tripR = r.viagem || (r.numeroViagem ? `${r.numeroViagem}ª Viagem` : '');
+          if (Array.isArray(r.toras)) {
+            r.toras.forEach(t => {
+              todasTorasCam.push({
+                ...t,
+                viagem: t.viagem || tripR,
+                numeroViagem: t.numeroViagem || r.numeroViagem
+              });
+            });
+          }
+        });
+        todasTorasCam.forEach((t, i) => { t.numero = i + 1; });
+        this.torasCaminhao = todasTorasCam;
+        this.renderizarListaTorasCaminhao();
+      } else {
+        this.setModoCargaCaminhao('geometrica');
+        const todasLE = records.flatMap(r => Array.isArray(r.alturasLE) ? r.alturasLE : [r.alturasLE]).filter(v => v !== '' && !isNaN(v));
+        const todasLD = records.flatMap(r => Array.isArray(r.alturasLD) ? r.alturasLD : [r.alturasLD]).filter(v => v !== '' && !isNaN(v));
 
-      this.alturasLE = todasLE.length > 0 ? todasLE : ['', '', ''];
-      this.alturasLD = todasLD.length > 0 ? todasLD : ['', '', ''];
-      this.renderizarGridsAlturas();
+        this.alturasLE = todasLE.length > 0 ? todasLE : ['', '', ''];
+        this.alturasLD = todasLD.length > 0 ? todasLD : ['', '', ''];
+        this.renderizarGridsAlturas();
+      }
     } else if (tipo === 'pilha') {
       const elIdent = document.getElementById('cubIdentPilha');
       const elComp = document.getElementById('cubComprimentoPilha');

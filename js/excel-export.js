@@ -791,6 +791,7 @@ class CubagemExcelExport {
       wsTor.columns = [
         { key: 'num', width: 6 },
         { key: 'id', width: 22 },
+        { key: 'viagem', width: 14 },
         { key: 'data', width: 12 },
         { key: 'horario', width: 9 },
         { key: 'plaqueta', width: 16 },
@@ -807,7 +808,7 @@ class CubagemExcelExport {
         { key: 'obs', width: 28 }
       ];
 
-      wsTor.mergeCells('A1:P1');
+      wsTor.mergeCells('A1:Q1');
       const hTor = wsTor.getCell('A1');
       hTor.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE TORAS ROLIÇAS (SMALIAN)';
       hTor.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
@@ -816,7 +817,7 @@ class CubagemExcelExport {
       wsTor.getRow(1).height = 32;
 
       const torCols = [
-        '#', 'Identificação Individual', 'Data', 'Horário', 'Nº Plaqueta', 'Espécie Florestal',
+        '#', 'Identificação / Lote', 'Nº Viagem', 'Data', 'Horário', 'Nº Plaqueta', 'Espécie Florestal',
         'Local / Pátio', 'Km', 'Coordenada UTM', 'Responsável',
         'Diâm. Ponta 1 (cm)', 'Diâm. Ponta 2 (cm)', 'Diâm. Médio (cm)', 'Comprimento (m)',
         'Vol. Smalian (m³)', 'Observações'
@@ -827,7 +828,7 @@ class CubagemExcelExport {
         const c = rTorH.getCell(i + 1);
         c.value = col;
         c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.creme } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i === 14 ? C.ouro : C.verde2 } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i === 15 ? C.ouro : C.verde2 } };
         c.alignment = { horizontal: 'center', vertical: 'middle' };
         c.border = thinBorder;
       });
@@ -855,13 +856,15 @@ class CubagemExcelExport {
           subtotalDmPilha += vDm;
 
           const trip = getTripInfo(pileItem);
+          const toraViagem = item.viagem || (item.numeroViagem ? `${item.numeroViagem}ª Viagem` : (pileItem.tipo === 'caminhao' ? trip.label : '—'));
           const identItem = pileItem.tipo === 'caminhao'
-            ? `Retirada ${pileItem.placa || 'S/P'} (${trip.label})`
+            ? `Retirada ${pileItem.placa || 'S/P'}`
             : (pileItem.identificacao || pileItem.id);
 
           const vals = [
             totalTorasLinhas,
             identItem,
+            toraViagem,
             this.formatDateBR(pileItem.data),
             pileItem.horario,
             item.plaqueta || 'S/P',
@@ -883,15 +886,19 @@ class CubagemExcelExport {
             c.value = v;
             c.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
             c.border = thinBorder;
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 14 ? 'D6C7A1' : bg } };
-            if (vi === 0 || vi === 2 || vi === 3 || vi === 4 || vi === 6 || vi === 7 || vi === 8) c.alignment = { horizontal: 'center', vertical: 'middle' };
-            else if (vi === 5) {
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 15 ? 'D6C7A1' : bg } };
+            if (vi === 0 || vi === 2 || vi === 3 || vi === 4 || vi === 5 || vi === 7 || vi === 8 || vi === 9 || vi === 10) {
+              c.alignment = { horizontal: 'center', vertical: 'middle' };
+              if (vi === 2 && toraViagem !== '—') {
+                c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: 'FF8C4A37' } };
+              }
+            } else if (vi === 6) {
               c.alignment = { horizontal: 'left', vertical: 'middle' };
               c.font = { name: FONT_NAME, size: 9, italic: true, color: { argb: C.texto } };
-            } else if (vi >= 10 && vi <= 14) {
+            } else if (vi >= 11 && vi <= 15) {
               c.alignment = { horizontal: 'right', vertical: 'middle' };
-              c.numFmt = vi === 14 ? '#,##0.000' : '#,##0.0';
-              if (vi === 14) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
+              c.numFmt = vi === 15 ? '#,##0.000' : '#,##0.0';
+              if (vi === 15) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
             } else c.alignment = { horizontal: 'left', vertical: 'middle' };
           });
 
@@ -904,8 +911,8 @@ class CubagemExcelExport {
           subRow.height = 22;
           const avgDm = subtotalDmPilha / torasIndiv.length;
 
-          // Mescla colunas 1 a 10 para o título do subtotal
-          wsTor.mergeCells(`A${rTorIdx}:J${rTorIdx}`);
+          // Mescla colunas 1 a 11 para o título do subtotal
+          wsTor.mergeCells(`A${rTorIdx}:K${rTorIdx}`);
           const cTit = subRow.getCell(1);
           const tripSub = getTripInfo(pileItem);
           cTit.value = pileItem.tipo === 'caminhao'
@@ -916,7 +923,7 @@ class CubagemExcelExport {
           cTit.alignment = { horizontal: 'right', vertical: 'middle' };
           cTit.border = thinBorder;
 
-          for (let col = 11; col <= 12; col++) {
+          for (let col = 12; col <= 13; col++) {
             const c = subRow.getCell(col);
             c.value = '-';
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
@@ -924,7 +931,7 @@ class CubagemExcelExport {
             c.alignment = { horizontal: 'center', vertical: 'middle' };
           }
 
-          const cDm = subRow.getCell(13);
+          const cDm = subRow.getCell(14);
           cDm.value = avgDm;
           cDm.numFmt = '#,##0.0';
           cDm.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.verde } };
@@ -932,13 +939,13 @@ class CubagemExcelExport {
           cDm.border = thinBorder;
           cDm.alignment = { horizontal: 'right', vertical: 'middle' };
 
-          const cComp = subRow.getCell(14);
+          const cComp = subRow.getCell(15);
           cComp.value = '-';
           cComp.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
           cComp.border = thinBorder;
           cComp.alignment = { horizontal: 'center', vertical: 'middle' };
 
-          const cVol = subRow.getCell(15);
+          const cVol = subRow.getCell(16);
           cVol.value = subtotalVolPilha;
           cVol.numFmt = '#,##0.000';
           cVol.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
@@ -946,7 +953,7 @@ class CubagemExcelExport {
           cVol.border = thinBorder;
           cVol.alignment = { horizontal: 'right', vertical: 'middle' };
 
-          const cObs = subRow.getCell(16);
+          const cObs = subRow.getCell(17);
           cObs.value = 'Volume Total da Pilha';
           cObs.font = { name: FONT_NAME, size: 8, italic: true, color: { argb: C.texto } };
           cObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8DFCE' } };
@@ -961,7 +968,7 @@ class CubagemExcelExport {
       const totTorRow = wsTor.getRow(rTorIdx);
       totTorRow.height = 26;
 
-      wsTor.mergeCells(`A${rTorIdx}:L${rTorIdx}`);
+      wsTor.mergeCells(`A${rTorIdx}:M${rTorIdx}`);
       const cTotTit = totTorRow.getCell(1);
       cTotTit.value = `TOTAL GERAL DA CUBAGEM DE TORAS (${totalTorasLinhas} TORAS AVALIADAS):`;
       cTotTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
@@ -977,7 +984,7 @@ class CubagemExcelExport {
         ? allTorasIndiv.reduce((acc, t) => acc + (Number(t.comprimento) || 0), 0) / allTorasIndiv.length
         : 0;
 
-      const cTotDm = totTorRow.getCell(13);
+      const cTotDm = totTorRow.getCell(14);
       cTotDm.value = avgDmGeral;
       cTotDm.numFmt = '#,##0.0';
       cTotDm.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
@@ -985,7 +992,7 @@ class CubagemExcelExport {
       cTotDm.alignment = { horizontal: 'right', vertical: 'middle' };
       cTotDm.border = doubleBottomBorder;
 
-      const cTotComp = totTorRow.getCell(14);
+      const cTotComp = totTorRow.getCell(15);
       cTotComp.value = avgCompGeral;
       cTotComp.numFmt = '#,##0.00';
       cTotComp.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
@@ -1003,7 +1010,7 @@ class CubagemExcelExport {
         return acc + v;
       }, 0);
 
-      const cTotVol = totTorRow.getCell(15);
+      const cTotVol = totTorRow.getCell(16);
       cTotVol.value = vTotTorasAba;
       cTotVol.numFmt = '#,##0.000 "m³"';
       cTotVol.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
@@ -1011,7 +1018,7 @@ class CubagemExcelExport {
       cTotVol.alignment = { horizontal: 'right', vertical: 'middle' };
       cTotVol.border = doubleBottomBorder;
 
-      const cTotObs = totTorRow.getCell(16);
+      const cTotObs = totTorRow.getCell(17);
       cTotObs.value = 'Volume Total Homologado';
       cTotObs.font = { name: FONT_NAME, size: 9, bold: true, italic: true, color: { argb: C.creme } };
       cTotObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };

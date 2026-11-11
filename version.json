@@ -5,7 +5,8 @@
   "novidades": [
     "Identificação de Viagens na Retirada: selecione o número da viagem (1ª Viagem, 2ª Viagem... ou personalizada) ao lançar retiradas de material com caminhão",
     "Sugestão Automática da Próxima Viagem: o app sugere inteligentemente o próximo número de viagem do dia para o projeto ativo",
-    "Separação de Volume por Viagem na Planilha Excel: demonstrativo dedicado agrupando retiradas por viagem com volume individual de cada viagem",
+    "Coluna de Viagem na Aba de Toras: coluna dedicada identificando a viagem exata de cada tora rastreável (1ª Viagem, 2ª Viagem...), com subtotais de volume por viagem",
+    "Separação de Volume por Viagem no Excel: demonstrativo dedicado agrupando retiradas por viagem com volume individual de cada viagem",
     "Consolidado Geral do Dia: preservação e destaque do volume geral de entrada, retiradas por viagem e saldo restante do pátio nas abas do relatório e prévia"
   ]
 }
