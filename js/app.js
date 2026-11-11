@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.1';
+    this.appVersion = '2.10.2';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -2579,7 +2579,13 @@ class CubagemApp {
     const btn = document.getElementById('btnExportarExcel');
 
     let records = [];
-    if (start && end) {
+    const isSelectedMode = this.selectedHistoryIds && this.selectedHistoryIds.size > 0;
+
+    if (isSelectedMode) {
+      const ids = [...this.selectedHistoryIds];
+      records = (await Promise.all(ids.map(id => window.cubagemDB.get(id)))).filter(Boolean);
+      records.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    } else if (start && end) {
       records = await window.cubagemDB.getByDateRange(start, end, tipoSelect);
     } else {
       records = await window.cubagemDB.getAll(false);
@@ -2599,10 +2605,14 @@ class CubagemApp {
 
     try {
       const respPadrao = await window.cubagemDB.getSetting('defaultResponsavel', 'Lucas Aøsf');
+      const finalFileName = fileName && fileName.trim()
+        ? fileName
+        : (isSelectedMode ? `Planilha_${records.length}_Cubagens_Selecionadas.xlsx` : null);
+
       const res = await window.CubagemExcelExport.exportWorkbook(records, {
-        startDate: start,
-        endDate: end,
-        fileName: fileName,
+        startDate: isSelectedMode ? (records[0]?.data || start) : start,
+        endDate: isSelectedMode ? (records[records.length - 1]?.data || end) : end,
+        fileName: finalFileName,
         responsavel: respPadrao
       });
 

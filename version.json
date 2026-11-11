@@ -1,10 +1,10 @@
 {
-  "v": "2.10.1",
-  "nome": "2.10.1",
+  "v": "2.10.2",
+  "nome": "2.10.2",
   "data": "2026-11-11",
   "novidades": [
-    "Painel de Balanço Completo do Pátio na Tela Inicial: exibição visual integrada do Total Cubado (Entrada), Total Retirado (Saída) e Quanto Falta Retirar (Saldo no Pátio)",
-    "Controle Operacional em Tempo Real: cálculo imediato do saldo restante em m³ e percentual pendente de retirada",
-    "Design Otimizado para Celulares e Campo: cards de fluxo com badges distintos e tipografia legível sob sol direto"
+    "Correção Crítica na Exportação Excel: resolução do erro 'vTot is not defined' ao exportar medições e retiradas de material",
+    "Exportação Inteligente de Itens Selecionados: ao marcar retiradas ou cubagens específicas com a caixinha, o botão 'Exportar Planilha Excel' exporta exatamente os itens selecionados",
+    "Totais Consolidados na Aba Toras: soma precisa do volume e médias de diâmetro e comprimento para todas as toras de retiradas e pilhas exportadas"
   ]
 }

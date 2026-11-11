@@ -82,6 +82,7 @@ class CubagemExcelExport {
     const vTor = sumVol(toras);
     const vTotEntrada = vPil + vTor;
     const vSaldoPatio = vTotEntrada - vCam;
+    const vTot = sumVol(records);
 
     // =========================================================================
     // ABA 1: RESUMO CONSOLIDADO
@@ -755,7 +756,7 @@ class CubagemExcelExport {
       cTotTit.alignment = { horizontal: 'right', vertical: 'middle' };
       cTotTit.border = doubleBottomBorder;
 
-      const allTorasIndiv = toras.flatMap(p => (p.toras && Array.isArray(p.toras) && p.toras.length > 0) ? p.toras : [p]);
+      const allTorasIndiv = todasTorasParaAba.flatMap(p => (p.toras && Array.isArray(p.toras) && p.toras.length > 0) ? p.toras : [p]);
       const avgDmGeral = allTorasIndiv.length > 0
         ? allTorasIndiv.reduce((acc, t) => acc + (Number(t.diametroMedio_cm) || 0), 0) / allTorasIndiv.length
         : 0;
@@ -779,8 +780,18 @@ class CubagemExcelExport {
       cTotComp.alignment = { horizontal: 'right', vertical: 'middle' };
       cTotComp.border = doubleBottomBorder;
 
+      const vTotTorasAba = todasTorasParaAba.reduce((acc, p) => {
+        if (Array.isArray(p.toras) && p.toras.length > 0) {
+          return acc + sumVol(p.toras);
+        }
+        const v = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+          ? window.CubagemCalculator.obterVolumeEfetivo(p)
+          : (Number(p.volumeGeometrico) || 0);
+        return acc + v;
+      }, 0);
+
       const cTotVol = totTorRow.getCell(15);
-      cTotVol.value = vTor;
+      cTotVol.value = vTotTorasAba;
       cTotVol.numFmt = '#,##0.000 "m³"';
       cTotVol.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
       cTotVol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
