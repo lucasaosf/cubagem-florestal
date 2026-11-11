@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.5';
+    this.appVersion = '2.9.6';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -116,7 +116,23 @@ class CubagemApp {
     });
 
     // Verifica por novas atualizações em segundo plano
-    setTimeout(() => this.checkUpdate(false), 2500);
+    setTimeout(() => this.checkUpdate(false), 2000);
+
+    // Escuta reconexão com a internet para atualizar automaticamente
+    window.addEventListener('online', () => {
+      console.log('[App] Conexão com a internet restabelecida. Verificando atualizações...');
+      this.checkUpdate(false);
+      if (this.auth && this.auth.user) {
+        this.auth.syncAllWithCloud(true);
+      }
+    });
+
+    // Verificação periódica automática a cada 15 minutos se conectado
+    setInterval(() => {
+      if (navigator.onLine) {
+        this.checkUpdate(false);
+      }
+    }, 15 * 60 * 1000);
 
     console.log('[Cubagem Florestal] Inicialização concluída!');
   }
@@ -137,6 +153,7 @@ class CubagemApp {
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
           refreshing = true;
+          console.log('[Service Worker] Nova versão ativada. Recarregando aplicativo...');
           window.location.reload();
         }
       });
@@ -148,8 +165,9 @@ class CubagemApp {
             this.swRegistration = reg;
             console.log('[Service Worker] Ativo:', reg.scope);
 
-            // Se já houver um Service Worker novo aguardando para ativar, ativa silenciosamente
+            // Se já houver um Service Worker novo aguardando para ativar, ativa imediatamente
             if (reg.waiting) {
+              console.log('[Service Worker] Novo worker aguardando, ativando automaticamente...');
               reg.waiting.postMessage({ action: 'skipWaiting', type: 'SKIP_WAITING' });
             }
 
@@ -158,16 +176,19 @@ class CubagemApp {
               const newWorker = reg.installing;
               if (!newWorker) return;
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  this.checkUpdate(false);
+                if (newWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    console.log('[Service Worker] Nova versão instalada. Ativando imediatamente...');
+                    newWorker.postMessage({ action: 'skipWaiting', type: 'SKIP_WAITING' });
+                  }
                 }
               });
             });
 
-            // Monitor de visibilidade: verifica silenciosamente com intervalo mínimo de 12 horas
+            // Monitor de visibilidade: verifica atualizações ao voltar para o app (mínimo a cada 60s)
             let lastVisCheck = Date.now();
             document.addEventListener('visibilitychange', () => {
-              if (document.visibilityState === 'visible' && (Date.now() - lastVisCheck > 12 * 3600000)) {
+              if (document.visibilityState === 'visible' && (Date.now() - lastVisCheck > 60000) && navigator.onLine) {
                 lastVisCheck = Date.now();
                 this.checkUpdate(false);
               }
@@ -202,13 +223,6 @@ class CubagemApp {
     if (this.updateChecking) return;
     this.updateChecking = true;
 
-    // Respeita intervalo de 3 horas se dispensado recentemente (a menos que seja clique manual)
-    const lastDismissed = localStorage.getItem('cubagem.update_dismissed');
-    if (!force && lastDismissed && (Date.now() - parseInt(lastDismissed, 10) < 3 * 3600000)) {
-      this.updateChecking = false;
-      return;
-    }
-
     if (!navigator.onLine) {
       if (force) this.showToast('Sem conexão com a internet para verificar atualizações.', 'warning');
       this.updateChecking = false;
@@ -231,11 +245,12 @@ class CubagemApp {
         const data = await res.json();
         const temNova = data && data.v && this.compararVersoes(data.v, this.appVersion) > 0;
         if (temNova) {
-          this.notificarAtualizacaoDisponivel(data);
+          console.log(`[Update] Nova versão detectada: v${data.v} (atual: v${this.appVersion}). Atualizando automaticamente...`);
+          await this.executarAtualizacaoAutomatica(data);
           this.updateChecking = false;
           return;
         } else if (force) {
-          this.abrirPopUpJaAtualizado(data || { v: this.appVersion });
+          this.showToast(`✓ O aplicativo já está na versão mais recente (v${this.appVersion}).`, 'info');
           this.updateChecking = false;
           return;
         }
@@ -248,6 +263,42 @@ class CubagemApp {
     } finally {
       this.updateChecking = false;
     }
+  }
+
+  async executarAtualizacaoAutomatica(data) {
+    if (this.isUpdatingAuto) return;
+    this.isUpdatingAuto = true;
+
+    const vNova = data ? (data.v || data.nome || '') : '';
+    console.log(`[Update] Atualizando automaticamente para a versão ${vNova}...`);
+    this.showToast(`✨ Atualizando aplicativo para a versão ${vNova}...`, 'info', 2500);
+
+    // Limpa todos os caches locais do Service Worker
+    if ('caches' in window) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch (_) {}
+    }
+
+    // Comanda ativação imediata do novo Service Worker e cancela registros antigos
+    if ('serviceWorker' in navigator) {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) {
+          if (r.waiting) {
+            r.waiting.postMessage({ action: 'skipWaiting', type: 'SKIP_WAITING' });
+          }
+          await r.unregister();
+        }
+      } catch (_) {}
+    }
+
+    // Recarrega sem cache após breve intervalo para confirmação de disco
+    setTimeout(() => {
+      const cleanUrl = window.location.origin + window.location.pathname + '?reload=' + Date.now();
+      window.location.replace(cleanUrl);
+    }, 600);
   }
 
   notificarAtualizacaoDisponivel(data) {

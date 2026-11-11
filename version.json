@@ -1,12 +1,11 @@
 {
-  "v": "2.9.5",
-  "nome": "2.9.5",
+  "v": "2.9.6",
+  "nome": "2.9.6",
   "data": "2026-11-11",
   "novidades": [
-    "Sincronização Segura de Equipe: compatibilidade total com regras de segurança do Firebase Firestore para projetos compartilhados",
-    "Sanitização de Dados: prevenção de erros com valores indefinidos na gravação no Firestore",
-    "Diagnóstico Transparente: aviso específico caso falte autorização nas Regras de Segurança do Firebase",
-    "Botão 'Forçar Envio à Nuvem': permite ao criador enviar todas as cubagens da frente diretamente para a nuvem da equipe de uma só vez",
-    "Entrada Fluida de Membros: integrantes autorizados agora baixam instantaneamente todo o lote medido pelo criador e demais membros"
+    "Atualização 100% Automática: o aplicativo agora se atualiza sozinho e silenciosamente em segundo plano sempre que houver conexão com a internet",
+    "Header Limpo: remoção do botão manual 'Atualizar' do cabeçalho superior para maior conforto visual e espaço no celular",
+    "Detecção Ativa: verificação instantânea ao abrir o app, ao alternar de aba ou ao restabelecer a conexão de rede",
+    "Ativação Imediata do Service Worker: novas melhorias e correções entram em vigor sem necessidade de confirmação manual"
   ]
 }
