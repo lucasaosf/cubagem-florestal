@@ -9,19 +9,19 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E2515">
   <meta name="background-color" content="#0E2515">
   <meta name="description" content="Aplicativo florestal para cubagem de caminhões, pilhas e toras roliças. Desenvolvido por Lucas Aøsf para BIOKURI Pesquisa e Soluções Ambientais.">
-  <link rel="manifest" href="manifest.webmanifest?v=2.10.2">
-  <link rel="icon" href="icons/favicon.png?v=2.10.2" type="image/png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.10.2">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.10.2">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.10.2">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.10.2">
+  <link rel="manifest" href="manifest.webmanifest?v=2.10.3">
+  <link rel="icon" href="icons/favicon.png?v=2.10.3" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.10.3">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.10.3">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.10.3">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.10.3">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="#0E2515">
   <meta name="msapplication-TileColor" content="#0E2515">
-  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.10.2">
+  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.10.3">
 
   <script>
     (function(){
@@ -40,7 +40,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css?v=2.10.2">
+  <link rel="stylesheet" href="css/styles.css?v=2.10.3">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -233,7 +233,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill" style="border: 1px solid var(--gold); color: var(--gold);" id="coverVersionBadge">v2.10.2</span>
+            <span class="cover-ver-pill" style="border: 1px solid var(--gold); color: var(--gold);" id="coverVersionBadge">v2.10.3</span>
             <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
@@ -353,21 +353,44 @@
           <div id="sectionCaminhao" class="card">
             <h3 class="card-title">2. Retirada do Material (Caminhão)</h3>
 
-            <div class="form-row" style="margin-bottom: 14px;">
+            <div class="form-row" style="margin-bottom: 12px;">
               <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" for="cubPlaca">Placa do Caminhão <span class="helper">(Opcional)</span></label>
                 <input type="text" id="cubPlaca" class="form-control" placeholder="ABC-1234" style="text-transform: uppercase;">
               </div>
               <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label">Origem da Madeira <span class="required">*</span></label>
-                <div class="toggle-pills-row">
-                  <button type="button" class="btn-toggle-pill active" id="btnOrigemNativaCam" onclick="app.setOrigemMadeira('Nativa')">
-                    🌿 Nativa
-                  </button>
-                  <button type="button" class="btn-toggle-pill" id="btnOrigemExoticaCam" onclick="app.setOrigemMadeira('Exótica')">
-                    🌲 Exótica
-                  </button>
+                <label class="form-label" for="cubViagem">Nº da Viagem <span class="required">*</span></label>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <select id="cubViagem" class="form-control" style="flex: 1;" onchange="app.aoMudarViagemCaminhao()">
+                    <option value="1">1ª Viagem</option>
+                    <option value="2">2ª Viagem</option>
+                    <option value="3">3ª Viagem</option>
+                    <option value="4">4ª Viagem</option>
+                    <option value="5">5ª Viagem</option>
+                    <option value="6">6ª Viagem</option>
+                    <option value="7">7ª Viagem</option>
+                    <option value="8">8ª Viagem</option>
+                    <option value="9">9ª Viagem</option>
+                    <option value="10">10ª Viagem</option>
+                    <option value="11">11ª Viagem</option>
+                    <option value="12">12ª Viagem</option>
+                    <option value="15">15ª Viagem</option>
+                    <option value="outra">Outra (+)</option>
+                  </select>
+                  <input type="number" id="cubViagemOutro" class="form-control" placeholder="Nº" min="1" max="999" style="width: 76px; display: none;" oninput="app.aoMudarViagemCaminhao()">
                 </div>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label class="form-label">Origem da Madeira <span class="required">*</span></label>
+              <div class="toggle-pills-row">
+                <button type="button" class="btn-toggle-pill active" id="btnOrigemNativaCam" onclick="app.setOrigemMadeira('Nativa')">
+                  🌿 Nativa
+                </button>
+                <button type="button" class="btn-toggle-pill" id="btnOrigemExoticaCam" onclick="app.setOrigemMadeira('Exótica')">
+                  🌲 Exótica
+                </button>
               </div>
             </div>
 
@@ -942,7 +965,7 @@
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
-            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.10.2</span><br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.10.3</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
@@ -1810,12 +1833,12 @@
   <!-- Scripts -->
   <script src="firebase-config.js"></script>
   <script src="vendor/exceljs.min.js"></script>
-  <script src="js/db.js?v=2.10.2"></script>
-  <script src="js/calculator.js?v=2.10.2"></script>
-  <script src="js/excel-export.js?v=2.10.2"></script>
-  <script src="js/auth.js?v=2.10.2"></script>
+  <script src="js/db.js?v=2.10.3"></script>
+  <script src="js/calculator.js?v=2.10.3"></script>
+  <script src="js/excel-export.js?v=2.10.3"></script>
+  <script src="js/auth.js?v=2.10.3"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js?v=2.10.2"></script>
+  <script src="js/app.js?v=2.10.3"></script>
 </body>
 </html>

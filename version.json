@@ -1,10 +1,11 @@
 {
-  "v": "2.10.2",
-  "nome": "2.10.2",
+  "v": "2.10.3",
+  "nome": "2.10.3",
   "data": "2026-11-11",
   "novidades": [
-    "Correção Crítica na Exportação Excel: resolução do erro 'vTot is not defined' ao exportar medições e retiradas de material",
-    "Exportação Inteligente de Itens Selecionados: ao marcar retiradas ou cubagens específicas com a caixinha, o botão 'Exportar Planilha Excel' exporta exatamente os itens selecionados",
-    "Totais Consolidados na Aba Toras: soma precisa do volume e médias de diâmetro e comprimento para todas as toras de retiradas e pilhas exportadas"
+    "Identificação de Viagens na Retirada: selecione o número da viagem (1ª Viagem, 2ª Viagem... ou personalizada) ao lançar retiradas de material com caminhão",
+    "Sugestão Automática da Próxima Viagem: o app sugere inteligentemente o próximo número de viagem do dia para o projeto ativo",
+    "Separação de Volume por Viagem na Planilha Excel: demonstrativo dedicado agrupando retiradas por viagem com volume individual de cada viagem",
+    "Consolidado Geral do Dia: preservação e destaque do volume geral de entrada, retiradas por viagem e saldo restante do pátio nas abas do relatório e prévia"
   ]
 }

@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.2';
+    this.appVersion = '2.10.3';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -910,6 +910,9 @@ class CubagemApp {
       if (this.modoCargaCaminhao === 'toras') {
         this.renderizarListaTorasCaminhao();
       }
+      if (!this.editingRecordId) {
+        this.sugerirProximaViagem();
+      }
     } else if (tipo === 'pilha') {
       secCam.style.display = 'none';
       secPil.style.display = 'block';
@@ -1202,6 +1205,8 @@ class CubagemApp {
 
     if (this.tipoCubagem === 'caminhao') {
       const placa = document.getElementById('cubPlaca').value.trim().toUpperCase();
+      const numeroViagem = this.obterNumeroViagem();
+      const viagemTexto = this.obterViagemTexto();
 
       if (this.modoCargaCaminhao === 'toras') {
         if (!this.torasCaminhao || this.torasCaminhao.length === 0) {
@@ -1231,6 +1236,8 @@ class CubagemApp {
           projeto, autorNome, autorEmail, autorUid,
           data, horario, rodovia, km, utm, responsavel,
           placa: placa || 'NÃO INFORMADA',
+          numeroViagem: numeroViagem,
+          viagem: viagemTexto,
           observacoes,
           totalToras: lote.totalToras,
           diametroMedio_cm: lote.diametroMedio || lote.diametroMedio_cm,
@@ -1242,9 +1249,9 @@ class CubagemApp {
           tipoVolume: 'Volume Smalian (Retirada Caminhão)',
           toras: [...this.torasCaminhao],
           plaqueta: `Plaquetas: ${plaquetasResumo}`,
-          identificacao: `Retirada Caminhão ${placa || 'S/ Placa'} (${lote.totalToras} Toras)`,
+          identificacao: `Retirada ${placa || 'S/ Placa'} (${viagemTexto} • ${lote.totalToras} Toras)`,
           memoriaCalculo: [
-            `Retirada do Material (Caminhão) ${placa || 'S/ Placa'} — Toras Rastreáveis`,
+            `Retirada do Material (Caminhão) ${placa || 'S/ Placa'} — ${viagemTexto} — Toras Rastreáveis`,
             `Projeto / Frente: ${projeto}`,
             `Total de Toras Carregadas: ${lote.totalToras}`,
             `Diâmetro Médio (Dm): ${lote.display.diametroMedio} | Comprimento Médio: ${lote.display.comprimentoMedio}`,
@@ -1277,7 +1284,9 @@ class CubagemApp {
           projeto, autorNome, autorEmail, autorUid,
           data, horario, rodovia, km, utm, responsavel,
           placa: placa || 'NÃO INFORMADA',
-          identificacao: `Retirada Caminhão ${placa || 'S/ Placa'}`,
+          numeroViagem: numeroViagem,
+          viagem: viagemTexto,
+          identificacao: `Retirada Caminhão ${placa || 'S/ Placa'} (${viagemTexto})`,
           observacoes,
           alturasLE: calc.alturasLE,
           alturasLD: calc.alturasLD,
@@ -1288,7 +1297,10 @@ class CubagemApp {
           largura: calc.largura,
           volumeGeometrico: calc.volumeGeometrico,
           tipoVolume: calc.tipoVolume,
-          memoriaCalculo: calc.memoriaCalculo,
+          memoriaCalculo: [
+            `Retirada do Material (Caminhão) ${placa || 'S/ Placa'} — ${viagemTexto} — Carga Geométrica`,
+            ...(Array.isArray(calc.memoriaCalculo) ? calc.memoriaCalculo : [calc.memoriaCalculo])
+          ],
           timestamp: Date.now()
         };
       }
@@ -1475,6 +1487,7 @@ class CubagemApp {
       const plqInp = document.getElementById('cubCamPlaquetasInput');
       if (plqInp) plqInp.value = '';
       this.setModoCargaCaminhao('geometrica');
+      this.sugerirProximaViagem();
     } else if (this.tipoCubagem === 'pilha') {
       this.alturasPilha = ['', '', '', ''];
       this.renderizarGridsAlturas();
@@ -1523,6 +1536,7 @@ class CubagemApp {
     const plqInp = document.getElementById('cubCamPlaquetasInput');
     if (plqInp) plqInp.value = '';
     this.carregarPreferenciasIniciais();
+    this.sugerirProximaViagem();
     this.executarCalculoTempoReal();
     this.showToast('Formulário limpo.', 'warning');
   }
@@ -1572,6 +1586,9 @@ class CubagemApp {
       if (tipo === 'caminhao') {
         const elPlaca = document.getElementById('cubPlaca');
         if (elPlaca) elPlaca.value = item.placa || '';
+
+        const numViagem = item.numeroViagem || (item.viagem ? parseInt(String(item.viagem).replace(/\D+/g, ''), 10) : 1) || 1;
+        this.definirViagemCaminhao(numViagem);
 
         const modo = (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0)) ? 'toras' : 'geometrica';
         this.setModoCargaCaminhao(modo);
@@ -2159,14 +2176,18 @@ class CubagemApp {
     let subItem = `${item.rodovia} ${item.km ? '• km ' + item.km : ''}`;
 
     if (tipo === 'caminhao') {
+      const vNum = item.numeroViagem || (item.viagem ? parseInt(String(item.viagem).replace(/\D+/g, ''), 10) : 0);
+      const vStr = vNum > 0 ? `${vNum}ª Viagem` : (item.viagem || '');
+      const vTag = vStr ? ` • ${vStr}` : '';
       if (isTorasCam) {
         const nToras = item.totalToras || (item.toras ? item.toras.length : 0);
-        tagTipo = `🚚 Retirada • ${nToras} Toras`;
-        tituloItem = `${item.placa || 'SEM PLACA'} (${nToras} toras)`;
+        tagTipo = `🚚 Retirada${vTag} • ${nToras} Toras`;
+        tituloItem = `${item.placa || 'SEM PLACA'}${vStr ? ' (' + vStr + ')' : ''} (${nToras} toras)`;
         subItem = `${item.rodovia} • Smalian • ${item.especie || item.origemMadeira || 'Nativa'}`;
       } else {
         const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
-        tagTipo = `🚚 Retirada (Caminhão)${origStr}`;
+        tagTipo = `🚚 Retirada${vTag}${origStr}`;
+        tituloItem = `${item.placa || 'SEM PLACA'}${vStr ? ' (' + vStr + ')' : ''}`;
       }
     } else if (tipo === 'pilha') {
       const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
@@ -2264,6 +2285,7 @@ class CubagemApp {
             ${projMetaHtml}
             ${autorMetaHtml}
             <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
+            <strong>Nº da Viagem:</strong> <span style="font-weight: 700; color: var(--gold);">${item.viagem || (item.numeroViagem ? item.numeroViagem + 'ª Viagem' : '1ª Viagem')}</span><br>
             <strong>Modalidade:</strong> <span style="font-weight: 700; color: var(--gold);">Toras Rastreáveis (Fórmula de Smalian)</span><br>
             <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
             ${item.especie ? `<strong>Espécies:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
@@ -2298,6 +2320,7 @@ class CubagemApp {
             ${projMetaHtml}
             ${autorMetaHtml}
             <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
+            <strong>Nº da Viagem:</strong> <span style="font-weight: 700; color: var(--gold);">${item.viagem || (item.numeroViagem ? item.numeroViagem + 'ª Viagem' : '1ª Viagem')}</span><br>
             <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
             ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
             <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
@@ -2863,6 +2886,83 @@ class CubagemApp {
     }
 
     this.executarCalculoTempoReal();
+  }
+
+  obterNumeroViagem() {
+    const sel = document.getElementById('cubViagem');
+    if (!sel) return 1;
+    if (sel.value === 'outra') {
+      const inp = document.getElementById('cubViagemOutro');
+      const val = parseInt(inp?.value, 10);
+      return (Number.isFinite(val) && val > 0) ? val : 1;
+    }
+    const val = parseInt(sel.value, 10);
+    return (Number.isFinite(val) && val > 0) ? val : 1;
+  }
+
+  obterViagemTexto() {
+    const num = this.obterNumeroViagem();
+    return `${num}ª Viagem`;
+  }
+
+  definirViagemCaminhao(num) {
+    const sel = document.getElementById('cubViagem');
+    const inp = document.getElementById('cubViagemOutro');
+    if (!sel) return;
+    const n = parseInt(num, 10) || 1;
+    const opt = sel.querySelector(`option[value="${n}"]`);
+    if (opt) {
+      sel.value = String(n);
+      if (inp) {
+        inp.style.display = 'none';
+        inp.value = '';
+      }
+    } else {
+      sel.value = 'outra';
+      if (inp) {
+        inp.style.display = 'inline-block';
+        inp.value = n;
+      }
+    }
+  }
+
+  aoMudarViagemCaminhao() {
+    const sel = document.getElementById('cubViagem');
+    const inp = document.getElementById('cubViagemOutro');
+    if (!sel || !inp) return;
+    if (sel.value === 'outra') {
+      inp.style.display = 'inline-block';
+      if (!inp.value) inp.value = '16';
+      inp.focus();
+    } else {
+      inp.style.display = 'none';
+    }
+  }
+
+  async sugerirProximaViagem() {
+    try {
+      const records = await window.cubagemDB.getAll(false);
+      const hoje = (document.getElementById('cubData')?.value) || new Date().toISOString().slice(0, 10);
+      const proj = this.projetoAtivo || '';
+
+      const retiradasHoje = records.filter(r => {
+        if ((r.tipo || 'caminhao') !== 'caminhao') return false;
+        if (proj && r.projeto && r.projeto !== proj) return false;
+        const dataR = (r.data || '').slice(0, 10);
+        return !dataR || dataR === hoje;
+      });
+
+      let maxViagem = 0;
+      retiradasHoje.forEach(r => {
+        const num = r.numeroViagem || (r.viagem ? parseInt(String(r.viagem).replace(/\D+/g, ''), 10) : 0);
+        if (num > maxViagem) maxViagem = num;
+      });
+
+      const prox = maxViagem + 1;
+      this.definirViagemCaminhao(prox > 0 ? prox : 1);
+    } catch (e) {
+      this.definirViagemCaminhao(1);
+    }
   }
 
   compararPlaquetas(q, c) {
@@ -5176,6 +5276,40 @@ class CubagemApp {
       : `TOTAL GERAL CONSOLIDADO (${records.length} CUBAGENS):`;
     const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
 
+    const sumVol = arr => arr.reduce((acc, x) => acc + ((window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function') ? window.CubagemCalculator.obterVolumeEfetivo(x) : (Number(x.volumeGeometrico) || 0)), 0);
+    const caminhoes = records.filter(r => (r.tipo || 'caminhao') === 'caminhao');
+    const pilhas = records.filter(r => r.tipo === 'pilha');
+    const toras = records.filter(r => r.tipo === 'tora');
+    const vCam = sumVol(caminhoes);
+    const vPil = sumVol(pilhas);
+    const vTor = sumVol(toras);
+    const vTotEntrada = vPil + vTor;
+    const vSaldoPatio = vTotEntrada - vCam;
+
+    const viagensMap = new Map();
+    caminhoes.forEach((c, idx) => {
+      let num = c.numeroViagem;
+      if (!num && c.viagem) {
+        const m = String(c.viagem).match(/\d+/);
+        if (m) num = parseInt(m[0], 10);
+      }
+      num = num || (idx + 1);
+      const label = `${num}ª Viagem`;
+      if (!viagensMap.has(num)) {
+        viagensMap.set(num, { num, label, volumeTotal: 0, placas: new Set(), totalToras: 0, items: [] });
+      }
+      const g = viagensMap.get(num);
+      g.items.push(c);
+      const v = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+        ? window.CubagemCalculator.obterVolumeEfetivo(c)
+        : (Number(c.volumeGeometrico) || 0);
+      g.volumeTotal += v;
+      if (c.placa && c.placa !== 'NÃO INFORMADA') g.placas.add(c.placa);
+      if (Array.isArray(c.toras)) g.totalToras += c.toras.length;
+      else if (c.totalToras) g.totalToras += Number(c.totalToras) || 0;
+    });
+    const viagensList = [...viagensMap.values()].sort((a, b) => a.num - b.num);
+
     if (aba === 'memoria') {
       return `
         <table class="excel-grid-table">
@@ -5221,7 +5355,10 @@ class CubagemApp {
             </tr>
             ${records.map((r, idx) => {
               const dtBR = window.CubagemExcelExport.formatDateBR(r.data);
-              const ident = r.placa || r.identificacao || r.plaqueta || `Medição ${idx + 1}`;
+              const isCam = (r.tipo || 'caminhao') === 'caminhao';
+              const tripNum = r.numeroViagem || (r.viagem ? parseInt(String(r.viagem).replace(/\D+/g, ''), 10) : 0);
+              const tripStr = tripNum > 0 ? `${tripNum}ª Viagem` : (r.viagem || '');
+              const ident = isCam ? `${r.placa || 'Sem placa'}${tripStr ? ' (' + tripStr + ')' : ''}` : (r.placa || r.identificacao || r.plaqueta || `Medição ${idx + 1}`);
               const mem = r.memoriaCalculo || `V = C × L × Hm (${r.volumeGeometrico} m³)`;
               const vol = fNum(r.volumeGeometrico, r.tipo === 'tora' ? 3 : 2);
               return `
@@ -5285,7 +5422,8 @@ class CubagemApp {
             <td colspan="10" class="excel-meta-cell">
               <strong>Período:</strong> ${periodoStr} &bull; 
               <strong>Total de Medições:</strong> ${records.length} &bull; 
-              <strong>Volume Total do Dia:</strong> ${fNum(totalVol, 2)} m³ &bull; 
+              <strong>Volume Geral do Dia:</strong> ${fNum(totalVol, 2)} m³
+              ${caminhoes.length > 0 ? ` &bull; <strong>Retiradas:</strong> ${fNum(vCam, 2)} m³ (${viagensList.length} viagens) &bull; <strong>Entrada:</strong> ${fNum(vTotEntrada, 2)} m³ &bull; <strong>Saldo Pátio:</strong> ${fNum(vSaldoPatio, 2)} m³` : ''} &bull; 
               <strong>Responsável:</strong> ${records[0]?.responsavel || 'Lucas Aøsf'} &bull; 
               <strong>CRBio:</strong> 127233/01-D
             </td>
@@ -5307,7 +5445,10 @@ class CubagemApp {
             const dtBR = window.CubagemExcelExport.formatDateBR(r.data);
             const tipo = r.tipo || 'caminhao';
             const tipoLabel = tipo === 'caminhao' ? 'Caminhão' : (tipo === 'pilha' ? 'Pilha' : 'Toras');
-            const ident = r.placa || r.identificacao || r.plaqueta || '-';
+            const isCam = tipo === 'caminhao';
+            const tripNum = r.numeroViagem || (r.viagem ? parseInt(String(r.viagem).replace(/\D+/g, ''), 10) : 0);
+            const tripStr = tripNum > 0 ? `${tripNum}ª Viagem` : (r.viagem || '');
+            const ident = isCam ? `${r.placa || 'Sem placa'}${tripStr ? ' (' + tripStr + ')' : ''}` : (r.placa || r.identificacao || r.plaqueta || '-');
             const loc = `${r.rodovia || '-'}${r.km ? ' km ' + r.km : ''}`;
             const espOrig = r.especie ? `${r.origemMadeira || 'Nativa'} (${r.especie})` : (r.origemMadeira || 'Nativa');
             const dimStr = tipo === 'tora'
@@ -5332,8 +5473,19 @@ class CubagemApp {
               </tr>
             `;
           }).join('')}
+          ${viagensList.length > 0 ? `
+            <tr style="background: rgba(140, 74, 55, 0.12); font-weight: 700;">
+              <td class="excel-row-num" style="background: #e2dccb;">•</td>
+              <td colspan="9" class="excel-cell-text" style="color: #8C4A37; font-size: 0.78rem;">
+                🚚 RETIRADAS SEPARADAS POR VIAGEM (${viagensList.length} ${viagensList.length === 1 ? 'VIAGEM' : 'VIAGENS'}): ${viagensList.map(v => `<b>${v.label}</b>: ${fNum(v.volumeTotal, 2)} m³ (${v.placas.size > 0 ? [...v.placas].join(', ') : 'S/P'})`).join(' &bull; ')}
+              </td>
+              <td class="excel-cell-num" style="font-weight: 800; color: #8C4A37;">
+                ${fNum(vCam, 2)} m³
+              </td>
+            </tr>
+          ` : ''}
           <tr class="excel-total-row">
-            <td class="excel-row-num">${records.length + 5}</td>
+            <td class="excel-row-num">${records.length + 5 + (viagensList.length > 0 ? 1 : 0)}</td>
             <td colspan="9" class="excel-cell-text" style="font-weight: 800; text-transform: uppercase;">
               ${titTotal}
             </td>
