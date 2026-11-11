@@ -9,19 +9,19 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E2515">
   <meta name="background-color" content="#0E2515">
   <meta name="description" content="Aplicativo florestal para cubagem de caminhões, pilhas e toras roliças. Desenvolvido por Lucas Aøsf para BIOKURI Pesquisa e Soluções Ambientais.">
-  <link rel="manifest" href="manifest.webmanifest?v=2.9.2">
-  <link rel="icon" href="icons/favicon.png?v=2.9.2" type="image/png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.9.2">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.9.2">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.9.2">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.9.2">
+  <link rel="manifest" href="manifest.webmanifest?v=2.9.3">
+  <link rel="icon" href="icons/favicon.png?v=2.9.3" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.9.3">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.9.3">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.9.3">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.9.3">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="#0E2515">
   <meta name="msapplication-TileColor" content="#0E2515">
-  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.9.2">
+  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.9.3">
 
   <script>
     (function(){
@@ -40,7 +40,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css?v=2.9.2">
+  <link rel="stylesheet" href="css/styles.css?v=2.9.3">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -905,7 +905,7 @@
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
-            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.9.2</span><br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.9.3</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
@@ -1521,7 +1521,7 @@
         <button class="modal-close-btn" onclick="app.fecharModal('modalProjeto')" aria-label="Fechar">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 18px 20px;">
+      <div class="modal-body" style="padding: 16px 18px;">
         <!-- Card do Projeto Ativo -->
         <div class="project-current-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px;">
@@ -1543,36 +1543,118 @@
           </div>
         </div>
 
-        <!-- Seção Dinâmica de Integrantes (Controle Exclusivo do Criador) -->
-        <div id="containerSecaoMembrosProjeto">
-          <!-- Renderizado dinamicamente por app.renderizarSecaoMembrosProjeto() -->
+        <!-- Abas de Navegação do Modal de Projetos -->
+        <div class="project-modal-tabs">
+          <button type="button" class="proj-tab-btn active" id="projTabBtnPainel" onclick="app.alternarAbaModalProjeto('painel')">
+            <span>📊</span> Painel & Extração
+          </button>
+          <button type="button" class="proj-tab-btn" id="projTabBtnIntegrantes" onclick="app.alternarAbaModalProjeto('integrantes')">
+            <span>👥</span> Integrantes
+          </button>
+          <button type="button" class="proj-tab-btn" id="projTabBtnTrocar" onclick="app.alternarAbaModalProjeto('trocar')">
+            <span>⚙️</span> Trocar Frente
+          </button>
         </div>
 
-        <!-- Trocar ou Criar Novo Projeto -->
-        <div class="form-group" style="margin-bottom: 14px; border-top: 1px solid var(--line); padding-top: 14px;">
-          <label class="form-label" for="inputTrocarProjeto" style="font-weight: 700;">Criar Novo Projeto ou Trocar Frente</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="inputTrocarProjeto" class="form-control" placeholder="Ex: Pátio 2, Lote Sul, Fazenda Boa Vista" style="font-weight: 600;">
-            <button type="button" class="btn btn-primary" style="white-space: nowrap; padding: 0 16px;" onclick="app.salvarNovoProjeto()">
-              Ativar
+        <!-- ABA 1: PAINEL & EXTRAÇÃO DE DADOS (GERAIS OU SELECIONADOS) -->
+        <div id="projTabContentPainel" class="proj-tab-content active">
+          <!-- KPIs Técnicos Consolidados -->
+          <div class="project-kpi-grid">
+            <div class="project-kpi-card">
+              <span class="kpi-icon">🌳</span>
+              <div class="kpi-value" id="projKpiVolTotal">0,000 m³</div>
+              <div class="kpi-label">Volume Total</div>
+            </div>
+            <div class="project-kpi-card">
+              <span class="kpi-icon">🏷️</span>
+              <div class="kpi-value" id="projKpiTorasTotal">0</div>
+              <div class="kpi-label">Toras Cubadas</div>
+            </div>
+            <div class="project-kpi-card">
+              <span class="kpi-icon">🚚</span>
+              <div class="kpi-value" id="projKpiRetiradas">0</div>
+              <div class="kpi-label">Retiradas (Cargas)</div>
+            </div>
+            <div class="project-kpi-card">
+              <span class="kpi-icon">🪵</span>
+              <div class="kpi-value" id="projKpiPatioRestante">0</div>
+              <div class="kpi-label">Toras no Pátio</div>
+            </div>
+          </div>
+
+          <!-- Resumo de Contribuição da Equipe na Frente -->
+          <div id="projEquipeResumo" class="proj-equipe-resumo">
+            Carregando dados da frente...
+          </div>
+
+          <!-- Ações de Extração Excel -->
+          <div class="project-export-actions">
+            <button type="button" class="btn btn-primary btn-block" onclick="app.extrairDadosGeraisProjeto()" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; padding: 12px; font-size: 0.92rem;">
+              <span>📊</span> Extrair Geral do Projeto (.xlsx)
             </button>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+              <button type="button" class="btn btn-secondary" id="btnExtrairSelecionadasProj" onclick="app.extrairDadosSelecionadosProjeto()" style="flex: 1; font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <span>📑</span> Extrair Selecionadas (<span id="projSelCountBadge">0</span>)
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="app.preverDadosProjeto()" style="font-size: 0.82rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <span>👁️</span> Ver Prévia
+              </button>
+            </div>
           </div>
-          <span class="helper" style="font-size: 0.75rem; margin-top: 4px; display: block;">Ao criar uma nova frente, você será o Criador oficial e somente você poderá adicionar outras contas.</span>
-        </div>
 
-        <div style="margin-bottom: 16px;">
-          <div style="font-size: 0.78rem; font-weight: 600; color: var(--ink); margin-bottom: 8px;">Projetos Recentes:</div>
-          <div id="containerProjetosRecentes" style="display: flex; flex-wrap: wrap; gap: 6px;">
-            <!-- Pílulas preenchidas dinamicamente -->
+          <!-- Cabeçalho e Seleção da Lista de Medições -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 6px 0;">
+            <div style="font-size: 0.82rem; font-weight: 700; color: var(--ink);">
+              Medições desta Frente (<span id="projTotalRecordsCount">0</span>):
+            </div>
+            <div style="display: flex; gap: 8px; font-size: 0.76rem;">
+              <a href="#" onclick="event.preventDefault(); app.selecionarTodasMedicoesProjeto(true);" style="color: var(--gold); font-weight: 700; text-decoration: underline;">Selecionar Todas</a>
+              <span style="color: var(--line);">|</span>
+              <a href="#" onclick="event.preventDefault(); app.selecionarTodasMedicoesProjeto(false);" style="color: var(--muted); text-decoration: underline;">Desmarcar</a>
+            </div>
+          </div>
+
+          <!-- Lista Scrollável de Medições do Projeto com Checkboxes -->
+          <div id="projListaMedicoesContainer" class="proj-lista-medicoes">
+            <!-- Preenchido dinamicamente -->
           </div>
         </div>
 
-        <div class="project-info-card">
-          💡 <strong>Regra de Acesso e Trabalho em Equipe:</strong><br>
-          Somente o criador do projeto pode autorizar outras contas de e-mail nele. Os integrantes autorizados conseguem cubar toras e lançar retiradas de material com caminhão puxando as plaquetas em tempo real no mesmo projeto, sem precisar cubar tudo novamente!
+        <!-- ABA 2: INTEGRANTES & PERMISSÕES (CRIADOR) -->
+        <div id="projTabContentIntegrantes" class="proj-tab-content">
+          <div id="containerSecaoMembrosProjeto">
+            <!-- Renderizado dinamicamente por app.renderizarSecaoMembrosProjeto() -->
+          </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <!-- ABA 3: TROCAR OU CRIAR NOVA FRENTE -->
+        <div id="projTabContentTrocar" class="proj-tab-content">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="inputTrocarProjeto" style="font-weight: 700;">Criar Novo Projeto ou Trocar Frente</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="inputTrocarProjeto" class="form-control" placeholder="Ex: Pátio 2, Lote Sul, Fazenda Boa Vista" style="font-weight: 600;">
+              <button type="button" class="btn btn-primary" style="white-space: nowrap; padding: 0 16px;" onclick="app.salvarNovoProjeto()">
+                Ativar
+              </button>
+            </div>
+            <span class="helper" style="font-size: 0.75rem; margin-top: 4px; display: block;">Ao criar uma nova frente, você será o Criador oficial e somente você poderá adicionar outras contas.</span>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--ink); margin-bottom: 8px;">Projetos Recentes:</div>
+            <div id="containerProjetosRecentes" style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <!-- Pílulas preenchidas dinamicamente -->
+            </div>
+          </div>
+
+          <div class="project-info-card">
+            💡 <strong>Regra de Acesso e Trabalho em Equipe:</strong><br>
+            Somente o criador do projeto pode autorizar outras contas de e-mail nele. Os integrantes autorizados conseguem cubar toras e lançar retiradas de material com caminhão puxando as plaquetas em tempo real no mesmo projeto, sem precisar cubar tudo novamente!
+          </div>
+        </div>
+
+        <!-- Rodapé do Modal -->
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px;">
           <button type="button" class="btn btn-secondary" style="font-size: 0.82rem;" onclick="app.sincronizarProjetoAgora()">
             🔄 Sincronizar Agora
           </button>
@@ -1632,10 +1714,10 @@
   <script src="vendor/exceljs.min.js"></script>
   <script src="js/db.js"></script>
   <script src="js/calculator.js"></script>
-  <script src="js/excel-export.js?v=2.9.2"></script>
-  <script src="js/auth.js?v=2.9.2"></script>
+  <script src="js/excel-export.js?v=2.9.3"></script>
+  <script src="js/auth.js?v=2.9.3"></script>
   <script src="js/species-campeiro-data.js"></script>
   <script src="js/species-database.js"></script>
-  <script src="js/app.js?v=2.9.2"></script>
+  <script src="js/app.js?v=2.9.3"></script>
 </body>
 </html>

@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.9.2';
+    this.appVersion = '2.9.3';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -43,6 +43,9 @@ class CubagemApp {
 
     // Projeto / Frente Compartilhada da Equipe
     this.projetoAtivo = localStorage.getItem('cubagem.projeto_ativo') || 'BR-153';
+    this.selectedProjectRecordIds = new Set();
+    this.abaProjetoAtiva = 'painel';
+    this.registrosProjetoCache = [];
     try {
       this.projetosRecentes = JSON.parse(localStorage.getItem('cubagem.projetos_recentes') || '["BR-153", "Geral"]');
       if (!Array.isArray(this.projetosRecentes)) this.projetosRecentes = ['BR-153', 'Geral'];
@@ -3218,10 +3221,14 @@ class CubagemApp {
       }).catch(() => {});
     }
 
-    // Atualiza seção de integrantes se o modal estiver aberto
+    // Atualiza dados da aba ativa se o modal estiver aberto
     const modalProj = document.getElementById('modalProjeto');
     if (modalProj && modalProj.classList.contains('open')) {
-      this.renderizarSecaoMembrosProjeto(nome);
+      if (this.abaProjetoAtiva === 'painel') {
+        this.carregarDadosPainelProjeto();
+      } else if (this.abaProjetoAtiva === 'integrantes') {
+        this.renderizarSecaoMembrosProjeto(nome);
+      }
     }
   }
 
@@ -3230,6 +3237,7 @@ class CubagemApp {
     if (!limpo) return;
 
     this.projetoAtivo = limpo;
+    this.selectedProjectRecordIds.clear();
     try {
       localStorage.setItem('cubagem.projeto_ativo', limpo);
       if (!this.projetosRecentes.includes(limpo)) {
@@ -3259,7 +3267,7 @@ class CubagemApp {
 
   async abrirModalProjeto() {
     this.atualizarUIProjeto();
-    await this.renderizarSecaoMembrosProjeto(this.projetoAtivo);
+    await this.alternarAbaModalProjeto(this.abaProjetoAtiva || 'painel');
 
     const inputTrocar = document.getElementById('inputTrocarProjeto');
     if (inputTrocar) inputTrocar.value = '';
@@ -3296,6 +3304,337 @@ class CubagemApp {
     }
 
     this.abrirModal('modalProjeto');
+  }
+
+  /**
+   * Alterna entre as abas do Modal de Projeto: Painel & Extração, Integrantes e Trocar Frente
+   */
+  async alternarAbaModalProjeto(aba = 'painel') {
+    this.abaProjetoAtiva = aba;
+
+    const btnPainel = document.getElementById('projTabBtnPainel');
+    const btnIntegrantes = document.getElementById('projTabBtnIntegrantes');
+    const btnTrocar = document.getElementById('projTabBtnTrocar');
+
+    if (btnPainel) btnPainel.classList.toggle('active', aba === 'painel');
+    if (btnIntegrantes) btnIntegrantes.classList.toggle('active', aba === 'integrantes');
+    if (btnTrocar) btnTrocar.classList.toggle('active', aba === 'trocar');
+
+    const contentPainel = document.getElementById('projTabContentPainel');
+    const contentIntegrantes = document.getElementById('projTabContentIntegrantes');
+    const contentTrocar = document.getElementById('projTabContentTrocar');
+
+    if (contentPainel) contentPainel.classList.toggle('active', aba === 'painel');
+    if (contentIntegrantes) contentIntegrantes.classList.toggle('active', aba === 'integrantes');
+    if (contentTrocar) contentTrocar.classList.toggle('active', aba === 'trocar');
+
+    if (aba === 'painel') {
+      await this.carregarDadosPainelProjeto();
+    } else if (aba === 'integrantes') {
+      await this.renderizarSecaoMembrosProjeto(this.projetoAtivo);
+    }
+  }
+
+  /**
+   * Carrega os dados operacionais, resumo de toras e lista interativa de medições da frente
+   */
+  async carregarDadosPainelProjeto() {
+    const nome = (this.projetoAtivo || 'BR-153').trim();
+    const projId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+      ? this.auth.normalizarProjetoId(nome)
+      : String(nome).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+
+    let allRecords = [];
+    if (window.cubagemDB && typeof window.cubagemDB.getAll === 'function') {
+      allRecords = await window.cubagemDB.getAll(false);
+    }
+
+    const records = allRecords.filter(r => {
+      const rProj = r.projeto || 'BR-153';
+      const rId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+        ? this.auth.normalizarProjetoId(rProj)
+        : String(rProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+      return rId === projId;
+    });
+
+    records.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    this.registrosProjetoCache = records;
+
+    const fNum = (n, d = 2) => window.CubagemCalculator.formatNumber(n, d);
+
+    // Cálculos consolidados da frente
+    let volTotal = 0;
+    let torasCubadasCount = 0;
+    let retiradasCargasCount = 0;
+    let retiradasVolTotal = 0;
+    const torasCarregadasPlaquetas = new Set();
+    const responsaveisMap = new Map();
+
+    records.forEach(r => {
+      const vol = Number(r.volumeGeometrico) || 0;
+      volTotal += vol;
+
+      const autor = r.autorNome || r.responsavel || 'Lucas Aøsf';
+      const statsAutor = responsaveisMap.get(autor) || { vol: 0, count: 0 };
+      statsAutor.vol += vol;
+      statsAutor.count += 1;
+      responsaveisMap.set(autor, statsAutor);
+
+      if (r.tipo === 'caminhao') {
+        retiradasCargasCount += 1;
+        retiradasVolTotal += vol;
+        if (Array.isArray(r.toras)) {
+          r.toras.forEach(t => {
+            if (t.plaqueta) torasCarregadasPlaquetas.add(String(t.plaqueta).trim().toLowerCase());
+          });
+        }
+      } else {
+        if (Array.isArray(r.toras) && r.toras.length > 0) {
+          torasCubadasCount += r.toras.length;
+        } else {
+          torasCubadasCount += 1;
+        }
+      }
+    });
+
+    const torasNoPatioRestante = Math.max(0, torasCubadasCount - torasCarregadasPlaquetas.size);
+
+    // Atualiza KPIs
+    const kpiVol = document.getElementById('projKpiVolTotal');
+    const kpiToras = document.getElementById('projKpiTorasTotal');
+    const kpiRetiradas = document.getElementById('projKpiRetiradas');
+    const kpiPatio = document.getElementById('projKpiPatioRestante');
+    const totalCountEl = document.getElementById('projTotalRecordsCount');
+
+    if (kpiVol) kpiVol.textContent = `${fNum(volTotal, 3)} m³`;
+    if (kpiToras) kpiToras.textContent = `${torasCubadasCount}`;
+    if (kpiRetiradas) kpiRetiradas.textContent = `${retiradasCargasCount} (${fNum(retiradasVolTotal, 2)} m³)`;
+    if (kpiPatio) kpiPatio.textContent = `${torasNoPatioRestante}`;
+    if (totalCountEl) totalCountEl.textContent = `${records.length}`;
+
+    // Atualiza Resumo de Contribuição da Equipe
+    const equipeEl = document.getElementById('projEquipeResumo');
+    if (equipeEl) {
+      if (responsaveisMap.size === 0) {
+        equipeEl.innerHTML = `Nenhuma medição registrada nesta frente ainda. As cubagens e retiradas de todos os integrantes autorizados serão integradas aqui em tempo real.`;
+      } else {
+        const partes = [];
+        responsaveisMap.forEach((stats, resp) => {
+          partes.push(`<strong>${this.escapeHtml(resp)}:</strong> ${fNum(stats.vol, 2)} m³ (${stats.count} med.)`);
+        });
+        equipeEl.innerHTML = `<strong>👷 Equipe Ativa na Frente:</strong> ${partes.join(' • ')}`;
+      }
+    }
+
+    // Renderiza Lista de Medições com Checkboxes
+    const container = document.getElementById('projListaMedicoesContainer');
+    if (container) {
+      if (records.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 24px 12px; color: var(--muted); font-size: 0.84rem; background: var(--surface-2); border-radius: 8px; border: 1px dashed var(--line);">
+            Nenhuma medição vinculada a esta frente até o momento.<br>
+            Crie cubagens de toras ou registre retiradas com caminhão para extrair os relatórios consolidados!
+          </div>
+        `;
+      } else {
+        container.innerHTML = records.map(r => {
+          const isSelected = this.selectedProjectRecordIds.has(r.id);
+          const dataStr = r.data ? window.CubagemExcelExport.formatDateBR(r.data) : (r.dataCriacao ? new Date(r.dataCriacao).toLocaleDateString('pt-BR') : '');
+          const autor = r.autorNome || r.responsavel || 'Lucas Aøsf';
+          
+          let tipoBadge = '🌲 Tora';
+          let icone = '🌲';
+          let titulo = r.plaqueta ? `Plaqueta #${r.plaqueta}` : (r.identificacao || `Tora #${r.numero || 1}`);
+
+          if (r.tipo === 'caminhao') {
+            icone = '🚚';
+            tipoBadge = 'Retirada Caminhão';
+            titulo = r.placa ? `Caminhão ${r.placa}` : `Caminhão ${r.identificacao || r.id}`;
+          } else if (r.tipo === 'pilha') {
+            icone = '🪵';
+            tipoBadge = 'Pilha';
+            const nToras = Array.isArray(r.toras) ? r.toras.length : 1;
+            titulo = `${r.identificacao || 'Pilha'} (${nToras} toras)`;
+          }
+
+          const volStr = `${fNum(r.volumeGeometrico, 3)} m³`;
+          const espStr = r.especie || 'Madeira Nativa Diversa';
+
+          return `
+            <div class="proj-medicao-card ${isSelected ? 'selected' : ''}" id="projCard_${r.id}" onclick="app.toggleSelecaoMedicaoProjeto('${r.id}', event)">
+              <input type="checkbox" class="proj-medicao-checkbox" id="projChk_${r.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoMedicaoProjeto('${r.id}', event)">
+              <div class="proj-medicao-info">
+                <div class="proj-medicao-top">
+                  <div class="proj-medicao-title">
+                    <span>${icone}</span> <strong>${this.escapeHtml(titulo)}</strong>
+                    <span style="font-size: 0.72rem; color: var(--gold); margin-left: 4px;">(${tipoBadge})</span>
+                  </div>
+                  <div class="proj-medicao-vol">${volStr}</div>
+                </div>
+                <div class="proj-medicao-sub">
+                  ${this.escapeHtml(espStr)} • 📅 ${dataStr} • 👤 ${this.escapeHtml(autor)}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    this.atualizarContadorSelecaoProjeto();
+  }
+
+  toggleSelecaoMedicaoProjeto(id, event) {
+    if (this.selectedProjectRecordIds.has(id)) {
+      this.selectedProjectRecordIds.delete(id);
+    } else {
+      this.selectedProjectRecordIds.add(id);
+    }
+
+    const card = document.getElementById(`projCard_${id}`);
+    const chk = document.getElementById(`projChk_${id}`);
+    const isSel = this.selectedProjectRecordIds.has(id);
+
+    if (card) card.classList.toggle('selected', isSel);
+    if (chk) chk.checked = isSel;
+
+    this.atualizarContadorSelecaoProjeto();
+  }
+
+  selecionarTodasMedicoesProjeto(selecionar = true) {
+    const records = this.registrosProjetoCache || [];
+    if (selecionar) {
+      records.forEach(r => this.selectedProjectRecordIds.add(r.id));
+    } else {
+      this.selectedProjectRecordIds.clear();
+    }
+
+    records.forEach(r => {
+      const card = document.getElementById(`projCard_${r.id}`);
+      const chk = document.getElementById(`projChk_${r.id}`);
+      const isSel = this.selectedProjectRecordIds.has(r.id);
+      if (card) card.classList.toggle('selected', isSel);
+      if (chk) chk.checked = isSel;
+    });
+
+    this.atualizarContadorSelecaoProjeto();
+  }
+
+  atualizarContadorSelecaoProjeto() {
+    const badge = document.getElementById('projSelCountBadge');
+    if (badge) {
+      badge.textContent = `${this.selectedProjectRecordIds.size}`;
+    }
+
+    const btnExtrairSel = document.getElementById('btnExtrairSelecionadasProj');
+    if (btnExtrairSel) {
+      btnExtrairSel.style.opacity = this.selectedProjectRecordIds.size > 0 ? '1' : '0.6';
+    }
+  }
+
+  /**
+   * Extrai todos os dados gerais da frente ativa para planilha Excel (.xlsx) consolidada
+   */
+  async extrairDadosGeraisProjeto() {
+    const records = this.registrosProjetoCache || [];
+    if (records.length === 0) {
+      this.showToast('Nenhuma medição encontrada neste projeto para exportar.', 'warning');
+      return;
+    }
+
+    const nomeProj = (this.projetoAtivo || 'BR-153').trim();
+    const cleanProj = nomeProj.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const dataPri = records[records.length - 1]?.data || '';
+    const dataUlt = records[0]?.data || '';
+    const dateTag = dataPri === dataUlt ? dataPri : `${dataPri}_a_${dataUlt}`;
+    const fileName = `Planilha_Geral_Projeto_${cleanProj}_${records.length}_Medicoes_${dateTag || 'completo'}.xlsx`;
+
+    try {
+      this.showToast(`📊 Gerando planilha oficial consolidada do projeto ${nomeProj} (${records.length} medições)...`, 'info');
+
+      const resp = (this.auth && this.auth.user)
+        ? (this.auth.user.displayName || this.auth.user.email.split('@')[0])
+        : 'Lucas Aøsf';
+
+      const res = await window.CubagemExcelExport.exportWorkbook(records, {
+        fileName,
+        responsavel: resp,
+        startDate: dataPri,
+        endDate: dataUlt
+      });
+
+      this.showToast(`✓ Planilha Geral do projeto ${nomeProj} exportada com sucesso! (${res.recordsCount} medições)`, 'success');
+    } catch (err) {
+      console.error('Erro ao exportar planilha geral do projeto:', err);
+      this.showToast(`Erro ao exportar planilha Excel: ${err.message || err}`, 'danger');
+    }
+  }
+
+  /**
+   * Extrai apenas as medições selecionadas pelo usuário no projeto para Excel (.xlsx)
+   */
+  async extrairDadosSelecionadosProjeto() {
+    if (this.selectedProjectRecordIds.size === 0) {
+      this.showToast('Selecione ao menos uma medição na lista abaixo marcando a caixinha.', 'warning');
+      const listContainer = document.getElementById('projListaMedicoesContainer');
+      if (listContainer) listContainer.focus();
+      return;
+    }
+
+    const ids = this.selectedProjectRecordIds;
+    const records = (this.registrosProjetoCache || []).filter(r => ids.has(r.id));
+    if (records.length === 0) {
+      this.showToast('Nenhuma medição selecionada válida encontrada.', 'warning');
+      return;
+    }
+
+    const nomeProj = (this.projetoAtivo || 'BR-153').trim();
+    const cleanProj = nomeProj.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const dataPri = records[records.length - 1]?.data || '';
+    const dataUlt = records[0]?.data || '';
+    const dateTag = dataPri === dataUlt ? dataPri : `${dataPri}_a_${dataUlt}`;
+    const fileName = `Planilha_${cleanProj}_${records.length}_Medicoes_Selecionadas_${dateTag || 'export'}.xlsx`;
+
+    try {
+      this.showToast(`📑 Exportando ${records.length} medições selecionadas do projeto ${nomeProj}...`, 'info');
+
+      const resp = (this.auth && this.auth.user)
+        ? (this.auth.user.displayName || this.auth.user.email.split('@')[0])
+        : 'Lucas Aøsf';
+
+      const res = await window.CubagemExcelExport.exportWorkbook(records, {
+        fileName,
+        responsavel: resp,
+        startDate: dataPri,
+        endDate: dataUlt
+      });
+
+      this.showToast(`✓ Planilha com ${res.recordsCount} medições selecionadas baixada com sucesso!`, 'success');
+    } catch (err) {
+      console.error('Erro ao exportar selecionadas do projeto:', err);
+      this.showToast(`Erro ao exportar planilha Excel: ${err.message || err}`, 'danger');
+    }
+  }
+
+  /**
+   * Abre a prévia em tela cheia do ExcelJS das medições (selecionadas ou gerais)
+   */
+  preverDadosProjeto() {
+    let records = [];
+    if (this.selectedProjectRecordIds.size > 0) {
+      const ids = this.selectedProjectRecordIds;
+      records = (this.registrosProjetoCache || []).filter(r => ids.has(r.id));
+    } else {
+      records = this.registrosProjetoCache || [];
+    }
+
+    if (records.length === 0) {
+      this.showToast('Nenhuma medição disponível para visualização neste projeto.', 'warning');
+      return;
+    }
+
+    this.fecharModal('modalProjeto');
+    this.mostrarPreviaPlanilha(records);
   }
 
   /**

@@ -1,12 +1,12 @@
 {
-  "v": "2.9.2",
-  "nome": "2.9.2",
+  "v": "2.9.3",
+  "nome": "2.9.3",
   "data": "2026-11-11",
   "novidades": [
-    "Criador Oficial do Projeto: você é o proprietário da frente e tem autoridade total sobre o projeto",
-    "Opção Exclusiva de Adicionar Contas: somente o criador do projeto tem permissão para adicionar e remover outros integrantes",
-    "Segurança e Controle de Acesso: contas não autorizadas pelo criador não acessam os dados da frente",
-    "Sincronização em Tempo Real de Integrantes: novas contas autorizadas pelo criador entram em vigor imediatamente",
-    "Painel de Integrantes no Modal do Projeto: visualização clara de avatares, papéis (👑 Criador vs ✓ Integrante) e botões de gestão"
+    "Painel de Informações da Frente no botão da pasta: visualização de volume total (m³), toras cubadas, retiradas com caminhão e saldo restante no pátio",
+    "Extrair Geral do Projeto (.xlsx): botão para exportar a planilha multipasta consolidada de todas as medições da frente com um único toque",
+    "Extrair Medições Selecionadas (.xlsx): caixas de seleção interativas para escolher medições específicas da frente e gerar a planilha Excel correspondente",
+    "Ver Prévia da Planilha da Frente: conferência dos cálculos, abas e romaneios antes de baixar",
+    "Organização em Abas no Modal de Projetos: 'Painel & Extração', 'Integrantes (Criador)' e 'Trocar Frente'"
   ]
 }
