@@ -1,12 +1,11 @@
 {
-  "v": "2.10.6",
-  "nome": "2.10.6",
+  "v": "2.10.7",
+  "nome": "2.10.7",
   "data": "2026-11-11",
   "novidades": [
-    "Recuperação e Segurança de Dados: Proteção total contra perda de medições com backup automático de emergência em armazenamento local persistente (IndexedDB + Storage API)",
-    "Restauração Direta da Nuvem: Novo botão para resgatar e restaurar instantaneamente todas as medições do projeto ou da conta pessoal salvas no Firestore",
-    "Autenticação Robusta e Modo Offline: Login inteligente com Google e E-mail/Senha com auto-cadastro, e atalho de 1 toque para Modo Local (Lucas Aøsf)",
-    "Cálculo Confiável de Toras na Carga: Eliminação definitiva de 'undefined m³' e correção de duplicações de unidade (cm cm / m m) no resumo da retirada",
-    "Inicialização Imediata e Resiliente: Correção do ciclo de vida de carregamento DOM e prevenção de bloqueios por conexões concorrentes ou redirecionamento"
+    "Inicialização e Botões 100% Funcionais: Correção da sintaxe do script de inicialização e restauração imediata de todos os cliques e ações",
+    "Login e Janela de Autenticação: Abertura imediata do modal de login e reconexão de sessão local instantânea sem bloqueio de rede",
+    "Recuperação e Segurança de Dados: Proteção total contra perda de medições com backup automático persistente e restauração direta da nuvem",
+    "Cálculo e Exportação Excel de Retiradas: Consolidação precisa dos volumes por viagem e correção de erros em seleções de medições"
   ]
 }

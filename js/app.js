@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.5';
+    this.appVersion = '2.10.7';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -917,10 +917,6 @@ class CubagemApp {
         enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 0
-      }
-    );
-  }
-        maximumAge: 30000
       }
     );
   }
