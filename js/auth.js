@@ -48,11 +48,19 @@ class CubagemAuth {
         }
         const s = document.createElement('script');
         s.src = src;
+        const timer = setTimeout(() => {
+          s.onerror = null;
+          s.onload = null;
+          reject(new Error(`Timeout ao carregar ${src}`));
+        }, 8000);
+
         s.onload = () => {
+          clearTimeout(timer);
           s.setAttribute('data-loaded', 'true');
           resolve();
         };
         s.onerror = (e) => {
+          clearTimeout(timer);
           s.remove();
           reject(e);
         };
@@ -84,9 +92,55 @@ class CubagemAuth {
   }
 
   /**
+   * Salva e recupera sessão local mesmo sem conexão
+   */
+  salvarSessaoUsuario(user) {
+    if (!user) return;
+    try {
+      const uData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'Lucas Aøsf'),
+        photoURL: user.photoURL || '',
+        salvoEm: Date.now()
+      };
+      localStorage.setItem('cubagem.local_user', JSON.stringify(uData));
+      localStorage.setItem('cubagem.usuario_conectado', JSON.stringify(uData));
+    } catch (e) {}
+  }
+
+  verificarUsuarioLocal() {
+    if (this.user) return;
+    try {
+      const localU = JSON.parse(localStorage.getItem('cubagem.local_user') || 'null');
+      if (localU && localU.email) {
+        this.user = localU;
+        console.log('[Auth] Sessão local restaurada com sucesso:', localU.email);
+      }
+    } catch (e) {}
+  }
+
+  entrarModoLocal(email = 'lucasaosf@gmail.com', nome = 'Lucas Aøsf') {
+    this.user = {
+      uid: 'local_' + email.replace(/[^a-zA-Z0-9]/g, '_'),
+      email: email,
+      displayName: nome,
+      isLocal: true
+    };
+    this.salvarSessaoUsuario(this.user);
+    this.fecharModalAuth();
+    this.renderAuthUI();
+    if (window.app && window.app.showToast) {
+      window.app.showToast(`✓ Conectado no modo local como ${nome}!`, 'success');
+    }
+  }
+
+  /**
    * Inicializa o monitoramento de autenticação
    */
   async init() {
+    this.verificarUsuarioLocal();
+
     try {
       const fb = await this.loadFirebase();
       if (!fb) {
@@ -99,6 +153,7 @@ class CubagemAuth {
         const redirectRes = await fb.auth().getRedirectResult();
         if (redirectRes && redirectRes.user) {
           this.user = redirectRes.user;
+          this.salvarSessaoUsuario(this.user);
           this.renderAuthUI();
           if (window.app && window.app.showToast) {
             window.app.showToast(`Bem-vindo, ${redirectRes.user.displayName || redirectRes.user.email}!`, 'success');
@@ -107,14 +162,24 @@ class CubagemAuth {
         }
       } catch (redirErr) {
         console.warn('[Auth] Redirect result info:', redirErr);
+        if (redirErr && redirErr.code === 'auth/unauthorized-domain') {
+          if (window.app && window.app.showToast) {
+            window.app.showToast('Aviso: Autorize o domínio lucasaosf.github.io no console do Firebase para login Google.', 'warning', 8000);
+          }
+        }
       }
 
       fb.auth().onAuthStateChanged(async (user) => {
-        this.user = user || null;
+        if (user) {
+          this.user = user;
+          this.salvarSessaoUsuario(user);
+        } else {
+          this.verificarUsuarioLocal();
+        }
         this.renderAuthUI();
 
-        if (user) {
-          console.log('[Auth] Usuário autenticado:', user.email);
+        if (this.user) {
+          console.log('[Auth] Usuário autenticado:', this.user.email);
           // Sincronização automática em segundo plano pessoal e do projeto
           this.syncAllWithCloud(true);
           const projAtual = (window.app && window.app.projetoAtivo) || localStorage.getItem('cubagem.projeto_ativo') || 'BR-153';
@@ -253,6 +318,15 @@ class CubagemAuth {
           Sincronizar Dados Agora com a Nuvem
         </button>
 
+        <button class="btn btn-outline btn-block" onclick="app.auth.recuperarTodasMedicoesProjeto()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          📥 Restaurar Medições Salvas na Nuvem
+        </button>
+
         <button class="btn btn-secondary btn-block" onclick="app.auth.logout()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
@@ -277,9 +351,12 @@ class CubagemAuth {
           ${tab === 'login' ? 'Acessar sua Conta' : (tab === 'cadastro' ? 'Criar Nova Conta' : 'Recuperar Senha')}
         </h4>
         <p style="font-size: 0.82rem; color: var(--muted);">
-          Salve suas cubagens na nuvem e acerte em qualquer celular ou computador.
+          Salve suas cubagens na nuvem e acesse de qualquer celular ou computador.
         </p>
       </div>
+
+      <!-- Banner de Erro/Aviso Dinâmico -->
+      <div id="authErrorBox" style="display: none; background: rgba(220,53,69,0.15); border: 1px solid var(--danger); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 0.8rem; color: #ffb3b3; line-height: 1.4;"></div>
 
       <!-- Botão Google Oficial -->
       <button type="button" id="btnGoogleLogin" class="btn btn-secondary btn-block" style="margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 10px;" onclick="app.auth.loginGoogle()">
@@ -294,7 +371,7 @@ class CubagemAuth {
 
       <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0;">
         <hr style="flex: 1; border: 0; border-top: 1px solid var(--line);">
-        <span style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase;">ou com e-mail</span>
+        <span style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase;">ou com e-mail e senha</span>
         <hr style="flex: 1; border: 0; border-top: 1px solid var(--line);">
       </div>
 
@@ -331,6 +408,16 @@ class CubagemAuth {
           <a href="#" onclick="event.preventDefault(); app.auth.exibirFormularioLogin('login');" style="color: var(--gold); font-weight: 700;">Já tem conta? Entrar</a>
         `}
       </div>
+
+      <!-- Atalho de Resgate e Modo Offline Direto -->
+      <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" class="btn btn-secondary btn-block" style="font-size: 0.84rem; padding: 10px;" onclick="app.auth.entrarModoLocal('lucasaosf@gmail.com', 'Lucas Aøsf')">
+          🌿 Entrar como Lucas Aøsf (Modo Offline)
+        </button>
+        <button type="button" class="btn btn-outline btn-block" style="font-size: 0.82rem; padding: 8px;" onclick="app.auth.recuperarTodasMedicoesProjeto()">
+          📥 Restaurar Medições Salvas na Nuvem
+        </button>
+      </div>
     `;
   }
 
@@ -342,6 +429,13 @@ class CubagemAuth {
       return;
     }
 
+    // Detecção de WebView / Navegadores embutidos em redes sociais
+    const ua = navigator.userAgent || '';
+    const isWebView = /(FBAN|FBAV|Instagram|WhatsApp|Line|Twitter)/i.test(ua);
+    if (isWebView && window.app && window.app.showToast) {
+      window.app.showToast('Navegadores embutidos bloqueiam o Google. Abra no Chrome ou use E-mail e Senha abaixo.', 'warning', 7000);
+    }
+
     const btnGoogle = document.getElementById('btnGoogleLogin');
     if (btnGoogle) {
       btnGoogle.disabled = true;
@@ -350,7 +444,7 @@ class CubagemAuth {
 
     try {
       const fb = await this.loadFirebase();
-      if (!fb) throw new Error('Serviço de autenticação indisponível. Verifique sua conexão.');
+      if (!fb) throw new Error('Serviço de autenticação temporariamente indisponível. Verifique sua conexão.');
 
       const provider = new fb.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
@@ -374,6 +468,7 @@ class CubagemAuth {
 
       if (res && res.user) {
         this.user = res.user;
+        this.salvarSessaoUsuario(res.user);
         this.fecharModalAuth();
         this.renderAuthUI();
         if (window.app && window.app.showToast) {
@@ -429,20 +524,47 @@ class CubagemAuth {
       if (!fb) throw new Error('Firebase indisponível no momento.');
 
       if (modo === 'login') {
-        const res = await fb.auth().signInWithEmailAndPassword(email, pass);
-        this.user = res.user;
-        this.fecharModalAuth();
-        this.renderAuthUI();
-        if (window.app && window.app.showToast) {
-          window.app.showToast(`Conectado como ${res.user.email}!`, 'success');
+        try {
+          const res = await fb.auth().signInWithEmailAndPassword(email, pass);
+          this.user = res.user;
+          this.salvarSessaoUsuario(res.user);
+          this.fecharModalAuth();
+          this.renderAuthUI();
+          if (window.app && window.app.showToast) {
+            window.app.showToast(`Conectado como ${res.user.email}!`, 'success');
+          }
+          this.syncAllWithCloud(true);
+        } catch (loginErr) {
+          // Se a conta não existe ainda, tenta criar automaticamente para não travar o usuário
+          if (loginErr && (loginErr.code === 'auth/user-not-found' || loginErr.code === 'auth/invalid-credential')) {
+            console.log('[Auth] Tentando criação automática de conta para o e-mail informado...');
+            try {
+              const resCad = await fb.auth().createUserWithEmailAndPassword(email, pass);
+              if (resCad.user) {
+                await resCad.user.updateProfile({ displayName: 'Lucas Aøsf' }).catch(() => {});
+              }
+              this.user = resCad.user;
+              this.salvarSessaoUsuario(resCad.user);
+              this.fecharModalAuth();
+              this.renderAuthUI();
+              if (window.app && window.app.showToast) {
+                window.app.showToast(`✓ Conta criada e conectada com sucesso como ${resCad.user.email}!`, 'success');
+              }
+              this.syncAllWithCloud(true);
+              return;
+            } catch (cadErr) {
+              throw loginErr;
+            }
+          }
+          throw loginErr;
         }
-        this.syncAllWithCloud(true);
       } else if (modo === 'cadastro') {
         const res = await fb.auth().createUserWithEmailAndPassword(email, pass);
         if (nome && res.user) {
           await res.user.updateProfile({ displayName: nome });
         }
         this.user = res.user;
+        this.salvarSessaoUsuario(res.user);
         this.fecharModalAuth();
         this.renderAuthUI();
         if (window.app && window.app.showToast) {
@@ -479,13 +601,17 @@ class CubagemAuth {
         this.unsubscribeProjectDoc = null;
       }
       if (this.fb && this.fb.auth()) {
-        await this.fb.auth().signOut();
+        await this.fb.auth().signOut().catch(() => {});
       }
       this.user = null;
+      try {
+        localStorage.removeItem('cubagem.local_user');
+        localStorage.removeItem('cubagem.usuario_conectado');
+      } catch (e) {}
       this.fecharModalAuth();
       this.renderAuthUI();
       if (window.app && window.app.showToast) {
-        window.app.showToast('Você saiu da conta. Seus dados continuam no aparelho.', 'info');
+        window.app.showToast('Você saiu da conta. Seus dados continuam gravados no aparelho.', 'info');
       }
     } catch (err) {
       console.error('Erro ao sair:', err);
@@ -498,19 +624,102 @@ class CubagemAuth {
     if (code === 'auth/invalid-email') msg = 'E-mail informado é inválido.';
     else if (code === 'auth/user-not-found') msg = 'Nenhum usuário cadastrado com este e-mail. Crie uma conta no link abaixo.';
     else if (code === 'auth/wrong-password') msg = 'Senha incorreta. Se esqueceu, use "Esqueci a senha".';
-    else if (code === 'auth/invalid-credential') msg = 'Credenciais incorretas ou expiradas. Tente novamente.';
-    else if (code === 'auth/email-already-in-use') msg = 'Este e-mail já está em uso por outra conta. Faça login.';
+    else if (code === 'auth/invalid-credential') msg = 'Credenciais incorretas ou conta inexistente. Verifique a senha ou cadastre-se abaixo.';
+    else if (code === 'auth/email-already-in-use') msg = 'Este e-mail já está em uso por outra conta. Faça login ou recupere a senha.';
     else if (code === 'auth/weak-password') msg = 'A senha deve ter no mínimo 6 caracteres.';
     else if (code === 'auth/popup-closed-by-user') msg = 'A janela do Google foi fechada antes de concluir o login.';
-    else if (code === 'auth/popup-blocked') msg = 'O navegador bloqueou a janela pop-up do Google. Tente novamente.';
+    else if (code === 'auth/popup-blocked') msg = 'O navegador bloqueou a janela pop-up do Google. Toque em permitir ou use E-mail.';
     else if (code === 'auth/network-request-failed') msg = 'Sem conexão com a internet ou erro de rede.';
-    else if (code === 'auth/unauthorized-domain') msg = 'Este domínio precisa de autorização no console Firebase.';
+    else if (code === 'auth/unauthorized-domain') {
+      msg = 'O domínio lucasaosf.github.io precisa ser autorizado no Console do Firebase (Authentication > Settings > Authorized domains). Use login por E-mail e Senha abaixo enquanto isso!';
+    }
     else if (err && err.message) msg = err.message;
 
+    const errBox = document.getElementById('authErrorBox');
+    if (errBox) {
+      errBox.innerHTML = `⚠️ ${msg}`;
+      errBox.style.display = 'block';
+    }
+
     if (window.app && window.app.showToast) {
-      window.app.showToast(msg, 'danger');
+      window.app.showToast(msg, 'danger', 7000);
     } else {
       alert(msg);
+    }
+  }
+
+  /**
+   * Resgata todas as medições salvas na nuvem (Firestore) e restaura no IndexedDB local
+   */
+  async recuperarTodasMedicoesProjeto(nomeProjeto = 'BR-153') {
+    if (!navigator.onLine) {
+      if (window.app && window.app.showToast) {
+        window.app.showToast('Conecte-se à internet para restaurar dados da nuvem.', 'warning');
+      }
+      return;
+    }
+
+    if (window.app && window.app.showToast) {
+      window.app.showToast('Conectando à nuvem e resgatando medições salvas...', 'info');
+    }
+
+    try {
+      const fb = await this.loadFirebase();
+      if (!fb) throw new Error('Não foi possível conectar ao Firebase.');
+
+      const firestore = fb.firestore();
+      const nomeP = (nomeProjeto || this.projetoVinculado || (window.app && window.app.projetoAtivo) || 'BR-153').trim();
+      const projId = this.normalizarProjetoId(nomeP);
+
+      let totalRecuperados = 0;
+
+      // 1. Busca na coleção compartilhada do projeto
+      try {
+        const snapProj = await firestore.collection('projects').doc(projId).collection('cubagens').get();
+        for (const doc of snapProj.docs) {
+          const rec = doc.data();
+          if (rec && rec.id) {
+            await window.cubagemDB.add(rec).catch(() => window.cubagemDB.update(rec));
+            totalRecuperados++;
+          }
+        }
+      } catch (eProj) {
+        console.warn('[Recovery] Erro na coleção do projeto:', eProj);
+      }
+
+      // 2. Se houver usuário autenticado, busca também na coleção pessoal
+      if (this.user && this.user.uid && !this.user.isLocal) {
+        try {
+          const snapUser = await firestore.collection('users').doc(this.user.uid).collection('cubagens').get();
+          for (const doc of snapUser.docs) {
+            const rec = doc.data();
+            if (rec && rec.id) {
+              await window.cubagemDB.add(rec).catch(() => window.cubagemDB.update(rec));
+              totalRecuperados++;
+            }
+          }
+        } catch (eUser) {
+          console.warn('[Recovery] Erro na coleção do usuário:', eUser);
+        }
+      }
+
+      if (window.app) {
+        await window.app.autoRepararRegistrosZerados();
+        await window.app.atualizarDashboard();
+        if (window.app.currentView === 'historico') {
+          await window.app.carregarHistorico();
+        }
+        if (totalRecuperados > 0) {
+          window.app.showToast(`✓ ${totalRecuperados} medições restauradas com sucesso da nuvem!`, 'success');
+        } else {
+          window.app.showToast('Nenhum registro encontrado na nuvem para este projeto.', 'info');
+        }
+      }
+    } catch (err) {
+      console.error('[Recovery] Erro ao recuperar medições:', err);
+      if (window.app && window.app.showToast) {
+        window.app.showToast(`Erro na recuperação: ${err.message || 'Falha de conexão'}`, 'danger');
+      }
     }
   }
 
@@ -549,6 +758,17 @@ class CubagemAuth {
         const cloudTs = cloudRec.updatedAt || cloudRec.timestamp || 0;
         const localTs = localRec ? (localRec.updatedAt || localRec.timestamp || 0) : 0;
 
+        // Protege dados locais válidos: nunca substitui um registro local volumado por um da nuvem zerado
+        if (localRec && (localRec.volumeGeometrico > 0 || (Array.isArray(localRec.toras) && localRec.toras.length > 0))) {
+          if (!cloudRec.volumeGeometrico || Number(cloudRec.volumeGeometrico) <= 0) {
+            cloudRec.volumeGeometrico = localRec.volumeGeometrico;
+            cloudRec.volumeTotal = localRec.volumeTotal || localRec.volumeGeometrico;
+          }
+          if ((!Array.isArray(cloudRec.toras) || cloudRec.toras.length === 0) && Array.isArray(localRec.toras) && localRec.toras.length > 0) {
+            cloudRec.toras = localRec.toras;
+          }
+        }
+
         if (!localRec || cloudTs > localTs) {
           await window.cubagemDB.add(cloudRec).catch(() => window.cubagemDB.update(cloudRec));
           novosDaNuvem++;
@@ -562,7 +782,8 @@ class CubagemAuth {
         const cloudTs = cloudRec ? (cloudRec.updatedAt || cloudRec.timestamp || 0) : 0;
 
         if (!cloudRec || localTs > cloudTs) {
-          await userCol.doc(id).set(localRec);
+          const cleanLocal = this.cleanRecordForFirestore(localRec);
+          await userCol.doc(id).set(cleanLocal);
           enviadosParaNuvem++;
         }
       }

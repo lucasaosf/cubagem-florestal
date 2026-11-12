@@ -76,6 +76,10 @@ class CubagemApp {
     document.body.setAttribute('data-active-tab', 'inicio');
     this.atualizarUIProjeto();
 
+    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+
     try {
       await window.cubagemDB.init();
     } catch (err) {
@@ -95,12 +99,30 @@ class CubagemApp {
     this.configurarCalculoTempoReal();
 
     if (window.CubagemEspecies && typeof window.CubagemEspecies.initInputs === 'function') {
-      window.CubagemEspecies.initInputs(this);
+      try {
+        window.CubagemEspecies.initInputs(this);
+      } catch (e) {
+        console.warn('[Init] Especies init:', e);
+      }
     }
 
-    await this.carregarPreferenciasIniciais();
-    await this.autoRepararRegistrosZerados();
-    await this.atualizarDashboard();
+    try {
+      await this.carregarPreferenciasIniciais();
+    } catch (e) {
+      console.warn('[Init] Preferencias init:', e);
+    }
+
+    try {
+      await this.autoRepararRegistrosZerados();
+    } catch (e) {
+      console.warn('[Init] AutoRepair init:', e);
+    }
+
+    try {
+      await this.atualizarDashboard();
+    } catch (e) {
+      console.warn('[Init] Dashboard init:', e);
+    }
 
     const searchInput = document.getElementById('historySearchInput');
     if (searchInput) {
@@ -1062,16 +1084,15 @@ class CubagemApp {
           if (volNum <= 0 && Array.isArray(this.torasCaminhao)) {
             volNum = this.torasCaminhao.reduce((acc, t) => acc + (window.CubagemCalculator ? (window.CubagemCalculator.parseNumber(t.volumeGeometrico) || 0) : 0), 0);
           }
-          const volStr = (lote && lote.display && (lote.display.volumeTotal || lote.display.volumeGeometrico))
-            || window.CubagemCalculator.formatNumber(volNum, 3);
+          const volStr = window.CubagemCalculator.formatNumber(volNum, 3);
 
           setTxt(volEl, volStr);
           setTxt(v1, `${lote.totalToras} toras`);
 
-          const dmRaw = (lote && lote.display && lote.display.diametroMedio) || '0,0 cm';
-          const compRaw = (lote && lote.display && lote.display.comprimentoMedio) || '0,00 m';
-          const dmClean = String(dmRaw).replace(/\s*cm(\s*cm)+/gi, ' cm').trim();
-          const compClean = String(compRaw).replace(/\s*m(\s*m)+/gi, ' m').trim();
+          const dmVal = (lote && (lote.diametroMedio_cm || lote.diametroMedio)) || 0;
+          const compVal = (lote && lote.comprimentoMedio) || 0;
+          const dmClean = `${window.CubagemCalculator.formatNumber(dmVal, 1)} cm`;
+          const compClean = `${window.CubagemCalculator.formatNumber(compVal, 2)} m`;
 
           setTxt(v2, dmClean);
           setTxt(v3, compClean);
@@ -3297,14 +3318,13 @@ class CubagemApp {
       if (volNum <= 0 && Array.isArray(this.torasCaminhao)) {
         volNum = this.torasCaminhao.reduce((acc, t) => acc + (window.CubagemCalculator ? (window.CubagemCalculator.parseNumber(t.volumeGeometrico) || 0) : 0), 0);
       }
-      const volStr = (lote && lote.display && (lote.display.volumeTotal || lote.display.volumeGeometrico))
-        || window.CubagemCalculator.formatNumber(volNum, 3);
+      const volStr = window.CubagemCalculator.formatNumber(volNum, 3);
       if (volDisp) volDisp.textContent = `${volStr} m³`;
 
-      const dmRaw = (lote && lote.display && lote.display.diametroMedio) || '0,0 cm';
-      const compRaw = (lote && lote.display && lote.display.comprimentoMedio) || '0,00 m';
-      const dmClean = String(dmRaw).replace(/\s*cm(\s*cm)+/gi, ' cm').trim();
-      const compClean = String(compRaw).replace(/\s*m(\s*m)+/gi, ' m').trim();
+      const dmVal = (lote && (lote.diametroMedio_cm || lote.diametroMedio)) || 0;
+      const compVal = (lote && lote.comprimentoMedio) || 0;
+      const dmClean = `${window.CubagemCalculator.formatNumber(dmVal, 1)} cm`;
+      const compClean = `${window.CubagemCalculator.formatNumber(compVal, 2)} m`;
       if (statsEl) statsEl.textContent = `Dm Médio: ${dmClean} • Comp. Médio: ${compClean}`;
 
       const especiesUnicas = [...new Set(this.torasCaminhao.map(t => t.especie).filter(Boolean))];
@@ -6131,6 +6151,11 @@ class CubagemApp {
 }
 
 window.app = new CubagemApp();
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    window.app.init();
+  });
+} else {
+  // DOM já carregado (ex: retorno de redirect, cache PWA ou carregamento em final de body)
   window.app.init();
-});
+}

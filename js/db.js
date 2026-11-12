@@ -14,8 +14,24 @@ class CubagemDB {
   async init() {
     if (this.db) return this.db;
 
+    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+
     return new Promise((resolve, reject) => {
+      let resolved = false;
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          console.warn('[DB] Timeout ao abrir IndexedDB. Continuando com fallback se disponível...');
+          resolve(this.db);
+        }
+      }, 5000);
+
       const request = indexedDB.open(this.dbName, this.version);
+
+      request.onblocked = (event) => {
+        console.warn('[DB] IndexedDB bloqueado por outra conexão ou aba aberta:', event);
+      };
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
@@ -47,15 +63,40 @@ class CubagemDB {
       };
 
       request.onsuccess = (event) => {
+        clearTimeout(timeout);
+        resolved = true;
         this.db = event.target.result;
+
+        this.db.onversionchange = () => {
+          console.warn('[DB] onversionchange detectado, fechando banco.');
+          if (this.db) {
+            this.db.close();
+            this.db = null;
+          }
+        };
+
         resolve(this.db);
       };
 
       request.onerror = (event) => {
+        clearTimeout(timeout);
+        resolved = true;
         console.error('Erro ao abrir IndexedDB:', event.target.error);
         reject(event.target.error);
       };
     });
+  }
+
+  syncEmergencyBackup() {
+    setTimeout(async () => {
+      try {
+        if (!this.db) return;
+        const all = await this.getAll(false);
+        if (Array.isArray(all) && all.length > 0) {
+          localStorage.setItem('cubagem.emergency_backup', JSON.stringify(all));
+        }
+      } catch (e) {}
+    }, 400);
   }
 
   generateId(prefix = 'CUB') {
@@ -81,11 +122,26 @@ class CubagemDB {
     }
 
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        // Fallback para storage local se DB estiver offline
+        try {
+          const bkp = JSON.parse(localStorage.getItem('cubagem.emergency_backup') || '[]');
+          bkp.unshift(record);
+          localStorage.setItem('cubagem.emergency_backup', JSON.stringify(bkp));
+          return resolve(record);
+        } catch (e) {
+          return reject(e);
+        }
+      }
+
       const tx = this.db.transaction(['cubagens'], 'readwrite');
       const store = tx.objectStore('cubagens');
       const req = store.add(record);
 
-      req.onsuccess = () => resolve(record);
+      req.onsuccess = () => {
+        this.syncEmergencyBackup();
+        resolve(record);
+      };
       req.onerror = (e) => reject(e.target.error);
     });
   }
@@ -95,11 +151,27 @@ class CubagemDB {
     record.updatedAt = Date.now();
 
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        try {
+          const bkp = JSON.parse(localStorage.getItem('cubagem.emergency_backup') || '[]');
+          const idx = bkp.findIndex(r => r.id === record.id);
+          if (idx >= 0) bkp[idx] = record;
+          else bkp.unshift(record);
+          localStorage.setItem('cubagem.emergency_backup', JSON.stringify(bkp));
+          return resolve(record);
+        } catch (e) {
+          return reject(e);
+        }
+      }
+
       const tx = this.db.transaction(['cubagens'], 'readwrite');
       const store = tx.objectStore('cubagens');
       const req = store.put(record);
 
-      req.onsuccess = () => resolve(record);
+      req.onsuccess = () => {
+        this.syncEmergencyBackup();
+        resolve(record);
+      };
       req.onerror = (e) => reject(e.target.error);
     });
   }
@@ -107,11 +179,25 @@ class CubagemDB {
   async delete(id) {
     await this.init();
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        try {
+          let bkp = JSON.parse(localStorage.getItem('cubagem.emergency_backup') || '[]');
+          bkp = bkp.filter(r => r.id !== id);
+          localStorage.setItem('cubagem.emergency_backup', JSON.stringify(bkp));
+          return resolve(true);
+        } catch (e) {
+          return reject(e);
+        }
+      }
+
       const tx = this.db.transaction(['cubagens'], 'readwrite');
       const store = tx.objectStore('cubagens');
       const req = store.delete(id);
 
-      req.onsuccess = () => resolve(true);
+      req.onsuccess = () => {
+        this.syncEmergencyBackup();
+        resolve(true);
+      };
       req.onerror = (e) => reject(e.target.error);
     });
   }
@@ -119,6 +205,16 @@ class CubagemDB {
   async get(id) {
     await this.init();
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        try {
+          const bkp = JSON.parse(localStorage.getItem('cubagem.emergency_backup') || '[]');
+          const it = bkp.find(r => r.id === id);
+          return resolve(it || null);
+        } catch (e) {
+          return resolve(null);
+        }
+      }
+
       const tx = this.db.transaction(['cubagens'], 'readonly');
       const store = tx.objectStore('cubagens');
       const req = store.get(id);
@@ -131,12 +227,46 @@ class CubagemDB {
   async getAll(sortDesc = true) {
     await this.init();
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        try {
+          const bkp = JSON.parse(localStorage.getItem('cubagem.emergency_backup') || '[]');
+          bkp.sort((a, b) => {
+            const tA = a.timestamp || 0;
+            const tB = b.timestamp || 0;
+            return sortDesc ? tB - tA : tA - tB;
+          });
+          return resolve(bkp);
+        } catch (e) {
+          return resolve([]);
+        }
+      }
+
       const tx = this.db.transaction(['cubagens'], 'readonly');
       const store = tx.objectStore('cubagens');
       const req = store.getAll();
 
       req.onsuccess = () => {
-        const list = req.result || [];
+        let list = req.result || [];
+
+        // Auto-recuperação imediata se IndexedDB estiver vazio mas houver backup de emergência
+        if (list.length === 0) {
+          try {
+            const bkp = JSON.parse(localStorage.getItem('cubagem.emergency_backup') || '[]');
+            if (Array.isArray(bkp) && bkp.length > 0) {
+              console.log(`[DB] Restaurando ${bkp.length} medições do backup de emergência local...`);
+              list = bkp;
+              setTimeout(() => {
+                bkp.forEach(r => this.add(r).catch(() => {}));
+              }, 100);
+            }
+          } catch (e) {}
+        } else {
+          // Atualiza o backup de emergência sempre que houver dados no banco
+          try {
+            localStorage.setItem('cubagem.emergency_backup', JSON.stringify(list));
+          } catch (e) {}
+        }
+
         list.sort((a, b) => {
           const tA = a.timestamp || 0;
           const tB = b.timestamp || 0;
@@ -144,7 +274,14 @@ class CubagemDB {
         });
         resolve(list);
       };
-      req.onerror = (e) => reject(e.target.error);
+      req.onerror = (e) => {
+        try {
+          const bkp = JSON.parse(localStorage.getItem('cubagem.emergency_backup') || '[]');
+          resolve(bkp);
+        } catch (err) {
+          reject(e.target.error);
+        }
+      };
     });
   }
 
