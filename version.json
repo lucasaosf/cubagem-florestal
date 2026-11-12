@@ -1,12 +1,12 @@
 {
-  "v": "2.10.3",
-  "nome": "2.10.3",
+  "v": "2.10.4",
+  "nome": "2.10.4",
   "data": "2026-11-11",
   "novidades": [
-    "Identificação de Viagens na Retirada: selecione o número da viagem (1ª Viagem, 2ª Viagem... ou personalizada) ao lançar retiradas de material com caminhão",
-    "Sugestão Automática da Próxima Viagem: o app sugere inteligentemente o próximo número de viagem do dia para o projeto ativo",
-    "Coluna de Viagem na Aba de Toras: coluna dedicada identificando a viagem exata de cada tora rastreável (1ª Viagem, 2ª Viagem...), com subtotais de volume por viagem",
-    "Separação de Volume por Viagem no Excel: demonstrativo dedicado agrupando retiradas por viagem com volume individual de cada viagem",
-    "Consolidado Geral do Dia: preservação e destaque do volume geral de entrada, retiradas por viagem e saldo restante do pátio nas abas do relatório e prévia"
+    "Planilha Oficial com Sheet 'Toras': última aba renomeada exclusivamente para 'Toras', simplificando a identificação da cubagem dendrométrica (Smalian)",
+    "Coordenadas com Duas Colunas: separação técnica das coordenadas em duas colunas individuais — 'Latitude' e 'Longitude' — em todas as abas de medição (Caminhões, Pilhas e Toras)",
+    "Espaço Superior para Zona UTM: cabeçalho multinível integrando espaço superior destacado para identificação da Zona UTM (ex: Zona 22K/22S) sobre as colunas de Latitude e Longitude",
+    "Formulário Atualizado com Fuso e Coordenadas Separadas: campos dedicados no app para Zona UTM, Latitude (Y/N) e Longitude (X/E) com preenchimento automático via GPS do celular",
+    "Compatibilidade e Auditoria Completa: conversão inteligente de formatos UTM legados e GPS decimal com preservação histórica"
   ]
 }

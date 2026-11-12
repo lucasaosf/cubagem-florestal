@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.3';
+    this.appVersion = '2.10.4';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -843,6 +843,9 @@ class CubagemApp {
   capturarGpsUtm() {
     const btn = document.getElementById('btnCapturarGps');
     const inpUtm = document.getElementById('cubUtm');
+    const inpZona = document.getElementById('cubZona');
+    const inpLat = document.getElementById('cubLatitude');
+    const inpLon = document.getElementById('cubLongitude');
     if (!navigator.geolocation) {
       this.showToast('Geolocalização não é suportada por este dispositivo.', 'warning');
       return;
@@ -858,11 +861,19 @@ class CubagemApp {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         const utm = this.latLonToUtm(lat, lon);
-        if (utm && inpUtm) {
+        const zonaStr = utm ? `${utm.zone}${utm.band}` : '22K';
+
+        if (inpZona) inpZona.value = zonaStr;
+        if (inpLat) inpLat.value = lat.toFixed(6);
+        if (inpLon) inpLon.value = lon.toFixed(6);
+        if (inpUtm && utm) {
           inpUtm.value = utm.formatted;
-          const acc = Math.round(pos.coords.accuracy);
-          this.showToast(`Coordenada UTM capturada (±${acc}m): ${utm.formatted}`, 'success');
+        } else if (inpUtm) {
+          inpUtm.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         }
+
+        const acc = Math.round(pos.coords.accuracy);
+        this.showToast(`Coordenadas capturadas (±${acc}m): Lat ${lat.toFixed(6)}, Long ${lon.toFixed(6)} (Zona ${zonaStr})`, 'success');
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = '📍 GPS';
@@ -874,7 +885,7 @@ class CubagemApp {
         if (err.code === 1) msg = 'Permissão de localização não concedida.';
         else if (err.code === 2) msg = 'Sinal de GPS indisponível.';
         else if (err.code === 3) msg = 'Tempo limite de busca do GPS esgotado.';
-        this.showToast(`${msg} Você pode digitar a coordenada UTM manualmente.`, 'warning');
+        this.showToast(`${msg} Você pode digitar as coordenadas manualmente.`, 'warning');
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = '📍 GPS';
@@ -882,7 +893,11 @@ class CubagemApp {
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
+        maximumAge: 0
+      }
+    );
+  }
         maximumAge: 30000
       }
     );
@@ -1186,7 +1201,13 @@ class CubagemApp {
     const horario = document.getElementById('cubHorario').value;
     const rodovia = document.getElementById('cubRodovia').value.trim();
     const km = (document.getElementById('cubKm')?.value.trim()) || '';
-    const utm = (document.getElementById('cubUtm')?.value.trim()) || '';
+    const zona = (document.getElementById('cubZona')?.value.trim()) || '22K';
+    const latitude = (document.getElementById('cubLatitude')?.value.trim()) || '';
+    const longitude = (document.getElementById('cubLongitude')?.value.trim()) || '';
+    let utm = (document.getElementById('cubUtm')?.value.trim()) || '';
+    if (!utm && (latitude || longitude)) {
+      utm = `${zona ? zona + ' ' : ''}${longitude} ${latitude}`.trim();
+    }
     const responsavel = document.getElementById('cubResponsavel').value.trim();
     const observacoes = document.getElementById('cubObservacoes').value.trim();
     const projeto = (document.getElementById('cubProjeto')?.value.trim()) || this.projetoAtivo || 'BR-153';
@@ -1239,7 +1260,7 @@ class CubagemApp {
           origemMadeira: this.origemMadeira || 'Nativa',
           especie: especieFinal,
           projeto, autorNome, autorEmail, autorUid,
-          data, horario, rodovia, km, utm, responsavel,
+          data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
           placa: placa || 'NÃO INFORMADA',
           numeroViagem: numeroViagem,
           viagem: viagemTexto,
@@ -1287,7 +1308,7 @@ class CubagemApp {
           origemMadeira: this.origemMadeira || 'Nativa',
           especie: '',
           projeto, autorNome, autorEmail, autorUid,
-          data, horario, rodovia, km, utm, responsavel,
+          data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
           placa: placa || 'NÃO INFORMADA',
           numeroViagem: numeroViagem,
           viagem: viagemTexto,
@@ -1336,7 +1357,7 @@ class CubagemApp {
         origemMadeira: this.origemMadeira || 'Nativa',
         especie: '',
         projeto, autorNome, autorEmail, autorUid,
-        data, horario, rodovia, km, utm, responsavel,
+        data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
         identificacao: identPilha,
         placa: identPilha,
         observacoes,
@@ -1407,7 +1428,7 @@ class CubagemApp {
         tipo: 'tora',
         especie: especieFinal,
         projeto, autorNome, autorEmail, autorUid,
-        data, horario, rodovia, km, utm, responsavel,
+        data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
         identificacao: identPilhaTora,
         placa: identPilhaTora,
         plaqueta: plaquetasResumo,
@@ -1568,15 +1589,25 @@ class CubagemApp {
       const elHora = document.getElementById('cubHorario');
       const elRod = document.getElementById('cubRodovia');
       const elKm = document.getElementById('cubKm');
+      const elZona = document.getElementById('cubZona');
+      const elLat = document.getElementById('cubLatitude');
+      const elLon = document.getElementById('cubLongitude');
       const elUtm = document.getElementById('cubUtm');
       const elResp = document.getElementById('cubResponsavel');
       const elObs = document.getElementById('cubObservacoes');
+
+      const coords = window.CubagemExcelExport && typeof window.CubagemExcelExport.extrairCoordenadas === 'function'
+        ? window.CubagemExcelExport.extrairCoordenadas(item)
+        : { zona: item.zona || '22K', latitude: item.latitude || '', longitude: item.longitude || '' };
 
       if (elData && item.data) elData.value = item.data;
       if (elHora && item.horario) elHora.value = item.horario;
       if (elRod && item.rodovia) elRod.value = item.rodovia;
       if (elKm) elKm.value = item.km || '';
-      if (elUtm) elUtm.value = item.utm || '';
+      if (elZona) elZona.value = coords.zona || '22K';
+      if (elLat) elLat.value = coords.latitude || '';
+      if (elLon) elLon.value = coords.longitude || '';
+      if (elUtm) elUtm.value = item.utm || (coords.latitude && coords.longitude ? `${coords.zona} ${coords.longitude} ${coords.latitude}` : '');
       if (elResp && item.responsavel) elResp.value = item.responsavel;
       if (elObs) elObs.value = item.observacoes || '';
 
@@ -1861,14 +1892,24 @@ class CubagemApp {
     const elHora = document.getElementById('cubHorario');
     const elRod = document.getElementById('cubRodovia');
     const elKm = document.getElementById('cubKm');
+    const elZona = document.getElementById('cubZona');
+    const elLat = document.getElementById('cubLatitude');
+    const elLon = document.getElementById('cubLongitude');
     const elUtm = document.getElementById('cubUtm');
     const elResp = document.getElementById('cubResponsavel');
     const elObs = document.getElementById('cubObservacoes');
+
+    const coords = window.CubagemExcelExport && typeof window.CubagemExcelExport.extrairCoordenadas === 'function'
+      ? window.CubagemExcelExport.extrairCoordenadas(principal)
+      : { zona: principal.zona || '22K', latitude: principal.latitude || '', longitude: principal.longitude || '' };
 
     if (elData) elData.value = principal.data;
     if (elHora) elHora.value = principal.horario;
     if (elRod) elRod.value = principal.rodovia;
     if (elKm) elKm.value = principal.km || secundarias.find(s => s.km)?.km || '';
+    if (elZona) elZona.value = coords.zona || '22K';
+    if (elLat) elLat.value = coords.latitude || '';
+    if (elLon) elLon.value = coords.longitude || '';
     if (elUtm) elUtm.value = principal.utm || secundarias.find(s => s.utm)?.utm || '';
     if (elResp) elResp.value = principal.responsavel;
 
@@ -4930,7 +4971,13 @@ class CubagemApp {
     const horario = (document.getElementById('cubHorario')?.value) || new Date().toTimeString().slice(0, 5);
     const rodovia = (document.getElementById('cubRodovia')?.value?.trim()) || 'Pátio / Rodovia';
     const km = (document.getElementById('cubKm')?.value?.trim()) || '';
-    const utm = (document.getElementById('cubUtm')?.value?.trim()) || '';
+    const zona = (document.getElementById('cubZona')?.value?.trim()) || '22K';
+    const latitude = (document.getElementById('cubLatitude')?.value?.trim()) || '';
+    const longitude = (document.getElementById('cubLongitude')?.value?.trim()) || '';
+    let utm = (document.getElementById('cubUtm')?.value?.trim()) || '';
+    if (!utm && (latitude || longitude)) {
+      utm = `${zona ? zona + ' ' : ''}${longitude} ${latitude}`.trim();
+    }
     const responsavel = (document.getElementById('cubResponsavel')?.value?.trim()) || 'Responsável Técnico';
     const observacoes = (document.getElementById('cubObservacoes')?.value?.trim()) || '';
 
@@ -4950,7 +4997,7 @@ class CubagemApp {
         tipo: 'caminhao',
         origemMadeira: this.origemMadeira || 'Nativa',
         especie: '',
-        data, horario, rodovia, km, utm, responsavel,
+        data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
         placa,
         observacoes,
         alturasLE: calc.alturasLE || [],
@@ -4979,7 +5026,7 @@ class CubagemApp {
         tipo: 'pilha',
         origemMadeira: this.origemMadeira || 'Nativa',
         especie: '',
-        data, horario, rodovia, km, utm, responsavel,
+        data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
         identificacao: identPilha,
         placa: identPilha,
         observacoes,
@@ -5005,7 +5052,7 @@ class CubagemApp {
           id: 'LIVE-PILHA-TORA',
           tipo: 'tora',
           especie: this.torasPilha[0]?.especie || '',
-          data, horario, rodovia, km, utm, responsavel,
+          data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
           identificacao: identPilhaTora,
           placa: identPilhaTora,
           plaqueta: plaquetasList.join(', '),
@@ -5036,7 +5083,7 @@ class CubagemApp {
           id: 'LIVE-TORA-INDIVIDUAL',
           tipo: 'tora',
           especie: espAuto,
-          data, horario, rodovia, km, utm, responsavel,
+          data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
           identificacao: `Tora Plaqueta ${plaqueta}`,
           placa: `Plaqueta ${plaqueta}`,
           plaqueta: plaqueta,
