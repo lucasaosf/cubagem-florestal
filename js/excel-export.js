@@ -1,6 +1,6 @@
 /**
  * excel-export.js - Geração de planilha Excel multipasta personalizada via ExcelJS
- * Suporte a Cargas de Caminhão, Pilhas de Madeira e Toras Roliças (Smalian)
+ * Suporte a Cargas de Caminhão, Pilhas de Madeira e Toras (Smalian)
  * Identidade Visual Oficial: Pesquisa & Soluções Ambientais — Lucas Aøsf
  */
 

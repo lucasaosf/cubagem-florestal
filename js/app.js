@@ -1,7 +1,7 @@
 /**
  * app.js - Controlador principal do Aplicativo Cubagem Florestal
  * Gestão de interface, eventos, cálculos em tempo real e orquestração offline
- * Suporte a: Caminhão (LE/LD dinâmicos), Pilha de Madeira e Toras Roliças
+ * Suporte a: Caminhão (LE/LD dinâmicos), Pilha de Madeira e Toras
  * Desenvolvido por Lucas Aøsf
  */
 
@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.4';
+    this.appVersion = '2.10.5';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -939,7 +939,7 @@ class CubagemApp {
       secPil.style.display = 'none';
       secTor.style.display = 'block';
       if (lblRodovia) lblRodovia.innerHTML = 'Local / Pátio <span class="required">*</span>';
-      document.getElementById('liveTypeBadge').textContent = 'Pilha de Toras Roliças (Smalian)';
+      document.getElementById('liveTypeBadge').textContent = 'Pilha de Toras (Smalian)';
       this.renderizarListaTorasPilha();
     }
 
@@ -1437,7 +1437,7 @@ class CubagemApp {
         diametroMedio_cm: lote.diametroMedio_cm,
         comprimentoMedio: lote.comprimentoMedio,
         volumeGeometrico: lote.volumeTotal,
-        tipoVolume: `Pilha de Toras Roliças (${lote.totalToras} toras - Smalian)`,
+        tipoVolume: `Pilha de Toras (${lote.totalToras} toras - Smalian)`,
         memoriaCalculo: lote.memoriaCalculo,
         toras: [...this.torasPilha],
         timestamp: Date.now()
@@ -5061,7 +5061,7 @@ class CubagemApp {
           diametroMedio_cm: lote.diametroMedio_cm,
           comprimentoMedio: lote.comprimentoMedio,
           volumeGeometrico: lote.volumeTotal,
-          tipoVolume: `Pilha de Toras Roliças (${lote.totalToras} toras - Smalian)`,
+          tipoVolume: `Pilha de Toras (${lote.totalToras} toras - Smalian)`,
           memoriaCalculo: lote.memoriaCalculo,
           toras: [...this.torasPilha]
         };
@@ -5093,7 +5093,7 @@ class CubagemApp {
           diametroMedio_cm: calc.diametroMedio_cm || 0,
           comprimento: calc.comprimento || 0,
           volumeGeometrico: calc.volumeGeometrico || 0,
-          tipoVolume: 'Tora Roliça Individual (Smalian)',
+          tipoVolume: 'Tora Individual (Smalian)',
           memoriaCalculo: calc.memoriaCalculo || 'Fórmula Smalian: V = ((g1 + g2) / 2) × L',
           toras: [{
             numero: 1,
@@ -5619,7 +5619,7 @@ class CubagemApp {
               <td class="excel-cell-center font-mono">1</td>
               <td style="font-weight: 700; background: #F9FAFB;">Modalidade</td>
               <td colspan="5" class="excel-cell-text" style="font-weight: 600; color: #0E2515;">
-                ${item.tipoVolume || (tipo === 'caminhao' ? 'Retirada do Material (Caminhão)' : tipo === 'pilha' ? 'Pilha de Madeira' : 'Toras Roliças (Smalian)')}
+                ${item.tipoVolume || (tipo === 'caminhao' ? 'Retirada do Material (Caminhão)' : tipo === 'pilha' ? 'Pilha de Madeira' : 'Toras (Smalian)')}
               </td>
             </tr>
             <tr>
@@ -6055,7 +6055,7 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">1</td>
               <td colspan="10" class="excel-brand-title-cell">
-                BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE TORAS ROLIÇAS (MÉTODO SMALIAN)
+                BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE TORAS (MÉTODO SMALIAN)
               </td>
             </tr>
             <tr>

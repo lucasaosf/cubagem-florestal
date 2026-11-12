@@ -1,7 +1,7 @@
 {
   "name": "Cubagem Florestal",
   "short_name": "Cubagem",
-  "description": "App florestal para cubagem de caminhões, pilhas e toras roliças. BIOKURI Pesquisa e Soluções Ambientais.",
+  "description": "App florestal para cubagem de caminhões, pilhas e toras. BIOKURI Pesquisa e Soluções Ambientais.",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",

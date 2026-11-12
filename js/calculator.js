@@ -3,7 +3,7 @@
  * Suporte a:
  * 1. Cargas de Caminhão (LE e LD com número dinâmico de alturas)
  * 2. Pilhas de Madeira (medição de 1 face com número dinâmico de alturas)
- * 3. Toras Roliças Individuais (Fórmula de Smalian: diâmetro das pontas + comprimento + plaqueta)
+ * 3. Toras Individuais (Fórmula de Smalian: diâmetro das pontas + comprimento + plaqueta)
  * Desenvolvido por Lucas Aøsf
  */
 
@@ -245,7 +245,7 @@ class CubagemCalculator {
       seccaoPonta2: g2,
       comprimento: comp,
       volumeGeometrico,
-      tipoVolume: 'Volume de Tora Roliça (Smalian)',
+      tipoVolume: 'Volume de Tora (Smalian)',
       display: {
         diametroPonta1: `${this.formatNumber(d1_cm, 1)} cm (${this.formatPrecision(d1_m, 3)} m)`,
         diametroPonta2: `${this.formatNumber(d2_cm, 1)} cm (${this.formatPrecision(d2_m, 3)} m)`,

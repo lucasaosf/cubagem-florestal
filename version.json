@@ -1,12 +1,12 @@
 {
-  "v": "2.10.4",
-  "nome": "2.10.4",
+  "v": "2.10.5",
+  "nome": "2.10.5",
   "data": "2026-11-11",
   "novidades": [
+    "Padronização Textual: Substituição em toda a aplicação e documentação de 'Toras Roliças' apenas para 'Toras'",
     "Planilha Oficial com Sheet 'Toras': última aba renomeada exclusivamente para 'Toras', simplificando a identificação da cubagem dendrométrica (Smalian)",
     "Coordenadas com Duas Colunas: separação técnica das coordenadas em duas colunas individuais — 'Latitude' e 'Longitude' — em todas as abas de medição (Caminhões, Pilhas e Toras)",
     "Espaço Superior para Zona UTM: cabeçalho multinível integrando espaço superior destacado para identificação da Zona UTM (ex: Zona 22K/22S) sobre as colunas de Latitude e Longitude",
-    "Formulário Atualizado com Fuso e Coordenadas Separadas: campos dedicados no app para Zona UTM, Latitude (Y/N) e Longitude (X/E) com preenchimento automático via GPS do celular",
-    "Compatibilidade e Auditoria Completa: conversão inteligente de formatos UTM legados e GPS decimal com preservação histórica"
+    "Formulário Atualizado com Fuso e Coordenadas Separadas: campos dedicados no app para Zona UTM, Latitude (Y/N) e Longitude (X/E) com preenchimento automático via GPS do celular"
   ]
 }
