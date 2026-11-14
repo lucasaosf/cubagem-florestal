@@ -1,12 +1,12 @@
 {
-  "v": "2.10.12",
-  "nome": "2.10.12",
+  "v": "2.10.13",
+  "nome": "2.10.13",
   "data": "2026-11-14",
   "novidades": [
-    "Sincronizar Sozinho na Nuvem (Chave Liga/Desliga): Opção no perfil para o usuário escolher ativar ou não o envio automático na nuvem em tempo real",
-    "Proteção de Medições em Andamento: Rascunhos salvos no aparelho automaticamente para que nenhuma medida seja perdida se o app for fechado",
-    "Alerta na Capa Inicial: Card destacado na tela inicial mostrando medições não finalizadas com botão de 'Continuar Medição'",
-    "Botão de Finalizar Medição: Conclusão clara do lançamento com envio automático e silencioso para a nuvem",
-    "Interface Mais Limpa: Remoção dos botões manuais legados de WhatsApp e envio para PC"
+    "Pastas & Projetos da Conta na Capa: Nova seção interativa na tela inicial listando todas as frentes de trabalho vinculadas à sua conta",
+    "Acesso Direto às Medições da Frente: Toque em qualquer projeto para abrir suas cubagens e retiradas consolidadas",
+    "Extração Excel com Seleção de Medições: Escolha medições específicas usando caixas de seleção (checkboxes) para baixar apenas o que você precisa em planilha .xlsx",
+    "Métricas de Integrantes da Equipe: Acompanhe as cubagens de entrada e retiradas de cada colaborador por projeto",
+    "Capa Mais Limpa: Remoção dos botões de aplicativo instalado da tela inicial para priorizar os projetos e medições"
   ]
 }

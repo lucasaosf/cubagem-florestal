@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.12';
+    this.appVersion = '2.10.13';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -2503,6 +2503,13 @@ class CubagemApp {
       const elVolDet = document.getElementById('kpiVolumeDetail');
       if (elVolDet) elVolDet.textContent = `${stats.totalCaminhoes} cam (saída) • ${stats.totalPilhas} pilhas • ${stats.totalToras} toras`;
 
+      // Atualiza lista de pastas de projetos vinculados à conta na capa
+      try {
+        await this.renderizarProjetosCapa();
+      } catch (eProj) {
+        console.warn('[Dashboard] Erro ao renderizar projetos da capa:', eProj);
+      }
+
       const container = document.getElementById('dashboardRecentList');
       if (!container) return;
 
@@ -4120,6 +4127,9 @@ class CubagemApp {
         this.renderizarSecaoMembrosProjeto(nome);
       }
     }
+
+    // Atualiza lista de pastas de projetos vinculados na capa
+    this.renderizarProjetosCapa().catch(() => {});
   }
 
   definirProjetoAtivo(nomeProjeto, sincronizarNuvem = true) {
@@ -4155,7 +4165,14 @@ class CubagemApp {
     }
   }
 
-  async abrirModalProjeto() {
+  async abrirModalProjeto(nomeProjeto = null, aba = null) {
+    if (nomeProjeto) {
+      this.definirProjetoAtivo(nomeProjeto, false);
+    }
+    if (aba) {
+      this.abaProjetoAtiva = aba;
+    }
+
     this.atualizarUIProjeto();
     await this.alternarAbaModalProjeto(this.abaProjetoAtiva || 'painel');
 
@@ -4194,6 +4211,16 @@ class CubagemApp {
     }
 
     this.abrirModal('modalProjeto');
+  }
+
+  /**
+   * Atalho para entrar na pasta do projeto a partir da capa com foco na aba solicitada
+   */
+  async abrirPastaProjetoCapa(nomeProjeto, aba = 'painel') {
+    if (nomeProjeto) {
+      this.definirProjetoAtivo(nomeProjeto, true);
+    }
+    await this.abrirModalProjeto(nomeProjeto, aba);
   }
 
   /**
@@ -4246,6 +4273,31 @@ class CubagemApp {
         : String(rProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
       return rId === projId;
     });
+
+    // Se online, integra em tempo real as medições subidas na nuvem pela equipe
+    if (navigator.onLine && window.firebase && window.firebase.firestore) {
+      try {
+        const snap = await window.firebase.firestore().collection('projects').doc(projId).collection('cubagens').get();
+        let novosLocais = 0;
+        for (const doc of snap.docs) {
+          const rec = doc.data();
+          if (rec && rec.id && !records.some(r => r.id === rec.id)) {
+            records.push(rec);
+            if (window.cubagemDB && typeof window.cubagemDB.saveRecord === 'function') {
+              try {
+                await window.cubagemDB.saveRecord(rec);
+                novosLocais++;
+              } catch (eSave) {}
+            }
+          }
+        }
+        if (novosLocais > 0) {
+          console.log(`[PainelProjeto] ${novosLocais} nova(s) medição(ões) da nuvem integradas localmente.`);
+        }
+      } catch (eCloud) {
+        console.warn('[PainelProjeto] Consulta à nuvem falhou, usando base local:', eCloud);
+      }
+    }
 
     records.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     this.registrosProjetoCache = records;
@@ -4396,6 +4448,9 @@ class CubagemApp {
         }).join('');
       }
     }
+
+    const totalRecsEl = document.getElementById('projTotalRecordsCount');
+    if (totalRecsEl) totalRecsEl.textContent = records.length;
 
     this.atualizarContadorSelecaoProjeto();
   }
@@ -4805,6 +4860,197 @@ class CubagemApp {
     } catch (err) {
       console.error('Erro ao atribuir selecionadas ao projeto:', err);
       this.showToast(`Erro ao atribuir ao projeto: ${err.message || err}`, 'danger');
+    }
+  }
+
+  /**
+   * Obtém a lista de nomes de todos os projetos vinculados à conta do usuário
+   */
+  async obterProjetosVinculadosUsuario() {
+    const nomesProjetos = new Set();
+
+    // 1. Projeto Ativo e Padrões
+    if (this.projetoAtivo) {
+      nomesProjetos.add(this.projetoAtivo.trim());
+    }
+    nomesProjetos.add('BR-153');
+
+    // 2. Projetos recentes em memória/localStorage
+    if (Array.isArray(this.projetosRecentes)) {
+      this.projetosRecentes.forEach(p => {
+        if (p && typeof p === 'string' && p.trim()) nomesProjetos.add(p.trim());
+      });
+    }
+
+    // 3. Local IndexedDB: vasculha todos os registros locais por projetos distintos
+    if (window.cubagemDB && typeof window.cubagemDB.getAll === 'function') {
+      try {
+        const allRecords = await window.cubagemDB.getAll(false);
+        allRecords.forEach(r => {
+          if (r.projeto && typeof r.projeto === 'string' && r.projeto.trim()) {
+            nomesProjetos.add(r.projeto.trim());
+          }
+        });
+      } catch (eDb) {
+        console.warn('[Projetos] Erro ao ler projetos do IndexedDB:', eDb);
+      }
+    }
+
+    // 4. Metadados de projetos locais (localStorage)
+    if (this.auth && typeof this.auth.getProjetosMetaLocal === 'function') {
+      try {
+        const metas = this.auth.getProjetosMetaLocal();
+        Object.keys(metas).forEach(k => {
+          const m = metas[k];
+          if (m && m.nome && typeof m.nome === 'string' && m.nome.trim()) {
+            nomesProjetos.add(m.nome.trim());
+          } else if (k && typeof k === 'string' && k.trim()) {
+            nomesProjetos.add(k.trim());
+          }
+        });
+      } catch (eMeta) {}
+    }
+
+    // 5. Nuvem Firestore: lista projetos onde o usuário é criador ou membro autorizado
+    if (navigator.onLine && window.firebase && window.firebase.firestore) {
+      try {
+        const user = this.auth?.user;
+        const userEmail = (user?.email || '').trim().toLowerCase();
+        const userUid = (user?.uid || '').trim();
+
+        const snap = await window.firebase.firestore().collection('projects').get();
+        snap.forEach(doc => {
+          const data = doc.data();
+          if (!data) return;
+          const pNome = (data.nome || doc.id || '').trim();
+          if (!pNome) return;
+
+          if (!userEmail) {
+            nomesProjetos.add(pNome);
+          } else {
+            const criadorEmail = (data.criadorEmail || '').trim().toLowerCase();
+            const criadorUid = (data.criadorUid || '').trim();
+            let isVinculado = (criadorEmail === userEmail || (criadorUid && criadorUid === userUid));
+
+            if (!isVinculado && Array.isArray(data.membros)) {
+              isVinculado = data.membros.some(m => {
+                const mEmail = (m.email || '').trim().toLowerCase();
+                const mUid = (m.uid || '').trim();
+                return (mEmail && mEmail === userEmail) || (mUid && mUid === userUid);
+              });
+            }
+
+            if (isVinculado) {
+              nomesProjetos.add(pNome);
+            }
+          }
+        });
+      } catch (eCloud) {
+        console.warn('[Projetos] Erro ao buscar projetos vinculados no Firestore:', eCloud);
+      }
+    }
+
+    // Retorna lista com o projeto ativo sempre no topo, seguido dos demais ordenados
+    const arr = Array.from(nomesProjetos).filter(Boolean);
+    const ativo = (this.projetoAtivo || 'BR-153').trim();
+    arr.sort((a, b) => {
+      if (a.toLowerCase() === ativo.toLowerCase()) return -1;
+      if (b.toLowerCase() === ativo.toLowerCase()) return 1;
+      return a.localeCompare(b, 'pt-BR');
+    });
+
+    return arr;
+  }
+
+  /**
+   * Renderiza a lista de pastas e projetos vinculados à conta do usuário na tela inicial (capa)
+   */
+  async renderizarProjetosCapa() {
+    const container = document.getElementById('coverProjetosListContainer');
+    if (!container) return;
+
+    try {
+      const projetos = await this.obterProjetosVinculadosUsuario();
+      if (!projetos || projetos.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 14px; font-size: 0.82rem; color: var(--muted); background: var(--surface-2); border-radius: 10px; border: 1px dashed var(--line);">
+            Nenhuma pasta de projeto vinculada no momento.<br>
+            Toque em <strong>➕ Nova Frente</strong> acima para criar ou ativar.
+          </div>
+        `;
+        return;
+      }
+
+      const fNum = (n, d = 2) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
+        ? window.CubagemCalculator.formatNumber(n, d)
+        : Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+      const cardsHtml = [];
+      for (const pNome of projetos) {
+        const statsData = await this.obterEstatisticasMembrosProjeto(pNome);
+        const meta = statsData.meta || {};
+        const isAtivo = (pNome.trim().toLowerCase() === (this.projetoAtivo || 'BR-153').trim().toLowerCase());
+        const criadorNome = meta.criadorNome || (meta.criadorEmail ? meta.criadorEmail.split('@')[0] : 'Lucas Aøsf');
+        const totalMembros = Array.isArray(statsData.membros) && statsData.membros.length > 0 ? statsData.membros.length : 1;
+
+        cardsHtml.push(`
+          <div class="cover-project-card ${isAtivo ? 'active-project' : ''}" onclick="app.abrirPastaProjetoCapa('${this.escapeHtml(pNome)}', 'painel')">
+            <div class="cover-project-card-top">
+              <div class="cover-project-card-title-wrap">
+                <span class="cover-project-folder-icon">📁</span>
+                <div style="min-width: 0; flex: 1;">
+                  <h4 class="cover-project-card-title">${this.escapeHtml(pNome)}</h4>
+                  <div class="cover-project-card-owner">
+                    👑 Criador: <strong>${this.escapeHtml(criadorNome)}</strong>
+                  </div>
+                </div>
+              </div>
+              <div>
+                ${isAtivo
+                  ? '<span class="badge-frente-ativa">⚡ Frente Ativa</span>'
+                  : '<span class="badge-abrir-frente">Entrar ➔</span>'}
+              </div>
+            </div>
+
+            <div class="cover-project-card-stats">
+              <div class="cover-proj-stat-pill">
+                <span class="stat-ico">☁️</span>
+                <span class="stat-txt"><strong>${statsData.totalGeralCount}</strong> ${statsData.totalGeralCount === 1 ? 'med.' : 'med.'}</span>
+              </div>
+              <div class="cover-proj-stat-pill stat-entrada">
+                <span class="stat-ico">🟢</span>
+                <span class="stat-txt">Entrada: <strong>${fNum(statsData.totalEntradaVolume, 2)} m³</strong></span>
+              </div>
+              <div class="cover-proj-stat-pill stat-retirada">
+                <span class="stat-ico">🚚</span>
+                <span class="stat-txt">Retirada: <strong>${fNum(statsData.totalRetiradaVolume, 2)} m³</strong></span>
+              </div>
+              <div class="cover-proj-stat-pill">
+                <span class="stat-ico">👥</span>
+                <span class="stat-txt"><strong>${totalMembros}</strong> ${totalMembros === 1 ? 'integrante' : 'integrantes'}</span>
+              </div>
+            </div>
+
+            <div class="cover-project-card-actions" onclick="event.stopPropagation()">
+              <button type="button" class="btn-card-proj-open" onclick="app.abrirPastaProjetoCapa('${this.escapeHtml(pNome)}', 'painel')" title="Ver todas as medições desta frente e baixar planilha Excel selecionando as medições">
+                <span>📊</span> Medições &amp; Planilha
+              </button>
+              <button type="button" class="btn-card-proj-members" onclick="app.abrirPastaProjetoCapa('${this.escapeHtml(pNome)}', 'integrantes')" title="Ver integrantes da equipe e métricas de cada um">
+                <span>👥</span> Integrantes (${totalMembros})
+              </button>
+            </div>
+          </div>
+        `);
+      }
+
+      container.innerHTML = cardsHtml.join('');
+    } catch (err) {
+      console.warn('[CapaProjetos] Erro ao renderizar pastas de projetos:', err);
+      container.innerHTML = `
+        <div style="text-align: center; padding: 10px; font-size: 0.8rem; color: var(--muted);">
+          Toque em 📁 <strong>${this.escapeHtml(this.projetoAtivo || 'BR-153')}</strong> no topo para gerenciar medições e equipe.
+        </div>
+      `;
     }
   }
 
