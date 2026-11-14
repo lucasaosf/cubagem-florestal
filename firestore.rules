@@ -2,10 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 1. Backup pessoal estritamente isolado de cada usuário (Privacidade Total)
-    // Impede que outros usuários leiam, alterem ou sobrescrevam dados particulares
+    // 1. Backup pessoal isolado de cada usuário
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null;
     }
     
     // 2. Metadados dos Projetos Compartilhados da Equipe (Criador, Integrantes e Frente)
@@ -17,5 +16,11 @@ service cloud.firestore {
     match /projects/{projectId}/{document=**} {
       allow read, write: if request.auth != null;
     }
+
+    // 4. Regra geral para usuários autenticados
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
+

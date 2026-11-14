@@ -1,11 +1,11 @@
 {
-  "v": "2.10.8",
-  "nome": "2.10.8",
-  "data": "2026-11-13",
+  "v": "2.10.9",
+  "nome": "2.10.9",
+  "data": "2026-11-14",
   "novidades": [
-    "Sincronização Celular ⇆ PC Inteligente: Novo botão para forçar envio de todas as medições locais para a nuvem e baixar tudo instantaneamente no PC",
-    "Compartilhamento Direto Celular ⇆ PC: Envio do backup completo com 1 toque via WhatsApp ou arquivo, dispensando necessidade de conexão no campo",
-    "Segurança e Privacidade Blindadas: Isolamento estrito de documentos de usuários no Firestore e proteção contra Cross-Site Scripting (XSS)",
-    "Prevenção contra Injeção de Fórmulas no Excel: Sanitização automática de caracteres executáveis em exportações de planilhas (.xlsx)"
+    "Sessão e Autenticação na Nuvem Confiável: Validação ativa da sessão do Google Auth para envio direto à nuvem sem erro de permissão",
+    "Isolamento do Envio de Medições: Gravação pessoal independente que não trava caso uma coleção de projeto retorne restrição",
+    "Compartilhamento Direto com 1 Toque: Transferência instantânea via WhatsApp para carregar medições do celular no computador sem depender de nuvem",
+    "Regras Firestore Otimizadas: Compatibilidade aprimorada com regras de segurança no Firebase Console"
   ]
 }

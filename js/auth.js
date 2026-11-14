@@ -172,20 +172,22 @@ class CubagemAuth {
       fb.auth().onAuthStateChanged(async (user) => {
         if (user) {
           this.user = user;
+          this.isFirebaseAuthed = true;
           this.salvarSessaoUsuario(user);
         } else {
+          this.isFirebaseAuthed = false;
           this.verificarUsuarioLocal();
         }
         this.renderAuthUI();
 
-        if (this.user) {
-          console.log('[Auth] Usuário autenticado:', this.user.email);
+        if (this.isFirebaseAuthed && this.user) {
+          console.log('[Auth] Usuário autenticado na nuvem:', this.user.email);
           // Sincronização automática em segundo plano pessoal e do projeto
           this.syncAllWithCloud(true);
           const projAtual = (window.app && window.app.projetoAtivo) || localStorage.getItem('cubagem.projeto_ativo') || 'BR-153';
           this.vincularProjeto(projAtual);
         } else {
-          console.log('[Auth] Usuário não conectado.');
+          console.log('[Auth] Sessão na nuvem não ativa.');
           if (typeof this.unsubscribeProject === 'function') {
             this.unsubscribeProject();
             this.unsubscribeProject = null;
@@ -212,9 +214,10 @@ class CubagemAuth {
     if (this.user) {
       const nome = this.user.displayName || this.user.email.split('@')[0];
       if (chipText) chipText.textContent = nome.length > 12 ? nome.slice(0, 10) + '..' : nome;
+      const isOnlineAuth = !!(this.isFirebaseAuthed || (window.firebase && window.firebase.auth && window.firebase.auth().currentUser));
       if (dot) {
         dot.style.display = 'inline-block';
-        dot.style.backgroundColor = 'var(--sage)';
+        dot.style.backgroundColor = isOnlineAuth ? 'var(--sage)' : 'var(--gold)';
       }
       if (chipBtn) {
         chipBtn.classList.add('logged');
@@ -307,6 +310,12 @@ class CubagemAuth {
     const email = this.user.email;
     const photo = this.user.photoURL;
     const isLocal = !!this.user.isLocal;
+    const isFirebaseAuthed = !!(this.isFirebaseAuthed || (window.firebase && window.firebase.auth && window.firebase.auth().currentUser));
+
+    const statusTexto = isLocal 
+      ? 'Modo Local (Apenas neste aparelho)' 
+      : (isFirebaseAuthed ? 'Conta Conectada à Nuvem' : 'Sessão na Nuvem Pendente');
+    const dotBg = isLocal ? 'var(--gold)' : (isFirebaseAuthed ? 'var(--sage)' : 'var(--gold)');
 
     container.innerHTML = `
       <div style="text-align: center; margin-bottom: 16px;">
@@ -315,8 +324,8 @@ class CubagemAuth {
         <div style="font-size: 0.85rem; color: var(--muted);">${this.escapeHtml(email)}</div>
         <div style="margin-top: 6px;">
           <span class="header-chip" style="display: inline-flex;">
-            <span class="dot-status" style="background-color: ${isLocal ? 'var(--gold)' : 'var(--sage)'};"></span>
-            ${isLocal ? 'Modo Local (Apenas neste aparelho)' : 'Conta Conectada à Nuvem'}
+            <span class="dot-status" style="background-color: ${dotBg};"></span>
+            ${statusTexto}
           </span>
         </div>
       </div>
@@ -328,25 +337,32 @@ class CubagemAuth {
         <button class="btn btn-primary btn-block" style="margin-bottom: 10px;" onclick="app.auth.exibirFormularioLogin('login')">
           🔑 Conectar Conta Google ou E-mail
         </button>
-      ` : `
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <button class="btn btn-primary btn-block" onclick="app.auth.enviarTudoParaNuvem()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-            </svg>
-            ⬆️ Enviar Todas as Medições deste Aparelho para a Nuvem
-          </button>
-
-          <button class="btn btn-outline btn-block" onclick="app.auth.baixarTudoDaNuvemParaAparelho()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            ⬇️ Baixar Medições da Nuvem para este Aparelho
-          </button>
+      ` : (!isFirebaseAuthed ? `
+        <div style="background: rgba(178, 143, 89, 0.15); border: 1px solid var(--gold); border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 0.8rem; line-height: 1.45; color: var(--gold);">
+          ⚠️ <strong>Sessão na Nuvem Desconectada:</strong> Confirme o login com sua conta Google para enviar diretamente para a nuvem.
         </div>
-      `}
+        <button class="btn btn-primary btn-block" style="margin-bottom: 10px;" onclick="app.auth.loginGoogle()">
+          🔑 Conectar com o Google
+        </button>
+      ` : '')}
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button class="btn btn-primary btn-block" onclick="app.auth.enviarTudoParaNuvem()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          ⬆️ Enviar Todas as Medições deste Aparelho para a Nuvem
+        </button>
+
+        <button class="btn btn-outline btn-block" onclick="app.auth.baixarTudoDaNuvemParaAparelho()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          ⬇️ Baixar Medições da Nuvem para este Aparelho
+        </button>
+      </div>
 
       <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
         <button class="btn btn-secondary btn-block" onclick="app.compartilharBackup()">
@@ -679,20 +695,71 @@ class CubagemAuth {
   }
 
   /**
+   * Obtém a instância de usuário autenticado no Firebase Auth garantindo resolução de sessão
+   */
+  async obterUsuarioAutenticado() {
+    try {
+      const fb = await this.loadFirebase();
+      if (!fb || !fb.auth) return null;
+
+      if (fb.auth().currentUser) {
+        this.user = fb.auth().currentUser;
+        this.isFirebaseAuthed = true;
+        return fb.auth().currentUser;
+      }
+
+      return await new Promise((resolve) => {
+        let resolved = false;
+        const unsubscribe = fb.auth().onAuthStateChanged((u) => {
+          if (!resolved) {
+            resolved = true;
+            try { unsubscribe(); } catch (e) {}
+            if (u) {
+              this.user = u;
+              this.isFirebaseAuthed = true;
+              this.salvarSessaoUsuario(u);
+            } else {
+              this.isFirebaseAuthed = false;
+            }
+            resolve(u || null);
+          }
+        });
+        setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            try { unsubscribe(); } catch (e) {}
+            const curr = (fb.auth && fb.auth().currentUser) || null;
+            if (curr) {
+              this.user = curr;
+              this.isFirebaseAuthed = true;
+            }
+            resolve(curr);
+          }
+        }, 1500);
+      });
+    } catch (e) {
+      console.warn('[Auth] Erro ao obter usuário autenticado:', e);
+      return null;
+    }
+  }
+
+  /**
    * Força o envio de todas as medições salvas no IndexedDB local para a nuvem
    */
   async enviarTudoParaNuvem() {
-    if (!this.user || this.user.isLocal) {
-      if (window.app && window.app.showToast) {
-        window.app.showToast('Para enviar medições para a nuvem, faça login com sua conta Google ou E-mail (Modo Local não grava na nuvem).', 'warning', 7000);
-      }
-      this.exibirFormularioLogin('login');
-      return;
-    }
     if (!navigator.onLine) {
       if (window.app && window.app.showToast) {
         window.app.showToast('Conecte-se à internet para enviar dados para a nuvem.', 'warning');
       }
+      return;
+    }
+
+    const authUser = await this.obterUsuarioAutenticado();
+    if (!authUser) {
+      if (window.app && window.app.showToast) {
+        window.app.showToast('Sessão na nuvem não conectada. Conecte sua conta Google para sincronizar ou envie via WhatsApp pelo botão abaixo.', 'warning', 8000);
+      }
+      this.exibirFormularioLogin('login');
       return;
     }
 
@@ -713,34 +780,65 @@ class CubagemAuth {
         return;
       }
 
-      let enviados = 0;
-      const userCol = firestore.collection('users').doc(this.user.uid).collection('cubagens');
+      const uid = authUser.uid;
+      const userCol = firestore.collection('users').doc(uid).collection('cubagens');
+
+      let enviadosUser = 0;
+      let enviadosProj = 0;
+      let erroPermissaoUser = null;
 
       for (const rec of localRecords) {
-        const cleanRec = this.cleanRecordForFirestore(rec);
-        await userCol.doc(rec.id).set(cleanRec);
+        const rawId = rec.id || `CUB-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const docId = String(rawId).replace(/\//g, '_');
+        const cleanRec = this.cleanRecordForFirestore({ ...rec, id: docId, autorUid: uid });
 
-        const projName = rec.projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
-        const projId = this.normalizarProjetoId(projName);
-        const recordCompartilhado = this.cleanRecordForFirestore({
-          ...cleanRec,
-          projeto: projName,
-          autorNome: cleanRec.autorNome || this.user.displayName || (this.user.email ? this.user.email.split('@')[0] : 'Campo'),
-          autorEmail: cleanRec.autorEmail || this.user.email || '',
-          autorUid: cleanRec.autorUid || this.user.uid || '',
-          updatedAt: Date.now()
-        });
-        await firestore.collection('projects').doc(projId).collection('cubagens').doc(rec.id).set(recordCompartilhado);
-        enviados++;
+        // 1. Grava no backup pessoal do usuário
+        try {
+          await userCol.doc(docId).set(cleanRec);
+          enviadosUser++;
+        } catch (eU) {
+          console.warn('[Cloud] Erro ao gravar backup pessoal no Firestore:', eU);
+          if (eU && (eU.code === 'permission-denied' || String(eU).includes('permission-denied') || String(eU).includes('insufficient permissions'))) {
+            erroPermissaoUser = eU;
+          }
+        }
+
+        // 2. Grava na coleção compartilhada do projeto (isolado)
+        try {
+          const projName = rec.projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
+          const projId = this.normalizarProjetoId(projName);
+          const recordCompartilhado = this.cleanRecordForFirestore({
+            ...cleanRec,
+            projeto: projName,
+            autorNome: cleanRec.autorNome || authUser.displayName || (authUser.email ? authUser.email.split('@')[0] : 'Campo'),
+            autorEmail: cleanRec.autorEmail || authUser.email || '',
+            autorUid: uid,
+            updatedAt: Date.now()
+          });
+          await firestore.collection('projects').doc(projId).collection('cubagens').doc(docId).set(recordCompartilhado);
+          enviadosProj++;
+        } catch (eP) {
+          console.warn('[Cloud] Erro ao gravar no projeto compartilhado:', eP);
+        }
       }
 
-      if (window.app && window.app.showToast) {
-        window.app.showToast(`✓ Sucesso! ${enviados} medições enviadas para a nuvem. Já estão disponíveis para abrir no seu PC!`, 'success', 8000);
+      if (enviadosUser > 0) {
+        if (window.app && window.app.showToast) {
+          window.app.showToast(`✓ Sucesso! ${enviadosUser} medições salvas na nuvem. Já estão disponíveis para abrir no seu PC!`, 'success', 8000);
+        }
+      } else if (erroPermissaoUser) {
+        if (window.app && window.app.showToast) {
+          window.app.showToast('⚠️ Permissão negada no Firebase: Publique as regras no Firebase Console ou use o botão "Enviar para o PC via WhatsApp / Arquivo" para transferir agora.', 'danger', 10000);
+        }
+      } else {
+        if (window.app && window.app.showToast) {
+          window.app.showToast('Não foi possível gravar na nuvem no momento. Use o botão "Enviar para o PC via WhatsApp / Arquivo".', 'warning', 8000);
+        }
       }
     } catch (err) {
       console.error('[Cloud] Erro ao enviar medições:', err);
       if (window.app && window.app.showToast) {
-        window.app.showToast(`Erro ao enviar para nuvem: ${err.message || 'Falha de permissão ou conexão'}`, 'danger', 7000);
+        window.app.showToast(`Erro ao enviar para nuvem: ${err.message || 'Falha de conexão'}. Use o botão de WhatsApp abaixo.`, 'danger', 8000);
       }
     }
   }
@@ -755,7 +853,8 @@ class CubagemAuth {
       }
       return;
     }
-    if (!this.user || this.user.isLocal) {
+    const authUser = await this.obterUsuarioAutenticado();
+    if (!authUser) {
       if (window.app && window.app.showToast) {
         window.app.showToast('Faça login com sua conta Google ou E-mail para resgatar seus dados da nuvem.', 'warning', 7000);
       }
@@ -777,7 +876,7 @@ class CubagemAuth {
 
       // 1. Busca na coleção pessoal do usuário
       try {
-        const snapUser = await firestore.collection('users').doc(this.user.uid).collection('cubagens').get();
+        const snapUser = await firestore.collection('users').doc(authUser.uid).collection('cubagens').get();
         for (const doc of snapUser.docs) {
           const rec = doc.data();
           if (rec && rec.id && !idsJaProcessados.has(rec.id)) {
@@ -833,7 +932,7 @@ class CubagemAuth {
         if (totalBaixados > 0) {
           window.app.showToast(`✓ Sucesso! ${totalBaixados} medições resgatadas da nuvem e carregadas no seu aparelho!`, 'success', 8000);
         } else {
-          window.app.showToast('Nenhuma medição encontrada na nuvem. Se mediu pelo celular, abra o celular e clique em "Enviar Medições para a Nuvem" ou use "Enviar para PC via WhatsApp".', 'warning', 10000);
+          window.app.showToast('Nenhuma medição encontrada na nuvem. Se mediu pelo celular, use o botão "Enviar para o PC via WhatsApp / Arquivo" para transferir.', 'warning', 10000);
         }
       }
     } catch (err) {
@@ -855,7 +954,9 @@ class CubagemAuth {
   // SINCRONIZAÇÃO BIDIRECIONAL COM O FIRESTORE
   // =========================================================================
   async syncAllWithCloud(silencioso = false) {
-    if (!this.user || !navigator.onLine || this.syncing) return;
+    if (!navigator.onLine || this.syncing) return;
+    const authUser = await this.obterUsuarioAutenticado();
+    if (!authUser) return;
     this.syncing = true;
 
     try {
@@ -863,7 +964,7 @@ class CubagemAuth {
       if (!fb) return;
 
       const firestore = fb.firestore();
-      const userCol = firestore.collection('users').doc(this.user.uid).collection('cubagens');
+      const userCol = firestore.collection('users').doc(authUser.uid).collection('cubagens');
 
       // 1. Obter registros locais
       const localRecords = await window.cubagemDB.getAll(false);
@@ -1454,32 +1555,44 @@ class CubagemAuth {
    * Salva um registro diretamente na nuvem (chamado após salvar localmente)
    */
   async syncRecordToCloud(record) {
-    if (!this.user || !navigator.onLine) return;
+    if (!navigator.onLine) return;
+    const authUser = await this.obterUsuarioAutenticado();
+    if (!authUser) return;
     try {
       const fb = await this.loadFirebase();
       if (!fb) return;
       const firestore = fb.firestore();
 
-      const cleanRec = this.cleanRecordForFirestore(record);
+      const rawId = record.id || `CUB-${Date.now()}`;
+      const docId = String(rawId).replace(/\//g, '_');
+      const cleanRec = this.cleanRecordForFirestore({ ...record, id: docId, autorUid: authUser.uid });
 
       // 1. Grava no backup pessoal do usuário
-      await firestore.collection('users').doc(this.user.uid).collection('cubagens').doc(record.id).set(cleanRec);
+      try {
+        await firestore.collection('users').doc(authUser.uid).collection('cubagens').doc(docId).set(cleanRec);
+      } catch (eU) {
+        console.warn('[Cloud] Erro ao gravar backup pessoal no Firestore:', eU);
+      }
 
       // 2. Grava na coleção compartilhada do projeto
-      const projName = record.projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
-      const projId = this.normalizarProjetoId(projName);
+      try {
+        const projName = record.projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
+        const projId = this.normalizarProjetoId(projName);
 
-      const recordCompartilhado = this.cleanRecordForFirestore({
-        ...cleanRec,
-        projeto: projName,
-        autorNome: cleanRec.autorNome || this.user.displayName || (this.user.email ? this.user.email.split('@')[0] : 'Campo'),
-        autorEmail: cleanRec.autorEmail || this.user.email || '',
-        autorUid: cleanRec.autorUid || this.user.uid || '',
-        updatedAt: Date.now()
-      });
+        const recordCompartilhado = this.cleanRecordForFirestore({
+          ...cleanRec,
+          projeto: projName,
+          autorNome: cleanRec.autorNome || authUser.displayName || (authUser.email ? authUser.email.split('@')[0] : 'Campo'),
+          autorEmail: cleanRec.autorEmail || authUser.email || '',
+          autorUid: authUser.uid,
+          updatedAt: Date.now()
+        });
 
-      await firestore.collection('projects').doc(projId).collection('cubagens').doc(record.id).set(recordCompartilhado);
-      console.log(`[Cloud] Medição ${record.id} compartilhada com a equipe no projeto "${projName}"!`);
+        await firestore.collection('projects').doc(projId).collection('cubagens').doc(docId).set(recordCompartilhado);
+        console.log(`[Cloud] Medição ${docId} compartilhada com a equipe no projeto "${projName}"!`);
+      } catch (eP) {
+        console.warn('[Cloud] Erro ao compartilhar com a equipe no Firestore:', eP);
+      }
     } catch (err) {
       console.warn('[Auth] Não foi possível enviar registro para nuvem no momento:', err);
     }
@@ -1489,19 +1602,26 @@ class CubagemAuth {
    * Remove um registro da nuvem (chamado após exclusão local)
    */
   async deleteRecordFromCloud(id, projeto) {
-    if (!this.user || !navigator.onLine) return;
+    if (!navigator.onLine) return;
+    const authUser = await this.obterUsuarioAutenticado();
+    if (!authUser) return;
     try {
       const fb = await this.loadFirebase();
       if (!fb) return;
       const firestore = fb.firestore();
 
-      await firestore.collection('users').doc(this.user.uid).collection('cubagens').doc(id).delete();
+      const docId = String(id).replace(/\//g, '_');
+      try {
+        await firestore.collection('users').doc(authUser.uid).collection('cubagens').doc(docId).delete();
+      } catch (eU) {}
 
-      const projName = projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
-      const projId = this.normalizarProjetoId(projName);
-      await firestore.collection('projects').doc(projId).collection('cubagens').doc(id).delete();
+      try {
+        const projName = projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
+        const projId = this.normalizarProjetoId(projName);
+        await firestore.collection('projects').doc(projId).collection('cubagens').doc(docId).delete();
+      } catch (eP) {}
 
-      console.log('[Auth] Registro removido da nuvem:', id);
+      console.log('[Auth] Registro removido da nuvem:', docId);
     } catch (err) {
       console.warn('[Auth] Não foi possível remover da nuvem no momento:', err);
     }
