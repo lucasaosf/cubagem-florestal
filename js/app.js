@@ -2827,6 +2827,20 @@ class CubagemApp {
     }
   }
 
+  selecionarArquivoBackup() {
+    let inp = document.getElementById('fileInputBackupGlobal');
+    if (!inp) {
+      inp = document.createElement('input');
+      inp.id = 'fileInputBackupGlobal';
+      inp.type = 'file';
+      inp.accept = '.json';
+      inp.style.display = 'none';
+      inp.onchange = (e) => this.processarArquivoBackup(e);
+      document.body.appendChild(inp);
+    }
+    inp.click();
+  }
+
   async processarArquivoBackup(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
@@ -2835,13 +2849,21 @@ class CubagemApp {
     reader.onload = async (e) => {
       try {
         const json = JSON.parse(e.target.result);
+        const total = json.totalRecords || (json.data && json.data.cubagens.length) || 0;
         const confirmMerge = confirm(
-          `Arquivo de backup detectado com ${json.totalRecords || (json.data && json.data.cubagens.length) || 0} registros.\n\nDeseja MESCLAR os registros com os atuais?`
+          `Arquivo de backup detectado com ${total} medições.\n\nDeseja carregar e mesclar essas medições no seu histórico?`
         );
         if (confirmMerge) {
           const res = await window.cubagemDB.importBackup(json, 'merge');
-          this.showToast(`Backup importado com sucesso: ${res.importedCount} registros!`, 'success');
+          await this.autoRepararRegistrosZerados();
           await this.atualizarDashboard();
+          if (this.currentView === 'historico') {
+            await this.carregarHistorico();
+          }
+          this.showToast(`✓ Sucesso! ${res.importedCount} medições carregadas no seu aparelho!`, 'success', 8000);
+          if (this.auth) {
+            this.auth.fecharModalAuth();
+          }
         }
       } catch (err) {
         console.error('Erro na importação:', err);
