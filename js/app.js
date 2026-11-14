@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.10';
+    this.appVersion = '2.10.11';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -3723,7 +3723,7 @@ class CubagemApp {
         const fNum = (n, d = 3) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
           ? window.CubagemCalculator.formatNumber(n, d)
           : Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
-        infoEl.innerHTML = `Medições salvas neste aparelho: <strong>${statsData.totalLocalCount}</strong> • Na Nuvem: <strong style="color: var(--gold);">${statsData.totalGeralCount} medições (${fNum(statsData.totalGeralVolume, 3)} m³)</strong>`;
+        infoEl.innerHTML = `Medições neste aparelho: <strong>${statsData.totalLocalCount}</strong> • Na Nuvem: <strong style="color: var(--gold);">${statsData.totalGeralCount} medições</strong> (<span style="color: #4ade80; font-weight: 700;">🟢 Entrada: <strong>${fNum(statsData.totalEntradaVolume, 3)} m³</strong></span> • <span style="color: #fbbf24; font-weight: 700;">🚚 Retirada: <strong>${fNum(statsData.totalRetiradaVolume, 3)} m³</strong></span>)`;
       }
     }).catch(() => {});
 
@@ -3882,12 +3882,13 @@ class CubagemApp {
         : (Number(r.volumeGeometrico) || 0);
 
       const autor = r.autorNome || r.responsavel || 'Lucas Aøsf';
-      const statsAutor = responsaveisMap.get(autor) || { vol: 0, count: 0 };
+      const statsAutor = responsaveisMap.get(autor) || { vol: 0, count: 0, volEntrada: 0, countEntrada: 0, volRetirada: 0, countRetirada: 0 };
       statsAutor.vol += vol;
       statsAutor.count += 1;
-      responsaveisMap.set(autor, statsAutor);
 
       if (r.tipo === 'caminhao') {
+        statsAutor.volRetirada = (statsAutor.volRetirada || 0) + vol;
+        statsAutor.countRetirada = (statsAutor.countRetirada || 0) + 1;
         retiradasCargasCount += 1;
         retiradasVolTotal += vol;
         if (Array.isArray(r.toras)) {
@@ -3896,6 +3897,8 @@ class CubagemApp {
           });
         }
       } else {
+        statsAutor.volEntrada = (statsAutor.volEntrada || 0) + vol;
+        statsAutor.countEntrada = (statsAutor.countEntrada || 0) + 1;
         volTotalEntrada += vol;
         if (Array.isArray(r.toras) && r.toras.length > 0) {
           torasCubadasCount += r.toras.length;
@@ -3903,6 +3906,7 @@ class CubagemApp {
           torasCubadasCount += 1;
         }
       }
+      responsaveisMap.set(autor, statsAutor);
     });
 
     const torasNoPatioRestante = Math.max(0, torasCubadasCount - torasCarregadasPlaquetas.size);
@@ -3929,12 +3933,14 @@ class CubagemApp {
         const partes = [];
         Object.values(statsData.porMembro).forEach(s => {
           const n = s.membro.nome || (s.membro.email ? s.membro.email.split('@')[0] : 'Integrante');
-          partes.push(`<strong>${this.escapeHtml(n)}:</strong> ${s.count} ${s.count === 1 ? 'med.' : 'med.'} (${fNum(s.volume, 2)} m³)`);
+          const entStr = `<span style="color: #4ade80; font-weight: 700;">🟢 Entrada: <strong>${fNum(s.volEntrada, 2)} m³</strong> (${s.countEntrada} med.)</span>`;
+          const retStr = `<span style="color: #fbbf24; font-weight: 700;">🚚 Retirada: <strong>${fNum(s.volRetirada, 2)} m³</strong> (${s.countRetirada} carg.)</span>`;
+          partes.push(`<strong>${this.escapeHtml(n)}</strong> (${s.count} ${s.count === 1 ? 'med.' : 'med.'} na nuvem) &mdash; ${entStr} • ${retStr}`);
         });
         if (partes.length === 0) {
           equipeEl.innerHTML = `Nenhuma medição registrada nesta frente ainda. As cubagens e retiradas de todos os integrantes autorizados serão integradas aqui em tempo real.`;
         } else {
-          equipeEl.innerHTML = `<strong>☁️ Subido na Nuvem por Integrante:</strong> ${partes.join(' • ')}`;
+          equipeEl.innerHTML = `<strong>☁️ Subido na Nuvem por Integrante:</strong><div style="margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">${partes.map(p => `<div style="font-size: 0.8rem; line-height: 1.4;">• ${p}</div>`).join('')}</div>`;
         }
       } catch (eEquipe) {
         console.warn('[Painel] Erro ao carregar resumo de equipe:', eEquipe);
@@ -3943,9 +3949,11 @@ class CubagemApp {
         } else {
           const partes = [];
           responsaveisMap.forEach((stats, resp) => {
-            partes.push(`<strong>${this.escapeHtml(resp)}:</strong> ${fNum(stats.vol, 2)} m³ (${stats.count} med.)`);
+            const entStr = `<span style="color: #4ade80; font-weight: 700;">🟢 Entrada: <strong>${fNum(stats.volEntrada || 0, 2)} m³</strong> (${stats.countEntrada || 0} med.)</span>`;
+            const retStr = `<span style="color: #fbbf24; font-weight: 700;">🚚 Retirada: <strong>${fNum(stats.volRetirada || 0, 2)} m³</strong> (${stats.countRetirada || 0} carg.)</span>`;
+            partes.push(`<strong>${this.escapeHtml(resp)}</strong> (${stats.count} med.) &mdash; ${entStr} • ${retStr}`);
           });
-          equipeEl.innerHTML = `<strong>👷 Equipe Ativa na Frente:</strong> ${partes.join(' • ')}`;
+          equipeEl.innerHTML = `<strong>👷 Equipe Ativa na Frente:</strong><div style="margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">${partes.map(p => `<div style="font-size: 0.8rem; line-height: 1.4;">• ${p}</div>`).join('')}</div>`;
         }
       }
     }
@@ -4490,12 +4498,21 @@ class CubagemApp {
       porMembro[emailChave] = {
         membro: m,
         count: 0,
-        volume: 0
+        volume: 0,
+        countEntrada: 0,
+        volEntrada: 0,
+        countRetirada: 0,
+        volRetirada: 0,
+        saldoVol: 0
       };
     });
 
     let totalGeralCount = 0;
     let totalGeralVolume = 0;
+    let totalEntradaCount = 0;
+    let totalEntradaVolume = 0;
+    let totalRetiradaCount = 0;
+    let totalRetiradaVolume = 0;
 
     recordsMap.forEach(r => {
       let vol = 0;
@@ -4505,6 +4522,8 @@ class CubagemApp {
         vol = Number(r.volumeTotal || r.volumeGeometrico || 0);
       }
       if (isNaN(vol) || vol < 0) vol = 0;
+
+      const isRetirada = (r.tipo === 'caminhao');
 
       const rEmail = (r.autorEmail || '').trim().toLowerCase();
       const rNome = (r.autorNome || r.responsavel || '').trim().toLowerCase();
@@ -4527,14 +4546,38 @@ class CubagemApp {
       if (matched) {
         const chave = (matched.email || matched.nome || '').trim().toLowerCase();
         if (!porMembro[chave]) {
-          porMembro[chave] = { membro: matched, count: 0, volume: 0 };
+          porMembro[chave] = {
+            membro: matched,
+            count: 0,
+            volume: 0,
+            countEntrada: 0,
+            volEntrada: 0,
+            countRetirada: 0,
+            volRetirada: 0,
+            saldoVol: 0
+          };
         }
         porMembro[chave].count += 1;
         porMembro[chave].volume += vol;
+        if (isRetirada) {
+          porMembro[chave].countRetirada += 1;
+          porMembro[chave].volRetirada += vol;
+        } else {
+          porMembro[chave].countEntrada += 1;
+          porMembro[chave].volEntrada += vol;
+        }
+        porMembro[chave].saldoVol = porMembro[chave].volEntrada - porMembro[chave].volRetirada;
       }
 
       totalGeralCount += 1;
       totalGeralVolume += vol;
+      if (isRetirada) {
+        totalRetiradaCount += 1;
+        totalRetiradaVolume += vol;
+      } else {
+        totalEntradaCount += 1;
+        totalEntradaVolume += vol;
+      }
     });
 
     return {
@@ -4543,7 +4586,12 @@ class CubagemApp {
       porMembro,
       totalLocalCount,
       totalGeralCount,
-      totalGeralVolume
+      totalGeralVolume,
+      totalEntradaCount,
+      totalEntradaVolume,
+      totalRetiradaCount,
+      totalRetiradaVolume,
+      saldoGeralVolume: (totalEntradaVolume - totalRetiradaVolume)
     };
   }
 
@@ -4599,13 +4647,23 @@ class CubagemApp {
         const isOwner = m.role === 'criador';
         const inicial = (nomeMembro || 'U').charAt(0).toUpperCase();
         const mKey = (m.email || m.nome || '').trim().toLowerCase();
-        const stats = (statsData.porMembro && statsData.porMembro[mKey]) || { count: 0, volume: 0 };
+        const stats = (statsData.porMembro && statsData.porMembro[mKey]) || {
+          count: 0,
+          volume: 0,
+          countEntrada: 0,
+          volEntrada: 0,
+          countRetirada: 0,
+          volRetirada: 0,
+          saldoVol: 0
+        };
         const volFmt = fNum(stats.volume, 3);
+        const entFmt = fNum(stats.volEntrada, 3);
+        const retFmt = fNum(stats.volRetirada, 3);
 
         return `
-          <div class="project-member-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; gap: 10px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px;">
-              <div class="project-member-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); border: 1.5px solid var(--gold); display: grid; place-items: center; font-weight: 700; color: var(--gold); font-size: 1rem; flex-shrink: 0;">${inicial}</div>
+          <div class="project-member-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 170px;">
+              <div class="project-member-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: #14351B; border: 1.5px solid var(--gold); display: grid; place-items: center; font-weight: 700; color: var(--gold); font-size: 1rem; flex-shrink: 0;">${inicial}</div>
               <div class="project-member-details" style="flex: 1; min-width: 0;">
                 <div class="project-member-name" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                   <strong style="color: var(--ink); font-size: 0.95rem;">${this.escapeHtml(nomeMembro)}</strong>
@@ -4615,19 +4673,32 @@ class CubagemApp {
               </div>
             </div>
 
-            <!-- Destaque: Quantas medições e quantos m³ tem subido na nuvem -->
-            <div class="project-member-stats-pill" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(178, 143, 89, 0.12); border: 1px solid var(--gold); border-radius: 8px; padding: 6px 12px; font-size: 0.82rem; white-space: nowrap;">
-              <span style="color: var(--gold); font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                <span>☁️</span> <strong>${stats.count}</strong> ${stats.count === 1 ? 'medição' : 'medições'}
-              </span>
-              <span style="color: var(--gold); opacity: 0.4;">|</span>
-              <span style="color: var(--sage); font-weight: 700;">
-                <strong>${volFmt}</strong> m³
-              </span>
+            <!-- Valores ao lado do Integrante: Total Nuvem, Total Entrada e Total Retirada -->
+            <div class="project-member-metrics">
+              <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem;">
+                <span style="color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600;">Na Nuvem:</span>
+                <span style="color: var(--gold); font-weight: 700;">☁️ <strong>${stats.count}</strong> ${stats.count === 1 ? 'medição' : 'medições'}</span>
+                <span style="color: var(--line);">•</span>
+                <span style="color: var(--ink); font-weight: 600;">${volFmt} m³</span>
+              </div>
+              <div class="project-member-metrics-pills">
+                <!-- Valor Total de Entrada -->
+                <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(85, 124, 99, 0.16); border: 1px solid rgba(85, 124, 99, 0.45); border-radius: 6px; padding: 3px 8px; font-size: 0.78rem;" title="Volume total de entrada no pátio (cubagem de toras e pilhas)">
+                  <span style="color: #4ade80; font-weight: 800;">🟢 Entrada:</span>
+                  <strong style="color: var(--ink);">${entFmt} m³</strong>
+                  <span style="color: var(--muted); font-size: 0.70rem;">(${stats.countEntrada} ${stats.countEntrada === 1 ? 'med.' : 'med.'})</span>
+                </div>
+                <!-- Valor Total de Retirada -->
+                <div style="display: inline-flex; align-items: center; gap: 4px; background: rgba(217, 119, 6, 0.16); border: 1px solid rgba(217, 119, 6, 0.45); border-radius: 6px; padding: 3px 8px; font-size: 0.78rem;" title="Volume total de retirada do pátio (cargas de caminhão)">
+                  <span style="color: #fbbf24; font-weight: 800;">🚚 Retirada:</span>
+                  <strong style="color: var(--ink);">${retFmt} m³</strong>
+                  <span style="color: var(--muted); font-size: 0.70rem;">(${stats.countRetirada} ${stats.countRetirada === 1 ? 'carg.' : 'carg.'})</span>
+                </div>
+              </div>
             </div>
 
             ${(isCriador && !isOwner) ? `
-              <button type="button" class="btn-remove-member" onclick="app.removerMembroProjeto('${this.escapeHtml(m.email)}', '${this.escapeHtml(nomeMembro)}')" title="Remover este integrante do projeto" style="background: transparent; border: 1px solid #d9534f; color: #d9534f; border-radius: 4px; padding: 4px 8px; font-size: 0.72rem; cursor: pointer;">
+              <button type="button" class="btn-remove-member" onclick="app.removerMembroProjeto('${this.escapeHtml(m.email)}', '${this.escapeHtml(nomeMembro)}')" title="Remover este integrante do projeto" style="background: transparent; border: 1px solid #d9534f; color: #d9534f; border-radius: 4px; padding: 4px 8px; font-size: 0.72rem; cursor: pointer; align-self: center;">
                 Remover
               </button>
             ` : ''}
@@ -4692,6 +4763,10 @@ class CubagemApp {
             <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--muted); font-weight: 700;">Total da Frente na Nuvem</div>
             <div style="font-size: 1.1rem; font-weight: 700; color: var(--gold); font-family: var(--display);">
               ${statsData.totalGeralCount} ${statsData.totalGeralCount === 1 ? 'medição' : 'medições'} • ${fNum(statsData.totalGeralVolume, 3)} m³
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 4px; font-size: 0.75rem; flex-wrap: wrap;">
+              <span style="color: #4ade80; font-weight: 700;">🟢 Entrada: <strong>${fNum(statsData.totalEntradaVolume, 3)} m³</strong> (${statsData.totalEntradaCount} med.)</span>
+              <span style="color: #fbbf24; font-weight: 700;">🚚 Retirada: <strong>${fNum(statsData.totalRetiradaVolume, 3)} m³</strong> (${statsData.totalRetiradaCount} carg.)</span>
             </div>
           </div>
           <div style="font-size: 0.75rem; color: var(--sage); font-weight: 600;">

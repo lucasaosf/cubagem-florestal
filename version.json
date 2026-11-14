@@ -1,10 +1,10 @@
 {
-  "v": "2.10.10",
-  "nome": "2.10.10",
+  "v": "2.10.11",
+  "nome": "2.10.11",
   "data": "2026-11-14",
   "novidades": [
-    "Sincronização Silenciosa na Inicialização: Fim dos alertas repetitivos na abertura do app; dados são integrados suavemente em segundo plano",
-    "Métricas na Nuvem por Integrante: Exibição visual do número de medições e volume total em m³ subidos na nuvem ao lado de cada integrante da frente",
-    "Painel Consolidado da Frente: Total geral na nuvem e detalhamento individual em tempo real na aba Integrantes do Projeto"
+    "Totais de Entrada e Retirada por Integrante: Exibição visual detalhada do volume total de entrada (m³ e medições) e retirada (m³ e cargas) ao lado de cada integrante da frente",
+    "Métricas Consolidadas na Nuvem: Total geral de entrada e retirada exibido nos cabeçalhos da frente e no resumo da equipe",
+    "Sincronização 100% Silenciosa: Atualizações em tempo real sem interrupções visuais na tela"
   ]
 }

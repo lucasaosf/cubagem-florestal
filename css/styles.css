@@ -460,7 +460,7 @@ button.header-chip:active {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 240px;
+  max-height: 360px;
   overflow-y: auto;
   margin-bottom: 12px;
   padding-right: 4px;
@@ -569,6 +569,39 @@ button.header-chip:active {
   background: #dc3545;
   color: #FFFFFF;
   border-color: #dc3545;
+}
+
+.project-member-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.project-member-metrics-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+  .project-member-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .project-member-metrics {
+    width: 100% !important;
+    align-items: flex-start !important;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line);
+    margin-top: 2px;
+  }
+  .project-member-metrics-pills {
+    justify-content: flex-start !important;
+  }
 }
 
 .project-add-member-box {
