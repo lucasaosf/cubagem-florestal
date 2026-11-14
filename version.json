@@ -1,12 +1,12 @@
 {
-  "v": "2.10.17",
-  "nome": "2.10.17",
+  "v": "2.10.18",
+  "nome": "2.10.18",
   "data": "2026-11-14",
   "novidades": [
+    "Ícone de Medições Atualizado: O indicador de total de medições nos cards dos projetos agora utiliza o emoji oficial 📐 (esquadro)",
     "Porcentagem de Nativa e Exótica no Saldo por KM: Exibição exata do percentual e volume restante de madeira Nativa e Exótica a retirar em cada Km",
     "Previsão por Origem na Carga do Caminhão: O card live atualiza quanto restará de madeira nativa e exótica após a saída do caminhão",
     "Balanço Consolidado no Painel do Projeto: Pílulas destacando '% Nativa' e '% Exótica' em cada trecho monitorado da rodovia",
-    "Aba Excel com % Nativa e % Exótica: Planilha exportada com colunas dedicadas de percentual por origem para cada KM",
-    "Página Inicial com Total Consolidado: Mantido o volume total geral de quanto falta retirar nos pátios de forma limpa e direta"
+    "Aba Excel com % Nativa e % Exótica: Planilha exportada com colunas dedicadas de percentual por origem para cada KM"
   ]
 }

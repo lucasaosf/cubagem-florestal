@@ -28,7 +28,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.17';
+    this.appVersion = '2.10.18';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -5859,8 +5859,8 @@ class CubagemApp {
             </div>
 
             <div class="cover-project-card-stats">
-              <div class="cover-proj-stat-pill">
-                <span class="stat-ico">☁️</span>
+              <div class="cover-proj-stat-pill" title="Total de medições nesta frente">
+                <span class="stat-ico">📐</span>
                 <span class="stat-txt"><strong>${statsData.totalGeralCount}</strong> ${statsData.totalGeralCount === 1 ? 'med.' : 'med.'}</span>
               </div>
               <div class="cover-proj-stat-pill stat-entrada">
