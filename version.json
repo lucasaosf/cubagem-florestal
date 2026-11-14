@@ -1,11 +1,11 @@
 {
-  "v": "2.10.7",
-  "nome": "2.10.7",
-  "data": "2026-11-11",
+  "v": "2.10.8",
+  "nome": "2.10.8",
+  "data": "2026-11-13",
   "novidades": [
-    "Inicialização e Botões 100% Funcionais: Correção da sintaxe do script de inicialização e restauração imediata de todos os cliques e ações",
-    "Login e Janela de Autenticação: Abertura imediata do modal de login e reconexão de sessão local instantânea sem bloqueio de rede",
-    "Recuperação e Segurança de Dados: Proteção total contra perda de medições com backup automático persistente e restauração direta da nuvem",
-    "Cálculo e Exportação Excel de Retiradas: Consolidação precisa dos volumes por viagem e correção de erros em seleções de medições"
+    "Sincronização Celular ⇆ PC Inteligente: Novo botão para forçar envio de todas as medições locais para a nuvem e baixar tudo instantaneamente no PC",
+    "Compartilhamento Direto Celular ⇆ PC: Envio do backup completo com 1 toque via WhatsApp ou arquivo, dispensando necessidade de conexão no campo",
+    "Segurança e Privacidade Blindadas: Isolamento estrito de documentos de usuários no Firestore e proteção contra Cross-Site Scripting (XSS)",
+    "Prevenção contra Injeção de Fórmulas no Excel: Sanitização automática de caracteres executáveis em exportações de planilhas (.xlsx)"
   ]
 }

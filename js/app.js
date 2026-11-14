@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.7';
+    this.appVersion = '2.10.8';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -2246,6 +2246,7 @@ class CubagemApp {
   }
 
   gerarCardItemHTML(item) {
+    const esc = (s) => this.escapeHtml(s);
     const tipo = item.tipo || 'caminhao';
     const isTorasCam = tipo === 'caminhao' && (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0));
     const isTora = tipo === 'tora' || isTorasCam;
@@ -2257,8 +2258,8 @@ class CubagemApp {
     const isSelected = this.selectedHistoryIds.has(item.id);
 
     let tagTipo = '🚚 Retirada (Caminhão)';
-    let tituloItem = item.placa || 'SEM PLACA';
-    let subItem = `${item.rodovia} ${item.km ? '• km ' + item.km : ''}`;
+    let tituloItem = esc(item.placa || 'SEM PLACA');
+    let subItem = `${esc(item.rodovia)} ${item.km ? '• km ' + esc(item.km) : ''}`;
 
     if (tipo === 'caminhao') {
       const vNum = item.numeroViagem || (item.viagem ? parseInt(String(item.viagem).replace(/\D+/g, ''), 10) : 0);
@@ -2267,23 +2268,23 @@ class CubagemApp {
       if (isTorasCam) {
         const nToras = item.totalToras || (item.toras ? item.toras.length : 0);
         tagTipo = `🚚 Retirada${vTag} • ${nToras} Toras`;
-        tituloItem = `${item.placa || 'SEM PLACA'}${vStr ? ' (' + vStr + ')' : ''} (${nToras} toras)`;
-        subItem = `${item.rodovia} • Smalian • ${item.especie || item.origemMadeira || 'Nativa'}`;
+        tituloItem = `${esc(item.placa || 'SEM PLACA')}${vStr ? ' (' + esc(vStr) + ')' : ''} (${nToras} toras)`;
+        subItem = `${esc(item.rodovia)} • Smalian • ${esc(item.especie || item.origemMadeira || 'Nativa')}`;
       } else {
         const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
         tagTipo = `🚚 Retirada${vTag}${origStr}`;
-        tituloItem = `${item.placa || 'SEM PLACA'}${vStr ? ' (' + vStr + ')' : ''}`;
+        tituloItem = `${esc(item.placa || 'SEM PLACA')}${vStr ? ' (' + esc(vStr) + ')' : ''}`;
       }
     } else if (tipo === 'pilha') {
       const origStr = item.origemMadeira ? ` • ${item.origemMadeira}` : ' • Nativa';
       tagTipo = `🪵 Pilha${origStr}`;
-      tituloItem = item.identificacao || item.placa || 'Pilha Sem Identificação';
+      tituloItem = esc(item.identificacao || item.placa || 'Pilha Sem Identificação');
       const nAlt = Array.isArray(item.alturas) ? item.alturas.length : (item.totalAlturas || '-');
-      subItem = `${item.rodovia} • ${nAlt} alturas`;
+      subItem = `${esc(item.rodovia)} • ${nAlt} alturas`;
     } else if (tipo === 'tora') {
       tagTipo = '🌲 Tora (Smalian)';
-      tituloItem = `Plaqueta: ${item.plaqueta || 'S/P'}`;
-      const espStr = item.especie ? ` • ${item.especie}` : '';
+      tituloItem = `Plaqueta: ${esc(item.plaqueta || 'S/P')}`;
+      const espStr = item.especie ? ` • ${esc(item.especie)}` : '';
       let compVal = item.comprimento || item.comprimentoMedio;
       let dmVal = item.diametroMedio_cm;
       if (Array.isArray(item.toras) && item.toras.length > 0) {
@@ -2305,19 +2306,19 @@ class CubagemApp {
     }
 
     return `
-      <div class="history-item-card ${isSelected ? 'selected-card' : ''}" data-id="${item.id}">
+      <div class="history-item-card ${isSelected ? 'selected-card' : ''}" data-id="${esc(item.id)}">
         <div class="history-card-top">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" class="hist-card-checkbox" value="${item.id}" ${isSelected ? 'checked' : ''} onchange="app.toggleItemSelecionado('${item.id}', this.checked)" title="Selecionar cubagem">
-            <span class="badge-type ${tipo}">${tagTipo}</span>
+            <input type="checkbox" class="hist-card-checkbox" value="${esc(item.id)}" ${isSelected ? 'checked' : ''} onchange="app.toggleItemSelecionado('${esc(item.id)}', this.checked)" title="Selecionar cubagem">
+            <span class="badge-type ${esc(tipo)}">${esc(tagTipo)}</span>
           </div>
-          <span class="history-tag-date">${dataBR} • ${item.horario || ''}</span>
+          <span class="history-tag-date">${esc(dataBR)} • ${esc(item.horario || '')}</span>
         </div>
         <div class="history-card-body">
           <div>
             <div class="history-plate">${tituloItem}</div>
             <div class="history-resp">${subItem}</div>
-            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">Resp: ${item.responsavel || '-'}${item.projeto ? ` • 📁 ${item.projeto}` : ''}${item.autorNome && item.autorNome !== item.responsavel ? ` • (${item.autorNome})` : ''}</div>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">Resp: ${esc(item.responsavel || '-')}${item.projeto ? ` • 📁 ${esc(item.projeto)}` : ''}${item.autorNome && item.autorNome !== item.responsavel ? ` • (${esc(item.autorNome)})` : ''}</div>
           </div>
           <div class="history-vol-badge">
             <div class="history-vol-num">${volFormatado}</div>
@@ -2325,10 +2326,10 @@ class CubagemApp {
           </div>
         </div>
         <div class="history-card-actions">
-          <button type="button" class="btn-action-small edit-btn" onclick="app.iniciarEdicaoCubagem('${item.id}')" title="Editar medidas e dados desta cubagem">✏️ Editar</button>
-          <button type="button" class="btn-action-small preview-btn" onclick="app.abrirPreviaFixada('${item.id}')" title="Ver planilha completa desta cubagem">📊 Ver Planilha</button>
-          <button type="button" class="btn-action-small" onclick="app.abrirDetalhes('${item.id}')">Detalhes</button>
-          <button type="button" class="btn-action-small danger" onclick="app.abrirModalExcluir('${item.id}')">Excluir</button>
+          <button type="button" class="btn-action-small edit-btn" onclick="app.iniciarEdicaoCubagem('${esc(item.id)}')" title="Editar medidas e dados desta cubagem">✏️ Editar</button>
+          <button type="button" class="btn-action-small preview-btn" onclick="app.abrirPreviaFixada('${esc(item.id)}')" title="Ver planilha completa desta cubagem">📊 Ver Planilha</button>
+          <button type="button" class="btn-action-small" onclick="app.abrirDetalhes('${esc(item.id)}')">Detalhes</button>
+          <button type="button" class="btn-action-small danger" onclick="app.abrirModalExcluir('${esc(item.id)}')">Excluir</button>
         </div>
       </div>
     `;
@@ -2339,6 +2340,7 @@ class CubagemApp {
     if (!item) return;
 
     this.currentDetailItem = item;
+    const esc = (s) => this.escapeHtml(s);
     const dataBR = window.CubagemExcelExport.formatDateBR(item.data);
     const tipo = item.tipo || 'caminhao';
     const isTorasCam = tipo === 'caminhao' && (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0));
@@ -2351,8 +2353,8 @@ class CubagemApp {
     document.getElementById('detalheModalTitulo').textContent = tipo === 'caminhao' ? 'Detalhes: Retirada (Caminhão)' : `Detalhes: ${tipo.toUpperCase()}`;
 
     let detalheHtml = '';
-    const projMetaHtml = item.projeto ? `<strong>Projeto / Frente:</strong> <span style="font-weight: 700; color: var(--gold);">${item.projeto}</span><br>` : '';
-    const autorMetaHtml = item.autorNome && item.autorNome !== item.responsavel ? `<strong>Registrado por:</strong> ${item.autorNome} (Equipe)<br>` : '';
+    const projMetaHtml = item.projeto ? `<strong>Projeto / Frente:</strong> <span style="font-weight: 700; color: var(--gold);">${esc(item.projeto)}</span><br>` : '';
+    const autorMetaHtml = item.autorNome && item.autorNome !== item.responsavel ? `<strong>Registrado por:</strong> ${esc(item.autorNome)} (Equipe)<br>` : '';
 
     if (tipo === 'caminhao') {
       if (isTorasCam) {
@@ -2360,7 +2362,7 @@ class CubagemApp {
         const nToras = item.totalToras || torasArr.length;
         const torasPreview = torasArr.slice(0, 15).map(t =>
           `<div style="display: flex; justify-content: space-between; font-size: 0.78rem; padding: 4px 0; border-bottom: 1px dotted var(--line);">
-            <span><strong>Plaqueta ${t.plaqueta}</strong> <em>(${t.especie || 'N/I'})</em></span>
+            <span><strong>Plaqueta ${esc(t.plaqueta)}</strong> <em>(${esc(t.especie || 'N/I')})</em></span>
             <span>Dm: ${fNum(t.diametroMedio_cm, 1)} cm • L: ${fNum(t.comprimento, 2)} m • <strong style="color: var(--gold);">${fNum(t.volumeGeometrico, 3)} m³</strong></span>
           </div>`
         ).join('') + (torasArr.length > 15 ? `<div style="text-align: center; font-size: 0.75rem; color: var(--gold); margin-top: 6px; font-weight: 700;">+ ${torasArr.length - 15} outras toras carregadas</div>` : '');
@@ -2369,15 +2371,15 @@ class CubagemApp {
           <div style="margin-bottom: 12px;">
             ${projMetaHtml}
             ${autorMetaHtml}
-            <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
-            <strong>Nº da Viagem:</strong> <span style="font-weight: 700; color: var(--gold);">${item.viagem || (item.numeroViagem ? item.numeroViagem + 'ª Viagem' : '1ª Viagem')}</span><br>
+            <strong>Placa:</strong> ${esc(item.placa || 'Sem placa')}<br>
+            <strong>Nº da Viagem:</strong> <span style="font-weight: 700; color: var(--gold);">${esc(item.viagem || (item.numeroViagem ? item.numeroViagem + 'ª Viagem' : '1ª Viagem'))}</span><br>
             <strong>Modalidade:</strong> <span style="font-weight: 700; color: var(--gold);">Toras Rastreáveis (Fórmula de Smalian)</span><br>
-            <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
-            ${item.especie ? `<strong>Espécies:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
-            <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
-            ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
-            <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
-            <strong>Responsável:</strong> ${item.responsavel}
+            <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${esc(item.origemMadeira || 'Nativa')}</span><br>
+            ${item.especie ? `<strong>Espécies:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${esc(item.especie)}</span><br>` : ''}
+            <strong>Local / Pátio:</strong> ${esc(item.rodovia)} ${item.km ? '• km ' + esc(item.km) : ''}<br>
+            ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${esc(item.utm)}</span><br>` : ''}
+            <strong>Data/Hora:</strong> ${esc(dataBR)} às ${esc(item.horario)}<br>
+            <strong>Responsável:</strong> ${esc(item.responsavel)}
           </div>
           <div class="calc-result-card">
             <div class="calc-result-header">
@@ -2404,14 +2406,14 @@ class CubagemApp {
           <div style="margin-bottom: 12px;">
             ${projMetaHtml}
             ${autorMetaHtml}
-            <strong>Placa:</strong> ${item.placa || 'Sem placa'}<br>
-            <strong>Nº da Viagem:</strong> <span style="font-weight: 700; color: var(--gold);">${item.viagem || (item.numeroViagem ? item.numeroViagem + 'ª Viagem' : '1ª Viagem')}</span><br>
-            <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
-            ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
-            <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
-            ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
-            <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
-            <strong>Responsável:</strong> ${item.responsavel}
+            <strong>Placa:</strong> ${esc(item.placa || 'Sem placa')}<br>
+            <strong>Nº da Viagem:</strong> <span style="font-weight: 700; color: var(--gold);">${esc(item.viagem || (item.numeroViagem ? item.numeroViagem + 'ª Viagem' : '1ª Viagem'))}</span><br>
+            <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${esc(item.origemMadeira || 'Nativa')}</span><br>
+            ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${esc(item.especie)}</span><br>` : ''}
+            <strong>Local / Pátio:</strong> ${esc(item.rodovia)} ${item.km ? '• km ' + esc(item.km) : ''}<br>
+            ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${esc(item.utm)}</span><br>` : ''}
+            <strong>Data/Hora:</strong> ${esc(dataBR)} às ${esc(item.horario)}<br>
+            <strong>Responsável:</strong> ${esc(item.responsavel)}
           </div>
           <div class="calc-result-card">
             <div class="calc-result-header">
@@ -2433,13 +2435,13 @@ class CubagemApp {
         <div style="margin-bottom: 12px;">
           ${projMetaHtml}
           ${autorMetaHtml}
-          <strong>Identificação:</strong> ${item.identificacao || item.placa || 'Pilha'}<br>
-          <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${item.origemMadeira || 'Nativa'}</span><br>
-          ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
-          <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
-          ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
-          <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
-          <strong>Responsável:</strong> ${item.responsavel}
+          <strong>Identificação:</strong> ${esc(item.identificacao || item.placa || 'Pilha')}<br>
+          <strong>Origem da Madeira:</strong> <span style="font-weight: 700; color: var(--gold);">${esc(item.origemMadeira || 'Nativa')}</span><br>
+          ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${esc(item.especie)}</span><br>` : ''}
+          <strong>Local / Pátio:</strong> ${esc(item.rodovia)} ${item.km ? '• km ' + esc(item.km) : ''}<br>
+          ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${esc(item.utm)}</span><br>` : ''}
+          <strong>Data/Hora:</strong> ${esc(dataBR)} às ${esc(item.horario)}<br>
+          <strong>Responsável:</strong> ${esc(item.responsavel)}
         </div>
         <div class="calc-result-card">
           <div class="calc-result-header">
@@ -2459,13 +2461,13 @@ class CubagemApp {
         <div style="margin-bottom: 12px;">
           ${projMetaHtml}
           ${autorMetaHtml}
-          <strong>Identificação Individual:</strong> ${item.identificacao || item.plaqueta || item.id}<br>
-          ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${item.especie}</span><br>` : ''}
-          <strong>Nº da Plaqueta:</strong> ${item.plaqueta || 'S/P'}<br>
-          <strong>Local / Pátio:</strong> ${item.rodovia} ${item.km ? '• km ' + item.km : ''}<br>
-          ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${item.utm}</span><br>` : ''}
-          <strong>Data/Hora:</strong> ${dataBR} às ${item.horario}<br>
-          <strong>Responsável:</strong> ${item.responsavel}
+          <strong>Identificação Individual:</strong> ${esc(item.identificacao || item.plaqueta || item.id)}<br>
+          ${item.especie ? `<strong>Espécie Florestal:</strong> <span style="font-weight: 700; font-style: italic; color: var(--gold);">${esc(item.especie)}</span><br>` : ''}
+          <strong>Nº da Plaqueta:</strong> ${esc(item.plaqueta || 'S/P')}<br>
+          <strong>Local / Pátio:</strong> ${esc(item.rodovia)} ${item.km ? '• km ' + esc(item.km) : ''}<br>
+          ${item.utm ? `<strong>Coordenada UTM:</strong> <span style="font-family: monospace; color: var(--gold); font-weight: 700;">${esc(item.utm)}</span><br>` : ''}
+          <strong>Data/Hora:</strong> ${esc(dataBR)} às ${esc(item.horario)}<br>
+          <strong>Responsável:</strong> ${esc(item.responsavel)}
         </div>
         <div class="calc-result-card">
           <div class="calc-result-header">
@@ -2501,9 +2503,9 @@ class CubagemApp {
                 <tbody>
                   ${item.toras.map(t => `
                     <tr style="border-bottom: 1px solid var(--line);">
-                      <td style="padding: 6px 8px; font-weight: 700;">#${t.numero}</td>
-                      <td style="padding: 6px 8px; font-weight: 700; color: var(--ink);">${t.plaqueta}</td>
-                      <td style="padding: 6px 8px; font-style: italic; color: var(--gold);">${t.especie || item.especie || '-'}</td>
+                      <td style="padding: 6px 8px; font-weight: 700;">#${esc(t.numero)}</td>
+                      <td style="padding: 6px 8px; font-weight: 700; color: var(--ink);">${esc(t.plaqueta)}</td>
+                      <td style="padding: 6px 8px; font-style: italic; color: var(--gold);">${esc(t.especie || item.especie || '-')}</td>
                       <td style="padding: 6px 8px;">${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)}</td>
                       <td style="padding: 6px 8px;">${fNum(t.comprimento, 2)} m</td>
                       <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: var(--gold);">${fNum(t.volumeGeometrico, 3)}</td>
@@ -2518,7 +2520,7 @@ class CubagemApp {
     }
 
     if (item.observacoes) {
-      detalheHtml += `<div style="background: var(--surface-2); padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px;"><strong>Observações:</strong> ${item.observacoes}</div>`;
+      detalheHtml += `<div style="background: var(--surface-2); padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px;"><strong>Observações:</strong> ${esc(item.observacoes)}</div>`;
     }
 
     document.getElementById('detalheModalConteudo').innerHTML = detalheHtml;
@@ -2530,10 +2532,11 @@ class CubagemApp {
     if (!item) return;
 
     this.itemToDeleteId = id;
+    const esc = (s) => this.escapeHtml(s);
     const vol = window.CubagemCalculator.formatNumber(item.volumeGeometrico, item.tipo === 'tora' ? 3 : 2);
     document.getElementById('excluirItemInfo').innerHTML = `
-      Modalidade: <strong>${(item.tipo || 'caminhao').toUpperCase()}</strong><br>
-      Identificação: <strong>${item.plaqueta || item.identificacao || item.placa || item.id}</strong><br>
+      Modalidade: <strong>${esc((item.tipo || 'caminhao').toUpperCase())}</strong><br>
+      Identificação: <strong>${esc(item.plaqueta || item.identificacao || item.placa || item.id)}</strong><br>
       Volume: <strong>${vol} m³</strong>
     `;
     this.abrirModal('modalExcluir');
@@ -2754,6 +2757,53 @@ class CubagemApp {
     this.showToast('Preferências salvas com sucesso!', 'success');
   }
 
+  async compartilharBackup() {
+    try {
+      const backup = await window.cubagemDB.exportBackup();
+      const nRecs = backup.totalRecords || (backup.data && backup.data.cubagens.length) || 0;
+      if (nRecs === 0) {
+        this.showToast('Nenhuma medição encontrada neste aparelho para exportar.', 'warning');
+        return;
+      }
+      const now = new Date().toISOString().slice(0, 10);
+      const fileName = `Backup_Cubagem_Florestal_${now}.json`;
+      const jsonStr = JSON.stringify(backup, null, 2);
+
+      // Tenta compartilhamento nativo móvel (WhatsApp, Drive, Email, etc.)
+      if (navigator.canShare && navigator.share) {
+        try {
+          const file = new File([jsonStr], fileName, { type: 'application/json' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Backup Cubagem Florestal',
+              text: `Backup com ${nRecs} medições de cubagem florestal (BIOKURI) para abrir no PC.`
+            });
+            this.showToast(`✓ Backup com ${nRecs} medições compartilhado com sucesso!`, 'success');
+            return;
+          }
+        } catch (shareFileErr) {
+          if (shareFileErr.name === 'AbortError') return;
+        }
+      }
+
+      // Fallback para download direto do arquivo .json
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      this.showToast(`✓ Arquivo de backup (${nRecs} medições) baixado! Envie para seu PC e clique em 'Restaurar Backup' lá.`, 'success', 8000);
+    } catch (err) {
+      console.error('Erro ao compartilhar backup:', err);
+      this.showToast('Erro ao exportar backup.', 'danger');
+    }
+  }
+
   async exportarBackupJSON() {
     try {
       const backup = await window.cubagemDB.exportBackup();
@@ -2918,7 +2968,7 @@ class CubagemApp {
           <span class="tora-item-badge">#${t.numero}</span>
           <div style="min-width: 0; flex: 1;">
             <div style="font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              Plaqueta: ${t.plaqueta} ${t.especie ? `<span style="font-weight: 400; font-style: italic; color: var(--gold); font-size: 0.78rem;">(${t.especie})</span>` : ''}
+              Plaqueta: ${this.escapeHtml(t.plaqueta)} ${t.especie ? `<span style="font-weight: 400; font-style: italic; color: var(--gold); font-size: 0.78rem;">(${this.escapeHtml(t.especie)})</span>` : ''}
             </div>
             <div style="font-size: 0.73rem; color: var(--muted);">
               D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m
@@ -3326,7 +3376,7 @@ class CubagemApp {
       const especiesUnicas = [...new Set(this.torasCaminhao.map(t => t.especie).filter(Boolean))];
       if (espEl) {
         espEl.innerHTML = especiesUnicas.length > 0
-          ? `<strong>Espécies na Carga:</strong> ${especiesUnicas.join(', ')}`
+          ? `<strong>Espécies na Carga:</strong> ${especiesUnicas.map(e => this.escapeHtml(e)).join(', ')}`
           : '<strong>Espécies na Carga:</strong> Madeira Nativa Diversa';
       }
     }
@@ -3334,11 +3384,11 @@ class CubagemApp {
     container.innerHTML = this.torasCaminhao.map((t, idx) => `
       <div class="cam-tora-card">
         <div class="cam-tora-card-left">
-          <span class="cam-tora-badge">#${t.plaqueta}</span>
+          <span class="cam-tora-badge">#${this.escapeHtml(t.plaqueta)}</span>
           <div class="cam-tora-info">
-            <div class="cam-tora-especie">${t.especie || 'Não informada'}</div>
+            <div class="cam-tora-especie">${this.escapeHtml(t.especie || 'Não informada')}</div>
             <div class="cam-tora-medidas">
-              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m${t.responsavel ? ' • Por: ' + t.responsavel : ''}
+              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m${t.responsavel ? ' • Por: ' + this.escapeHtml(t.responsavel) : ''}
             </div>
           </div>
         </div>
@@ -3454,7 +3504,7 @@ class CubagemApp {
       const isCarregada = t.statusCarga === 'carregada';
 
       const tagStatus = isCarregada
-        ? `<span class="modal-tora-status-tag status-tag-carregada">🚚 Em ${t.carregadaEm || 'outro caminhão'}</span>`
+        ? `<span class="modal-tora-status-tag status-tag-carregada">🚚 Em ${this.escapeHtml(t.carregadaEm || 'outro caminhão')}</span>`
         : `<span class="modal-tora-status-tag status-tag-disponivel">🟢 No Pátio</span>`;
 
       return `
@@ -3462,12 +3512,12 @@ class CubagemApp {
           <input type="checkbox" class="modal-tora-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoToraModal('${this.escapeHtml(plaqStr)}')">
           <div style="min-width: 0; flex: 1;">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span class="cam-tora-badge" style="font-size: 0.78rem;">#${plaqStr}</span>
-              <span style="font-weight: 600; color: var(--ink); font-size: 0.82rem;">${t.especie}</span>
+              <span class="cam-tora-badge" style="font-size: 0.78rem;">#${this.escapeHtml(plaqStr)}</span>
+              <span style="font-weight: 600; color: var(--ink); font-size: 0.82rem;">${this.escapeHtml(t.especie || 'N/I')}</span>
               ${tagStatus}
             </div>
             <div style="font-size: 0.72rem; color: var(--muted); margin-top: 3px;">
-              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m • Medição: ${window.CubagemExcelExport.formatDateBR(t.registroData)}${t.responsavel ? ' • Por: ' + t.responsavel : ''}${t.projeto ? ' (' + t.projeto + ')' : ''}
+              D: ${fNum(t.diametroPonta1_cm, 1)} × ${fNum(t.diametroPonta2_cm, 1)} cm (Dm: ${fNum(t.diametroMedio_cm, 1)}) • L: ${fNum(t.comprimento, 2)} m • Medição: ${window.CubagemExcelExport.formatDateBR(t.registroData)}${t.responsavel ? ' • Por: ' + this.escapeHtml(t.responsavel) : ''}${t.projeto ? ' (' + this.escapeHtml(t.projeto) + ')' : ''}
             </div>
           </div>
           <div style="text-align: right; font-family: var(--mono); font-weight: 700; color: var(--gold); font-size: 0.88rem; white-space: nowrap;">
@@ -3909,8 +3959,8 @@ class CubagemApp {
           const espStr = r.especie || 'Madeira Nativa Diversa';
 
           return `
-            <div class="proj-medicao-card ${isSelected ? 'selected' : ''}" id="projCard_${r.id}" onclick="app.toggleSelecaoMedicaoProjeto('${r.id}', event)">
-              <input type="checkbox" class="proj-medicao-checkbox" id="projChk_${r.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoMedicaoProjeto('${r.id}', event)">
+            <div class="proj-medicao-card ${isSelected ? 'selected' : ''}" id="projCard_${this.escapeHtml(r.id)}" onclick="app.toggleSelecaoMedicaoProjeto('${this.escapeHtml(r.id)}', event)">
+              <input type="checkbox" class="proj-medicao-checkbox" id="projChk_${this.escapeHtml(r.id)}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoMedicaoProjeto('${this.escapeHtml(r.id)}', event)">
               <div class="proj-medicao-info">
                 <div class="proj-medicao-top">
                   <div class="proj-medicao-title">
@@ -4189,8 +4239,8 @@ class CubagemApp {
       const volStr = `${fNum(r.volumeGeometrico, 3)} m³`;
 
       return `
-        <div class="proj-medicao-card ${isSelected ? 'selected' : ''}" id="vincCard_${r.id}" onclick="app.toggleSelecaoVincular('${r.id}', event)">
-          <input type="checkbox" class="proj-medicao-checkbox" id="vincChk_${r.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoVincular('${r.id}', event)">
+        <div class="proj-medicao-card ${isSelected ? 'selected' : ''}" id="vincCard_${this.escapeHtml(r.id)}" onclick="app.toggleSelecaoVincular('${this.escapeHtml(r.id)}', event)">
+          <input type="checkbox" class="proj-medicao-checkbox" id="vincChk_${this.escapeHtml(r.id)}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoVincular('${this.escapeHtml(r.id)}', event)">
           <div class="proj-medicao-info">
             <div class="proj-medicao-top">
               <div class="proj-medicao-title">
@@ -4200,7 +4250,7 @@ class CubagemApp {
               <div class="proj-medicao-vol">${volStr}</div>
             </div>
             <div class="proj-medicao-sub">
-              <strong style="color: var(--gold);">${projOrigem}</strong> • 📅 ${dataStr} • 👤 ${this.escapeHtml(autor)}
+              <strong style="color: var(--gold);">${this.escapeHtml(projOrigem)}</strong> • 📅 ${dataStr} • 👤 ${this.escapeHtml(autor)}
             </div>
           </div>
         </div>
@@ -5429,7 +5479,7 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">3</td>
               <td colspan="5" class="excel-meta-cell">
-                <strong>Responsável:</strong> ${records[0]?.responsavel || 'Lucas Aøsf'} &bull; 
+                <strong>Responsável:</strong> ${this.escapeHtml(records[0]?.responsavel || 'Lucas Aøsf')} &bull; 
                 <strong>Registro:</strong> CRBio 127233/01-D &bull; 
                 <strong>Total de Cubagens:</strong> ${records.length} &bull; 
                 <strong>Volume Total Consolidado:</strong> ${fNum(totalVol, 2)} m³
@@ -5455,9 +5505,9 @@ class CubagemApp {
                 <tr>
                   <td class="excel-row-num">${idx + 5}</td>
                   <td class="excel-cell-center" style="font-weight: 700;">${idx + 1}</td>
-                  <td class="excel-cell-center">${dtBR} ${r.horario || ''}</td>
-                  <td class="excel-cell-center" style="font-weight: 700;">${ident}</td>
-                  <td class="excel-cell-text" style="font-family: Consolas, monospace; font-size: 0.76rem;">${mem}</td>
+                  <td class="excel-cell-center">${this.escapeHtml(dtBR)} ${this.escapeHtml(r.horario || '')}</td>
+                  <td class="excel-cell-center" style="font-weight: 700;">${this.escapeHtml(ident)}</td>
+                  <td class="excel-cell-text" style="font-family: Consolas, monospace; font-size: 0.76rem;">${this.escapeHtml(mem)}</td>
                   <td class="excel-cell-num" style="font-weight: 700; color: #0E2515;">${vol}</td>
                 </tr>
               `;
@@ -5514,7 +5564,7 @@ class CubagemApp {
               <strong>Total de Medições:</strong> ${records.length} &bull; 
               <strong>Volume Geral do Dia:</strong> ${fNum(totalVol, 2)} m³
               ${caminhoes.length > 0 ? ` &bull; <strong>Retiradas:</strong> ${fNum(vCam, 2)} m³ (${viagensList.length} viagens) &bull; <strong>Entrada:</strong> ${fNum(vTotEntrada, 2)} m³ &bull; <strong>Saldo Pátio:</strong> ${fNum(vSaldoPatio, 2)} m³` : ''} &bull; 
-              <strong>Responsável:</strong> ${records[0]?.responsavel || 'Lucas Aøsf'} &bull; 
+              <strong>Responsável:</strong> ${this.escapeHtml(records[0]?.responsavel || 'Lucas Aøsf')} &bull; 
               <strong>CRBio:</strong> 127233/01-D
             </td>
           </tr>
@@ -5551,14 +5601,14 @@ class CubagemApp {
               <tr>
                 <td class="excel-row-num">${idx + 5}</td>
                 <td class="excel-cell-center" style="font-weight: 700;">${idx + 1}</td>
-                <td class="excel-cell-center">${dtBR}</td>
-                <td class="excel-cell-center">${r.horario || '-'}</td>
-                <td class="excel-cell-center"><span class="badge-type ${tipo}" style="font-size: 0.7rem; padding: 2px 6px;">${tipoLabel}</span></td>
-                <td class="excel-cell-center" style="font-weight: 700;">${ident}</td>
-                <td class="excel-cell-text">${loc}</td>
-                <td class="excel-cell-text" style="font-size: 0.75rem;">${espOrig}</td>
-                <td class="excel-cell-center font-mono">${dimStr}</td>
-                <td class="excel-cell-center font-mono">${hmStr}</td>
+                <td class="excel-cell-center">${this.escapeHtml(dtBR)}</td>
+                <td class="excel-cell-center">${this.escapeHtml(r.horario || '-')}</td>
+                <td class="excel-cell-center"><span class="badge-type ${this.escapeHtml(tipo)}" style="font-size: 0.7rem; padding: 2px 6px;">${this.escapeHtml(tipoLabel)}</span></td>
+                <td class="excel-cell-center" style="font-weight: 700;">${this.escapeHtml(ident)}</td>
+                <td class="excel-cell-text">${this.escapeHtml(loc)}</td>
+                <td class="excel-cell-text" style="font-size: 0.75rem;">${this.escapeHtml(espOrig)}</td>
+                <td class="excel-cell-center font-mono">${this.escapeHtml(dimStr)}</td>
+                <td class="excel-cell-center font-mono">${this.escapeHtml(hmStr)}</td>
                 <td class="excel-cell-num" style="font-weight: 700; color: #0E2515;">${volStr}</td>
               </tr>
             `;
@@ -5624,10 +5674,10 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">3</td>
               <td colspan="7" class="excel-meta-cell">
-                <strong>Responsável:</strong> ${item.responsavel || 'Lucas Aøsf'} &bull; 
+                <strong>Responsável:</strong> ${this.escapeHtml(item.responsavel || 'Lucas Aøsf')} &bull; 
                 <strong>Registro:</strong> CRBio 127233/01-D &bull; 
-                <strong>Data:</strong> ${dataBR} às ${item.horario || '--:--'} &bull; 
-                <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''}
+                <strong>Data:</strong> ${this.escapeHtml(dataBR)} às ${this.escapeHtml(item.horario || '--:--')} &bull; 
+                <strong>Local:</strong> ${this.escapeHtml(item.rodovia || 'Pátio')} ${item.km ? 'km ' + this.escapeHtml(item.km) : ''}
               </td>
             </tr>
             <tr>
@@ -5635,7 +5685,7 @@ class CubagemApp {
               <td class="excel-cell-center font-mono">1</td>
               <td style="font-weight: 700; background: #F9FAFB;">Modalidade</td>
               <td colspan="5" class="excel-cell-text" style="font-weight: 600; color: #0E2515;">
-                ${item.tipoVolume || (tipo === 'caminhao' ? 'Retirada do Material (Caminhão)' : tipo === 'pilha' ? 'Pilha de Madeira' : 'Toras (Smalian)')}
+                ${this.escapeHtml(item.tipoVolume || (tipo === 'caminhao' ? 'Retirada do Material (Caminhão)' : tipo === 'pilha' ? 'Pilha de Madeira' : 'Toras (Smalian)'))}
               </td>
             </tr>
             <tr>
@@ -5643,7 +5693,7 @@ class CubagemApp {
               <td class="excel-cell-center font-mono">2</td>
               <td style="font-weight: 700; background: #F9FAFB;">Identificação</td>
               <td colspan="5" class="excel-cell-text font-mono" style="font-weight: 700;">
-                ${item.placa || item.identificacao || item.plaqueta || 'S/ID'}
+                ${this.escapeHtml(item.placa || item.identificacao || item.plaqueta || 'S/ID')}
               </td>
             </tr>
             <tr>
@@ -5651,7 +5701,7 @@ class CubagemApp {
               <td class="excel-cell-center font-mono">3</td>
               <td style="font-weight: 700; background: #F9FAFB;">Origem da Madeira</td>
               <td colspan="5" class="excel-cell-text">
-                ${item.origemMadeira || 'Nativa'} ${item.especie ? ' &bull; <em>' + item.especie + '</em>' : ''}
+                ${this.escapeHtml(item.origemMadeira || 'Nativa')} ${item.especie ? ' &bull; <em>' + this.escapeHtml(item.especie) + '</em>' : ''}
               </td>
             </tr>
             <tr>
@@ -5712,8 +5762,8 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">${rowNum}</td>
               <td class="excel-cell-center font-mono">${idx + 1}</td>
-              <td class="excel-cell-center font-mono" style="font-weight: 700;">${t.plaqueta || 'S/P'}</td>
-              <td class="excel-cell-text" style="font-style: italic;">${t.especie || item.especie || '-'}</td>
+              <td class="excel-cell-center font-mono" style="font-weight: 700;">${this.escapeHtml(t.plaqueta || 'S/P')}</td>
+              <td class="excel-cell-text" style="font-style: italic;">${this.escapeHtml(t.especie || item.especie || '-')}</td>
               <td class="excel-cell-num">${fNum(d1, 1)}</td>
               <td class="excel-cell-num">${fNum(d2, 1)}</td>
               <td class="excel-cell-num font-mono" style="font-weight: 600;">${fNum(dm, 1)}</td>

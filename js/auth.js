@@ -289,42 +289,72 @@ class CubagemAuth {
     if (modal) modal.classList.remove('open');
   }
 
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   exibirPerfilConectado() {
     const container = document.getElementById('authModalBody');
     if (!container || !this.user) return;
 
-    const nome = this.user.displayName || 'Profissional de Campo';
+    const nome = this.user.displayName || 'Lucas Aøsf';
     const email = this.user.email;
     const photo = this.user.photoURL;
+    const isLocal = !!this.user.isLocal;
 
     container.innerHTML = `
       <div style="text-align: center; margin-bottom: 16px;">
         ${photo ? `<img src="${photo}" style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--gold); margin-bottom: 8px;">` : `<div style="width: 56px; height: 56px; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--gold); margin: 0 auto 8px; display: grid; place-items: center; font-size: 24px; color: var(--gold);">👤</div>`}
-        <h4 style="font-family: var(--display); font-size: 1.3rem; margin: 0; color: var(--ink);">${nome}</h4>
-        <div style="font-size: 0.85rem; color: var(--muted);">${email}</div>
+        <h4 style="font-family: var(--display); font-size: 1.3rem; margin: 0; color: var(--ink);">${this.escapeHtml(nome)}</h4>
+        <div style="font-size: 0.85rem; color: var(--muted);">${this.escapeHtml(email)}</div>
         <div style="margin-top: 6px;">
           <span class="header-chip" style="display: inline-flex;">
-            <span class="dot-status" style="background-color: var(--sage);"></span>
-            Sincronização em Nuvem Ativa
+            <span class="dot-status" style="background-color: ${isLocal ? 'var(--gold)' : 'var(--sage)'};"></span>
+            ${isLocal ? 'Modo Local (Apenas neste aparelho)' : 'Conta Conectada à Nuvem'}
           </span>
         </div>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <button class="btn btn-primary btn-block" onclick="app.auth.syncAllWithCloud(false)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-          </svg>
-          Sincronizar Dados Agora com a Nuvem
+      ${isLocal ? `
+        <div style="background: rgba(178, 143, 89, 0.15); border: 1px solid var(--gold); border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 0.8rem; line-height: 1.45; color: var(--gold);">
+          ⚠️ <strong>Atenção:</strong> Você está no <strong>Modo Local</strong>. Suas medições ficam salvas na memória deste aparelho e <strong>não sincronizam pela nuvem com o PC</strong> até você conectar sua conta oficial Google ou E-mail.
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-bottom: 10px;" onclick="app.auth.exibirFormularioLogin('login')">
+          🔑 Conectar Conta Google ou E-mail
         </button>
+      ` : `
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button class="btn btn-primary btn-block" onclick="app.auth.enviarTudoParaNuvem()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            ⬆️ Enviar Todas as Medições deste Aparelho para a Nuvem
+          </button>
 
-        <button class="btn btn-outline btn-block" onclick="app.auth.recuperarTodasMedicoesProjeto()">
+          <button class="btn btn-outline btn-block" onclick="app.auth.baixarTudoDaNuvemParaAparelho()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            ⬇️ Baixar Medições da Nuvem para este Aparelho
+          </button>
+        </div>
+      `}
+
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn btn-secondary btn-block" onclick="app.compartilharBackup()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
           </svg>
-          📥 Restaurar Medições Salvas na Nuvem
+          📲 Enviar para o PC via WhatsApp / Arquivo
         </button>
 
         <button class="btn btn-secondary btn-block" onclick="app.auth.logout()">
@@ -336,7 +366,7 @@ class CubagemAuth {
       </div>
 
       <div style="font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 14px; line-height: 1.4;">
-        Seus dados permanecem salvos localmente neste aparelho mesmo se você sair da conta.
+        Seus dados permanecem 100% seguros e preservados neste aparelho mesmo offline.
       </div>
     `;
   }
@@ -649,57 +679,145 @@ class CubagemAuth {
   }
 
   /**
-   * Resgata todas as medições salvas na nuvem (Firestore) e restaura no IndexedDB local
+   * Força o envio de todas as medições salvas no IndexedDB local para a nuvem
    */
-  async recuperarTodasMedicoesProjeto(nomeProjeto = 'BR-153') {
+  async enviarTudoParaNuvem() {
+    if (!this.user || this.user.isLocal) {
+      if (window.app && window.app.showToast) {
+        window.app.showToast('Para enviar medições para a nuvem, faça login com sua conta Google ou E-mail (Modo Local não grava na nuvem).', 'warning', 7000);
+      }
+      this.exibirFormularioLogin('login');
+      return;
+    }
     if (!navigator.onLine) {
       if (window.app && window.app.showToast) {
-        window.app.showToast('Conecte-se à internet para restaurar dados da nuvem.', 'warning');
+        window.app.showToast('Conecte-se à internet para enviar dados para a nuvem.', 'warning');
       }
       return;
     }
 
     if (window.app && window.app.showToast) {
-      window.app.showToast('Conectando à nuvem e resgatando medições salvas...', 'info');
+      window.app.showToast('Enviando todas as medições deste aparelho para a nuvem...', 'info');
     }
 
     try {
       const fb = await this.loadFirebase();
-      if (!fb) throw new Error('Não foi possível conectar ao Firebase.');
-
+      if (!fb) throw new Error('Firebase indisponível.');
       const firestore = fb.firestore();
-      const nomeP = (nomeProjeto || this.projetoVinculado || (window.app && window.app.projetoAtivo) || 'BR-153').trim();
-      const projId = this.normalizarProjetoId(nomeP);
 
-      let totalRecuperados = 0;
-
-      // 1. Busca na coleção compartilhada do projeto
-      try {
-        const snapProj = await firestore.collection('projects').doc(projId).collection('cubagens').get();
-        for (const doc of snapProj.docs) {
-          const rec = doc.data();
-          if (rec && rec.id) {
-            await window.cubagemDB.add(rec).catch(() => window.cubagemDB.update(rec));
-            totalRecuperados++;
-          }
+      const localRecords = await window.cubagemDB.getAll(false);
+      if (!localRecords || localRecords.length === 0) {
+        if (window.app && window.app.showToast) {
+          window.app.showToast('Nenhuma medição encontrada neste aparelho para enviar.', 'warning');
         }
-      } catch (eProj) {
-        console.warn('[Recovery] Erro na coleção do projeto:', eProj);
+        return;
       }
 
-      // 2. Se houver usuário autenticado, busca também na coleção pessoal
-      if (this.user && this.user.uid && !this.user.isLocal) {
+      let enviados = 0;
+      const userCol = firestore.collection('users').doc(this.user.uid).collection('cubagens');
+
+      for (const rec of localRecords) {
+        const cleanRec = this.cleanRecordForFirestore(rec);
+        await userCol.doc(rec.id).set(cleanRec);
+
+        const projName = rec.projeto || (window.app && window.app.projetoAtivo) || 'BR-153';
+        const projId = this.normalizarProjetoId(projName);
+        const recordCompartilhado = this.cleanRecordForFirestore({
+          ...cleanRec,
+          projeto: projName,
+          autorNome: cleanRec.autorNome || this.user.displayName || (this.user.email ? this.user.email.split('@')[0] : 'Campo'),
+          autorEmail: cleanRec.autorEmail || this.user.email || '',
+          autorUid: cleanRec.autorUid || this.user.uid || '',
+          updatedAt: Date.now()
+        });
+        await firestore.collection('projects').doc(projId).collection('cubagens').doc(rec.id).set(recordCompartilhado);
+        enviados++;
+      }
+
+      if (window.app && window.app.showToast) {
+        window.app.showToast(`✓ Sucesso! ${enviados} medições enviadas para a nuvem. Já estão disponíveis para abrir no seu PC!`, 'success', 8000);
+      }
+    } catch (err) {
+      console.error('[Cloud] Erro ao enviar medições:', err);
+      if (window.app && window.app.showToast) {
+        window.app.showToast(`Erro ao enviar para nuvem: ${err.message || 'Falha de permissão ou conexão'}`, 'danger', 7000);
+      }
+    }
+  }
+
+  /**
+   * Baixa e restaura todas as medições da conta na nuvem (Firestore) para o IndexedDB local
+   */
+  async baixarTudoDaNuvemParaAparelho() {
+    if (!navigator.onLine) {
+      if (window.app && window.app.showToast) {
+        window.app.showToast('Conecte-se à internet para baixar dados da nuvem.', 'warning');
+      }
+      return;
+    }
+    if (!this.user || this.user.isLocal) {
+      if (window.app && window.app.showToast) {
+        window.app.showToast('Faça login com sua conta Google ou E-mail para resgatar seus dados da nuvem.', 'warning', 7000);
+      }
+      this.exibirFormularioLogin('login');
+      return;
+    }
+
+    if (window.app && window.app.showToast) {
+      window.app.showToast('Buscando e baixando todas as medições da sua conta na nuvem...', 'info');
+    }
+
+    try {
+      const fb = await this.loadFirebase();
+      if (!fb) throw new Error('Firebase indisponível.');
+      const firestore = fb.firestore();
+
+      let totalBaixados = 0;
+      const idsJaProcessados = new Set();
+
+      // 1. Busca na coleção pessoal do usuário
+      try {
+        const snapUser = await firestore.collection('users').doc(this.user.uid).collection('cubagens').get();
+        for (const doc of snapUser.docs) {
+          const rec = doc.data();
+          if (rec && rec.id && !idsJaProcessados.has(rec.id)) {
+            idsJaProcessados.add(rec.id);
+            await window.cubagemDB.add(rec).catch(() => window.cubagemDB.update(rec));
+            totalBaixados++;
+          }
+        }
+      } catch (eUser) {
+        console.warn('[Cloud] Erro ao buscar na coleção do usuário:', eUser);
+      }
+
+      // 2. Busca em todos os projetos conhecidos (BR-153, Geral, etc.)
+      const projetosParaBuscar = new Set(['br_153', 'geral']);
+      const projAtual = (window.app && window.app.projetoAtivo) || localStorage.getItem('cubagem.projeto_ativo');
+      if (projAtual) projetosParaBuscar.add(this.normalizarProjetoId(projAtual));
+
+      try {
+        const localMetas = this.getProjetosMetaLocal();
+        Object.keys(localMetas).forEach(k => projetosParaBuscar.add(this.normalizarProjetoId(k)));
+      } catch (e) {}
+
+      try {
+        const snapProjs = await firestore.collection('projects').get();
+        snapProjs.forEach(pDoc => projetosParaBuscar.add(pDoc.id));
+      } catch (eProjs) {}
+
+      for (const pId of projetosParaBuscar) {
         try {
-          const snapUser = await firestore.collection('users').doc(this.user.uid).collection('cubagens').get();
-          for (const doc of snapUser.docs) {
+          const snapP = await firestore.collection('projects').doc(pId).collection('cubagens').get();
+          for (const doc of snapP.docs) {
             const rec = doc.data();
-            if (rec && rec.id) {
+            if (rec && rec.id && !idsJaProcessados.has(rec.id)) {
+              idsJaProcessados.add(rec.id);
               await window.cubagemDB.add(rec).catch(() => window.cubagemDB.update(rec));
-              totalRecuperados++;
+              totalBaixados++;
             }
           }
-        } catch (eUser) {
-          console.warn('[Recovery] Erro na coleção do usuário:', eUser);
+        } catch (eP) {
+          console.warn(`[Cloud] Erro no projeto ${pId}:`, eP);
         }
       }
 
@@ -709,18 +827,28 @@ class CubagemAuth {
         if (window.app.currentView === 'historico') {
           await window.app.carregarHistorico();
         }
-        if (totalRecuperados > 0) {
-          window.app.showToast(`✓ ${totalRecuperados} medições restauradas com sucesso da nuvem!`, 'success');
+      }
+
+      if (window.app && window.app.showToast) {
+        if (totalBaixados > 0) {
+          window.app.showToast(`✓ Sucesso! ${totalBaixados} medições resgatadas da nuvem e carregadas no seu aparelho!`, 'success', 8000);
         } else {
-          window.app.showToast('Nenhum registro encontrado na nuvem para este projeto.', 'info');
+          window.app.showToast('Nenhuma medição encontrada na nuvem. Se mediu pelo celular, abra o celular e clique em "Enviar Medições para a Nuvem" ou use "Enviar para PC via WhatsApp".', 'warning', 10000);
         }
       }
     } catch (err) {
-      console.error('[Recovery] Erro ao recuperar medições:', err);
+      console.error('[Cloud] Erro ao baixar medições:', err);
       if (window.app && window.app.showToast) {
-        window.app.showToast(`Erro na recuperação: ${err.message || 'Falha de conexão'}`, 'danger');
+        window.app.showToast(`Erro ao baixar da nuvem: ${err.message || 'Falha de conexão'}`, 'danger', 7000);
       }
     }
+  }
+
+  /**
+   * Atalho de compatibilidade para restaurar medições da nuvem
+   */
+  async recuperarTodasMedicoesProjeto(nomeProjeto = 'BR-153') {
+    return this.baixarTudoDaNuvemParaAparelho();
   }
 
   // =========================================================================
