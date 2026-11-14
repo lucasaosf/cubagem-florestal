@@ -28,7 +28,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.16';
+    this.appVersion = '2.10.17';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -1468,6 +1468,7 @@ class CubagemApp {
       record = {
         id: window.cubagemDB.generateId('PILHA-TORA'),
         tipo: 'tora',
+        origemMadeira: this.origemMadeira || 'Nativa',
         especie: especieFinal,
         projeto, autorNome, autorEmail, autorUid,
         data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel,
@@ -4383,7 +4384,7 @@ class CubagemApp {
 
   /**
    * Consolida o balanço completo de Entrada (Cubagem) vs Retirada (Caminhões)
-   * agrupado por KM para o projeto ativo.
+   * agrupado por KM para o projeto ativo, com desdobramento por origem (Nativa vs Exótica).
    */
   async obterBalancoPorKm(nomeProjeto = null) {
     const records = await this.obterRegistrosDoProjeto(nomeProjeto);
@@ -4401,7 +4402,11 @@ class CubagemApp {
           km: displayKm,
           key: key,
           volEntrada: 0,
+          volEntradaNativa: 0,
+          volEntradaExotica: 0,
           volRetirada: 0,
+          volRetiradaNativa: 0,
+          volRetiradaExotica: 0,
           countEntrada: 0,
           countRetirada: 0,
           pilhasCount: 0,
@@ -4418,33 +4423,116 @@ class CubagemApp {
         ? window.CubagemCalculator.obterVolumeEfetivo(r)
         : (Number(r.volumeGeometrico) || 0);
 
+      const rawOrig = String(r.origemMadeira || r.origem || '').trim().toLowerCase();
+      const isExotica = rawOrig.includes('exot') || rawOrig.includes('exót');
+
       if (r.tipo === 'caminhao') {
         item.volRetirada += vol;
         item.countRetirada += 1;
         item.caminhoesCount += 1;
+
+        if (Array.isArray(r.toras) && r.toras.length > 0) {
+          let somouTora = false;
+          r.toras.forEach(t => {
+            const vTora = (window.CubagemCalculator && typeof window.CubagemCalculator.parseNumber === 'function')
+              ? (window.CubagemCalculator.parseNumber(t.volumeGeometrico) || 0)
+              : (Number(t.volumeGeometrico) || 0);
+            if (vTora > 0) {
+              somouTora = true;
+              const tOrig = String(t.origemMadeira || t.origem || r.origemMadeira || 'Nativa').toLowerCase().includes('exot') ? 'Exótica' : 'Nativa';
+              if (tOrig === 'Exótica') item.volRetiradaExotica += vTora;
+              else item.volRetiradaNativa += vTora;
+            }
+          });
+          if (!somouTora) {
+            if (isExotica) item.volRetiradaExotica += vol;
+            else item.volRetiradaNativa += vol;
+          }
+        } else {
+          if (isExotica) item.volRetiradaExotica += vol;
+          else item.volRetiradaNativa += vol;
+        }
       } else {
         item.volEntrada += vol;
         item.countEntrada += 1;
         if (r.tipo === 'pilha') item.pilhasCount += 1;
         if (r.tipo === 'tora') item.torasCount += 1;
+
+        if (Array.isArray(r.toras) && r.toras.length > 0) {
+          let somouTora = false;
+          r.toras.forEach(t => {
+            const vTora = (window.CubagemCalculator && typeof window.CubagemCalculator.parseNumber === 'function')
+              ? (window.CubagemCalculator.parseNumber(t.volumeGeometrico) || 0)
+              : (Number(t.volumeGeometrico) || 0);
+            if (vTora > 0) {
+              somouTora = true;
+              const tOrig = String(t.origemMadeira || t.origem || r.origemMadeira || 'Nativa').toLowerCase().includes('exot') ? 'Exótica' : 'Nativa';
+              if (tOrig === 'Exótica') item.volEntradaExotica += vTora;
+              else item.volEntradaNativa += vTora;
+            }
+          });
+          if (!somouTora) {
+            if (isExotica) item.volEntradaExotica += vol;
+            else item.volEntradaNativa += vol;
+          }
+        } else {
+          if (isExotica) item.volEntradaExotica += vol;
+          else item.volEntradaNativa += vol;
+        }
       }
     });
 
     const resultado = [];
     kmsMap.forEach(item => {
-      const saldo = item.volEntrada - item.volRetirada;
+      const saldoTotal = Math.max(0, item.volEntrada - item.volRetirada);
+      let saldoNativa = Math.max(0, item.volEntradaNativa - item.volRetiradaNativa);
+      let saldoExotica = Math.max(0, item.volEntradaExotica - item.volRetiradaExotica);
+
+      if (saldoTotal <= 0.005) {
+        saldoNativa = 0;
+        saldoExotica = 0;
+      } else {
+        const somaPartes = saldoNativa + saldoExotica;
+        if (somaPartes > 0 && Math.abs(somaPartes - saldoTotal) > 0.05) {
+          saldoNativa = (saldoNativa / somaPartes) * saldoTotal;
+          saldoExotica = (saldoExotica / somaPartes) * saldoTotal;
+        } else if (somaPartes <= 0 && item.volEntrada > 0) {
+          const propNativa = (item.volEntradaNativa || 0) / (item.volEntrada || 1);
+          saldoNativa = saldoTotal * propNativa;
+          saldoExotica = saldoTotal * (1 - propNativa);
+        }
+      }
+
+      let percNativa = 0;
+      let percExotica = 0;
+
+      if (saldoTotal > 0.005) {
+        const base = saldoNativa + saldoExotica;
+        if (base > 0) {
+          percNativa = Math.round((saldoNativa / base) * 100);
+          percExotica = 100 - percNativa;
+        }
+      } else if (item.volEntrada > 0) {
+        percNativa = Math.round(((item.volEntradaNativa || 0) / item.volEntrada) * 100);
+        percExotica = 100 - percNativa;
+      }
+
       let perc = 0;
       if (item.volEntrada > 0) {
         perc = Math.round((item.volRetirada / item.volEntrada) * 100);
       } else if (item.volRetirada > 0) {
         perc = 100;
       }
-      const concluido = (item.volEntrada > 0 && saldo <= 0.005) || (item.volEntrada === 0 && item.volRetirada > 0);
+      const concluido = (item.volEntrada > 0 && saldoTotal <= 0.005) || (item.volEntrada === 0 && item.volRetirada > 0);
 
       resultado.push({
         ...item,
-        saldo: Math.max(0, saldo),
-        saldoReal: saldo,
+        saldo: saldoTotal,
+        saldoReal: item.volEntrada - item.volRetirada,
+        saldoNativa: Math.max(0, saldoNativa),
+        saldoExotica: Math.max(0, saldoExotica),
+        percNativa: Math.min(100, Math.max(0, percNativa)),
+        percExotica: Math.min(100, Math.max(0, percExotica)),
         percentualRetirado: Math.min(100, Math.max(0, perc)),
         percentualReal: perc,
         concluido: concluido
@@ -4492,8 +4580,11 @@ class CubagemApp {
           const labelInfo = b.concluido
             ? '✓ 100% limpo'
             : (this.tipoCubagem === 'caminhao' ? `Falta ${fNum(b.saldo)}m³` : `${fNum(b.saldo)}m³`);
+          const tipText = b.concluido
+            ? `${b.km} 100% Retirado (${b.percNativa}% Nativa • ${b.percExotica}% Exótica)`
+            : `${b.km} — Falta ${fNum(b.saldo, 2)} m³ a retirar (${b.percNativa}% Nativa • ${b.percExotica}% Exótica)`;
           return `
-            <button type="button" class="sugestao-km-pill ${isAtivo ? 'active' : ''} ${b.concluido ? 'concluido' : ''}" onclick="app.selecionarKmSugestaoNova('${this.escapeHtml(b.km)}')">
+            <button type="button" class="sugestao-km-pill ${isAtivo ? 'active' : ''} ${b.concluido ? 'concluido' : ''}" onclick="app.selecionarKmSugestaoNova('${this.escapeHtml(b.km)}')" title="${this.escapeHtml(tipText)}">
               <span>${b.concluido ? '✓' : '🛣️'}</span> ${this.escapeHtml(b.km)} <small style="opacity: 0.85;">(${labelInfo})</small>
             </button>
           `;
@@ -4629,10 +4720,26 @@ class CubagemApp {
               </div>
             `;
           } else {
+            const origCarga = this.origemMadeira || 'Nativa';
+            let restoNativa = kmData.saldoNativa;
+            let restoExotica = kmData.saldoExotica;
+            if (origCarga === 'Exótica') {
+              restoExotica = Math.max(0, restoExotica - volAtual);
+            } else {
+              restoNativa = Math.max(0, restoNativa - volAtual);
+            }
+            const restoTotal = restoNativa + restoExotica;
+            let restoPercNat = restoTotal > 0 ? Math.round((restoNativa / restoTotal) * 100) : 0;
+            let restoPercExo = 100 - restoPercNat;
+
             forecastHtml = `
               <div class="km-forecast-callout">
-                📉 <strong>Carga em Andamento:</strong> Esta viagem retira <strong>${fNum(volAtual, 3)} m³</strong>.<br>
-                Restará ainda um saldo de <strong>${fNum(saldoApos, 3)} m³</strong> no <strong>${this.escapeHtml(displayKm)}</strong> para os próximos caminhões (${percApos}% concluído).
+                📉 <strong>Carga em Andamento (${this.escapeHtml(origCarga)}):</strong> Esta viagem retira <strong>${fNum(volAtual, 3)} m³</strong>.<br>
+                Restará ainda um saldo de <strong>${fNum(saldoApos, 3)} m³</strong> no <strong>${this.escapeHtml(displayKm)}</strong> (${percApos}% concluído):
+                <div style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+                  <span class="km-origem-pill nativa">🌿 <strong>${restoPercNat}%</strong> Nativa (${fNum(restoNativa, 2)} m³)</span>
+                  <span class="km-origem-pill exotica">🌲 <strong>${restoPercExo}%</strong> Exótica (${fNum(restoExotica, 2)} m³)</span>
+                </div>
               </div>
             `;
           }
@@ -4672,6 +4779,14 @@ class CubagemApp {
           <div class="km-progress-wrapper">
             <div class="km-progress-bar">
               <div class="km-progress-fill ${concluiComEstaCarga ? 'concluido' : ''}" style="width: ${volAtual > 0 ? percApos : percAntes}%;"></div>
+            </div>
+          </div>
+
+          <div class="km-origem-balance-row">
+            <span class="km-origem-label">🪵 Falta retirar neste Km:</span>
+            <div class="km-origem-pills-wrap">
+              <span class="km-origem-pill nativa" title="Volume restante de madeira nativa a retirar">🌿 <strong>${kmData.percNativa}%</strong> Nativa (${fNum(kmData.saldoNativa, 2)} m³)</span>
+              <span class="km-origem-pill exotica" title="Volume restante de madeira exótica a retirar">🌲 <strong>${kmData.percExotica}%</strong> Exótica (${fNum(kmData.saldoExotica, 2)} m³)</span>
             </div>
           </div>
 
@@ -4729,6 +4844,14 @@ class CubagemApp {
               <div class="km-stat-box">
                 <div class="km-stat-val">${fNum(saldoAntes, 2)} m³</div>
                 <div class="km-stat-lbl">🪵 Saldo Anterior</div>
+              </div>
+            </div>
+
+            <div class="km-origem-balance-row">
+              <span class="km-origem-label">Composição acumulada no Km:</span>
+              <div class="km-origem-pills-wrap">
+                <span class="km-origem-pill nativa">🌿 <strong>${kmData.percNativa}%</strong> Nativa (${fNum(kmData.saldoNativa, 2)} m³)</span>
+                <span class="km-origem-pill exotica">🌲 <strong>${kmData.percExotica}%</strong> Exótica (${fNum(kmData.saldoExotica, 2)} m³)</span>
               </div>
             </div>
 
@@ -4806,7 +4929,15 @@ class CubagemApp {
             <div class="proj-km-card-stats">
               <div>🟢 <strong>Cubado:</strong> ${fNum(b.volEntrada, 2)} m³<small style="opacity:0.8;">${subEntrada}</small></div>
               <div>🚚 <strong>Retirado:</strong> ${fNum(b.volRetirada, 2)} m³<small style="opacity:0.8;"> (${b.caminhoesCount} carg.)</small></div>
-              <div>🪵 <strong>Saldo:</strong> <strong style="color: ${concl ? '#4ade80' : 'var(--gold)'};">${fNum(b.saldo, 2)} m³</strong></div>
+              <div>🪵 <strong>Saldo a Retirar:</strong> <strong style="color: ${concl ? '#4ade80' : 'var(--gold)'};">${fNum(b.saldo, 2)} m³</strong></div>
+            </div>
+
+            <div class="km-origem-balance-row">
+              <span class="km-origem-label">${concl ? 'Madeira Retirada do Km:' : 'Falta Retirar neste Km:'}</span>
+              <div class="km-origem-pills-wrap">
+                <span class="km-origem-pill nativa" title="Volume de madeira nativa ${concl ? 'retirado' : 'restante a retirar'}">🌿 <strong>${b.percNativa}%</strong> Nativa (${fNum(concl ? b.volEntradaNativa : b.saldoNativa, 2)} m³)</span>
+                <span class="km-origem-pill exotica" title="Volume de madeira exótica ${concl ? 'retirado' : 'restante a retirar'}">🌲 <strong>${b.percExotica}%</strong> Exótica (${fNum(concl ? b.volEntradaExotica : b.saldoExotica, 2)} m³)</span>
+              </div>
             </div>
 
             <div class="proj-km-card-actions">

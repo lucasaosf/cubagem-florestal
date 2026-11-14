@@ -1184,11 +1184,13 @@ class CubagemExcelExport {
         { key: 'qtd_cargas', width: 14 },
         { key: 'saldo_restante', width: 22 },
         { key: 'perc_retirado', width: 16 },
+        { key: 'perc_nativa', width: 18 },
+        { key: 'perc_exotica', width: 18 },
         { key: 'status_km', width: 22 },
         { key: 'responsaveis', width: 26 }
       ];
 
-      wsKm.mergeCells('A1:K1');
+      wsKm.mergeCells('A1:M1');
       const hKm = wsKm.getCell('A1');
       hKm.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — BALANÇO DE CUBAGEM & RETIRADA POR KM';
       hKm.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
@@ -1199,7 +1201,7 @@ class CubagemExcelExport {
       const kmCols = [
         '#', 'Km / Localização', 'Vol. Cubado Entrada (m³)', 'Qtd. Pilhas', 'Qtd. Toras',
         'Vol. Retirado Saída (m³)', 'Cargas Caminhão', 'Saldo Restante no Km (m³)',
-        '% Retirado', 'Status de Liberação', 'Equipe / Responsáveis'
+        '% Retirado', '% Nativa a Retirar', '% Exótica a Retirar', 'Status de Liberação', 'Equipe / Responsáveis'
       ];
 
       const rHdrKm = wsKm.addRow(kmCols);
@@ -1228,7 +1230,11 @@ class CubagemExcelExport {
           kmMap.set(k, {
             km: dKm,
             volEntrada: 0,
+            volEntradaNativa: 0,
+            volEntradaExotica: 0,
             volRetirada: 0,
+            volRetiradaNativa: 0,
+            volRetiradaExotica: 0,
             pilhasCount: 0,
             torasCount: 0,
             caminhoesCount: 0,
@@ -1243,23 +1249,61 @@ class CubagemExcelExport {
         const resp = r.autorNome || r.responsavel || '';
         if (resp) item.responsaveis.add(resp);
 
+        const rawOrig = String(r.origemMadeira || r.origem || '').trim().toLowerCase();
+        const isExotica = rawOrig.includes('exot') || rawOrig.includes('exót');
+
         if (r.tipo === 'caminhao') {
           item.volRetirada += v;
           item.caminhoesCount += 1;
+          if (isExotica) item.volRetiradaExotica += v;
+          else item.volRetiradaNativa += v;
         } else {
           item.volEntrada += v;
           if (r.tipo === 'pilha') item.pilhasCount += 1;
           if (r.tipo === 'tora') item.torasCount += 1;
+          if (isExotica) item.volEntradaExotica += v;
+          else item.volEntradaNativa += v;
         }
       });
 
       const kmList = Array.from(kmMap.values()).map(it => {
-        const saldo = it.volEntrada - it.volRetirada;
+        const saldo = Math.max(0, it.volEntrada - it.volRetirada);
+        let saldoNat = Math.max(0, it.volEntradaNativa - it.volRetiradaNativa);
+        let saldoExo = Math.max(0, it.volEntradaExotica - it.volRetiradaExotica);
+
+        if (saldo <= 0.005) {
+          saldoNat = 0;
+          saldoExo = 0;
+        } else {
+          const somaP = saldoNat + saldoExo;
+          if (somaP > 0 && Math.abs(somaP - saldo) > 0.05) {
+            saldoNat = (saldoNat / somaP) * saldo;
+            saldoExo = (saldoExo / somaP) * saldo;
+          }
+        }
+
+        let pNat = 0;
+        let pExo = 0;
+        if (saldo > 0.005) {
+          const base = saldoNat + saldoExo;
+          if (base > 0) {
+            pNat = Math.round((saldoNat / base) * 100);
+            pExo = 100 - pNat;
+          }
+        } else if (it.volEntrada > 0) {
+          pNat = Math.round(((it.volEntradaNativa || 0) / it.volEntrada) * 100);
+          pExo = 100 - pNat;
+        }
+
         const perc = it.volEntrada > 0 ? Math.round((it.volRetirada / it.volEntrada) * 100) : (it.volRetirada > 0 ? 100 : 0);
         const concluido = (it.volEntrada > 0 && saldo <= 0.005) || (it.volEntrada === 0 && it.volRetirada > 0);
         return {
           ...it,
-          saldo: Math.max(0, saldo),
+          saldo,
+          saldoNat,
+          saldoExo,
+          percNativa: Math.min(100, Math.max(0, pNat)),
+          percExotica: Math.min(100, Math.max(0, pExo)),
           perc: Math.min(100, Math.max(0, perc)),
           concluido
         };
@@ -1273,14 +1317,22 @@ class CubagemExcelExport {
       });
 
       let totEntradaKm = 0;
+      let totEntradaNat = 0;
+      let totEntradaExo = 0;
       let totRetiradaKm = 0;
+      let totRetiradaNat = 0;
+      let totRetiradaExo = 0;
       let totPilhasKm = 0;
       let totTorasKm = 0;
       let totCaminhoesKm = 0;
 
       kmList.forEach((it, idx) => {
         totEntradaKm += it.volEntrada;
+        totEntradaNat += it.volEntradaNativa;
+        totEntradaExo += it.volEntradaExotica;
         totRetiradaKm += it.volRetirada;
+        totRetiradaNat += it.volRetiradaNativa;
+        totRetiradaExo += it.volRetiradaExotica;
         totPilhasKm += it.pilhasCount;
         totTorasKm += it.torasCount;
         totCaminhoesKm += it.caminhoesCount;
@@ -1295,6 +1347,8 @@ class CubagemExcelExport {
           it.caminhoesCount,
           it.saldo,
           `${it.perc}%`,
+          `${it.percNativa}%`,
+          `${it.percExotica}%`,
           it.concluido ? '✓ 100% RETIRADO' : 'EM ANDAMENTO',
           Array.from(it.responsaveis).join(', ') || '-'
         ]);
@@ -1315,8 +1369,8 @@ class CubagemExcelExport {
             c.numFmt = '#,##0';
             c.alignment = { horizontal: 'center' };
           }
-          if (colNum === 9) c.alignment = { horizontal: 'center' };
-          if (colNum === 10) {
+          if (colNum === 9 || colNum === 10 || colNum === 11) c.alignment = { horizontal: 'center' };
+          if (colNum === 12) {
             c.alignment = { horizontal: 'center' };
             c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: it.concluido ? '0E8038' : 'B45309' } };
           }
@@ -1324,6 +1378,13 @@ class CubagemExcelExport {
       });
 
       // Linha de Totais
+      const totSaldo = Math.max(0, totEntradaKm - totRetiradaKm);
+      const totSaldoNat = Math.max(0, totEntradaNat - totRetiradaNat);
+      const totSaldoExo = Math.max(0, totEntradaExo - totRetiradaExo);
+      const totBase = totSaldoNat + totSaldoExo;
+      const totPercNat = totBase > 0 ? Math.round((totSaldoNat / totBase) * 100) : (totEntradaKm > 0 ? Math.round((totEntradaNat / totEntradaKm) * 100) : 0);
+      const totPercExo = 100 - totPercNat;
+
       const totKmRow = wsKm.addRow([
         'TOTAIS',
         `${kmList.length} KMs`,
@@ -1332,9 +1393,11 @@ class CubagemExcelExport {
         totTorasKm,
         totRetiradaKm,
         totCaminhoesKm,
-        Math.max(0, totEntradaKm - totRetiradaKm),
+        totSaldo,
         totEntradaKm > 0 ? `${Math.min(100, Math.round((totRetiradaKm / totEntradaKm) * 100))}%` : '100%',
-        totEntradaKm > 0 && (totEntradaKm - totRetiradaKm <= 0.005) ? '✓ 100% RETIRADO' : 'EM ANDAMENTO',
+        `${totPercNat}%`,
+        `${totPercExo}%`,
+        totEntradaKm > 0 && (totSaldo <= 0.005) ? '✓ 100% RETIRADO' : 'EM ANDAMENTO',
         'Consolidado da Rodovia'
       ]);
       totKmRow.height = 24;
@@ -1342,7 +1405,7 @@ class CubagemExcelExport {
         c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
         c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
         c.border = doubleBottomBorder;
-        if (colNum === 1 || colNum === 2 || colNum === 9 || colNum === 10) c.alignment = { horizontal: 'center', vertical: 'middle' };
+        if (colNum === 1 || colNum === 2 || colNum === 9 || colNum === 10 || colNum === 11 || colNum === 12) c.alignment = { horizontal: 'center', vertical: 'middle' };
         if (colNum === 3 || colNum === 6 || colNum === 8) {
           c.numFmt = '#,##0.000 "m³"';
           c.alignment = { horizontal: 'right', vertical: 'middle' };

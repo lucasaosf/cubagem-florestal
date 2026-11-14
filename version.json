@@ -1,12 +1,12 @@
 {
-  "v": "2.10.16",
-  "nome": "2.10.16",
+  "v": "2.10.17",
+  "nome": "2.10.17",
   "data": "2026-11-14",
   "novidades": [
-    "Controle e Balanço por KM: Definição de Km na cubagem de pilhas, toras e caminhões com soma automática e acompanhamento de estoque por trecho",
-    "Previsão em Tempo Real na Retirada: Ao medir a carga do caminhão, saiba na hora se conclui 100% da retirada do Km ou quanto restará no pátio",
-    "Painel de Retiradas por Km no Projeto: Gestão com barra de progresso visual, volume cubado, retirado e selo '✓ 100% RETIRADO'",
-    "Sugestões Rápidas de KMs: Datalist e pílulas interativas com os KMs existentes do projeto para seleção com 1 toque",
-    "Aba 'Balanço por Km' no Excel: Relatório multipasta profissional com demonstrativo consolidado de retiradas e saldo por trecho"
+    "Porcentagem de Nativa e Exótica no Saldo por KM: Exibição exata do percentual e volume restante de madeira Nativa e Exótica a retirar em cada Km",
+    "Previsão por Origem na Carga do Caminhão: O card live atualiza quanto restará de madeira nativa e exótica após a saída do caminhão",
+    "Balanço Consolidado no Painel do Projeto: Pílulas destacando '% Nativa' e '% Exótica' em cada trecho monitorado da rodovia",
+    "Aba Excel com % Nativa e % Exótica: Planilha exportada com colunas dedicadas de percentual por origem para cada KM",
+    "Página Inicial com Total Consolidado: Mantido o volume total geral de quanto falta retirar nos pátios de forma limpa e direta"
   ]
 }
