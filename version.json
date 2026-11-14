@@ -1,11 +1,11 @@
 {
-  "v": "2.10.14",
-  "nome": "2.10.14",
+  "v": "2.10.15",
+  "nome": "2.10.15",
   "data": "2026-11-14",
   "novidades": [
-    "Opção de Excluir Projeto com Confirmação: Botão dedicado de exclusão nos cards de projeto e no painel com pergunta clara de confirmação antes de apagar",
-    "Segurança Operacional: Exibição prévia do volume total, medições e criador da frente com aviso de segurança contra toques acidentais",
-    "Limpeza Integrada no Aparelho e Nuvem: Exclusão completa das medições do projeto no banco local e no Firestore com alternância automática do projeto ativo",
-    "Pastas & Projetos da Conta na Capa: Seção interativa com medições, integrantes e download de planilha Excel customizada"
+    "Sugestões de Projetos na Nova Medição: Pílulas interativas e autocomplete com todas as frentes já criadas direto no campo de projeto",
+    "Criar Novo Projeto com 1 Toque: Botão '➕ Novo Projeto' integrado às informações operacionais da cubagem com ativação imediata",
+    "Seleção Ágil em Campo: Toque em qualquer projeto sugerido para alternar e selecionar a frente de trabalho sem precisar redigitar",
+    "Opção de Excluir Projeto com Confirmação: Exclusão segura nos cards e no painel com confirmação prévia"
   ]
 }

@@ -28,7 +28,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.14';
+    this.appVersion = '2.10.15';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -743,6 +743,7 @@ class CubagemApp {
       this.resetarDataHoraAtual();
       this.verificarERestaurarRascunhoAoNavegarParaNova();
       this.atualizarTextoBotaoSalvar();
+      await this.renderizarSugestoesProjetosNova();
     } else if (viewId === 'historico') await this.carregarHistorico();
     else if (viewId === 'relatorios') await this.atualizarRelatorioPeriodo();
     else if (viewId === 'configuracoes') await this.carregarCamposConfiguracoes();
@@ -4131,6 +4132,9 @@ class CubagemApp {
 
     // Atualiza lista de pastas de projetos vinculados na capa
     this.renderizarProjetosCapa().catch(() => {});
+
+    // Atualiza sugestões de projetos no formulário de nova medição
+    this.renderizarSugestoesProjetosNova().catch(() => {});
   }
 
   definirProjetoAtivo(nomeProjeto, sincronizarNuvem = true) {
@@ -4164,6 +4168,137 @@ class CubagemApp {
       this.definirProjetoAtivo(limpo, true);
       this.showToast(`Projeto ativo alterado para "${limpo}".`, 'info');
     }
+  }
+
+  /**
+   * Renderiza a lista de projetos existentes como sugestões clicáveis e no datalist
+   * no formulário de Nova Medição
+   */
+  async renderizarSugestoesProjetosNova() {
+    const container = document.getElementById('containerSugestoesProjetosNova');
+    const datalist = document.getElementById('listaSugestoesProjetos');
+    const cubProjInput = document.getElementById('cubProjeto');
+
+    const valorAtual = ((cubProjInput ? cubProjInput.value : '') || this.projetoAtivo || 'BR-153').trim();
+
+    try {
+      const projetos = await this.obterProjetosVinculadosUsuario();
+      if (!projetos.includes(valorAtual) && valorAtual) {
+        projetos.unshift(valorAtual);
+      }
+
+      // 1. Atualiza o datalist nativo do input
+      if (datalist) {
+        datalist.innerHTML = projetos.map(p => `
+          <option value="${this.escapeHtml(p)}">
+        `).join('');
+      }
+
+      // 2. Atualiza as pílulas (chips) clicáveis
+      if (container) {
+        const chipsHtml = projetos.map(p => {
+          const isAtivo = (p.trim().toLowerCase() === valorAtual.toLowerCase());
+          return `
+            <button type="button" class="sugestao-proj-pill ${isAtivo ? 'active' : ''}" onclick="app.selecionarProjetoSugestaoNova('${this.escapeHtml(p)}')">
+              <span>📁</span> ${this.escapeHtml(p)} ${isAtivo ? '✓' : ''}
+            </button>
+          `;
+        });
+
+        // Botão/pílula rápida de criar novo projeto no final da lista
+        chipsHtml.push(`
+          <button type="button" class="sugestao-proj-pill-criar" onclick="app.abrirCriacaoNovoProjetoNova()" title="Criar ou adicionar nova frente de trabalho">
+            <span>➕</span> Novo Projeto
+          </button>
+        `);
+
+        container.innerHTML = chipsHtml.join('');
+      }
+    } catch (e) {
+      console.warn('[NovaProjeto] Erro ao renderizar sugestões de projetos:', e);
+    }
+  }
+
+  /**
+   * Seleciona um projeto a partir das sugestões no formulário
+   */
+  selecionarProjetoSugestaoNova(nomeProjeto) {
+    const nome = (nomeProjeto || 'BR-153').trim();
+    const cubProjInput = document.getElementById('cubProjeto');
+    if (cubProjInput) {
+      cubProjInput.value = nome;
+    }
+    this.definirProjetoAtivo(nome, true);
+    this.renderizarSugestoesProjetosNova();
+    this.showToast(`Frente ativa alterada para "${nome}".`, 'info', 2500);
+  }
+
+  /**
+   * Filtra as sugestões conforme o usuário digita no campo
+   */
+  filtrarSugestoesProjetosNova(valor) {
+    const val = (valor || '').trim().toLowerCase();
+    const pills = document.querySelectorAll('#containerSugestoesProjetosNova .sugestao-proj-pill');
+    pills.forEach(pill => {
+      const txt = pill.textContent.trim().toLowerCase();
+      if (!val || txt.includes(val)) {
+        pill.style.display = 'inline-flex';
+      } else {
+        pill.style.display = 'none';
+      }
+    });
+  }
+
+  /**
+   * Abre o modal rápido para criação de uma nova frente de trabalho direto no formulário
+   */
+  abrirCriacaoNovoProjetoNova() {
+    const input = document.getElementById('inputNovoProjetoRapidoNome');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 150);
+    }
+    this.abrirModal('modalCriarNovoProjetoRapido');
+  }
+
+  /**
+   * Confirma e ativa a nova frente de trabalho criada pelo usuário
+   */
+  async confirmarCriacaoNovoProjetoRapido() {
+    const input = document.getElementById('inputNovoProjetoRapidoNome');
+    const nome = input ? input.value.trim() : '';
+
+    if (!nome) {
+      this.showToast('Digite o nome do novo projeto.', 'warning');
+      if (input) input.focus();
+      return;
+    }
+
+    if (this.auth) {
+      const meta = await this.auth.obterMetaProjeto(nome);
+      const isCriador = this.auth.isUsuarioCriador(meta);
+      const isMembro = this.auth.isUsuarioMembroAutorizado(meta);
+
+      if (this.auth.user && !isCriador && !isMembro) {
+        this.showToast(`⛔ Acesso restrito: o projeto "${nome}" já pertence a outro usuário.`, 'danger', 6000);
+        return;
+      }
+
+      if (this.auth.user && !meta.criadorEmail) {
+        await this.auth.reivindicarCriacaoProjeto(nome);
+      }
+    }
+
+    this.definirProjetoAtivo(nome, true);
+
+    const cubProjInput = document.getElementById('cubProjeto');
+    if (cubProjInput) {
+      cubProjInput.value = nome;
+    }
+
+    this.fecharModal('modalCriarNovoProjetoRapido');
+    await this.renderizarSugestoesProjetosNova();
+    this.showToast(`✓ Frente "${nome}" criada e selecionada para esta medição!`, 'success');
   }
 
   async abrirModalProjeto(nomeProjeto = null, aba = null) {

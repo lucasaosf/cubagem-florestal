@@ -2786,6 +2786,131 @@ body[data-active-tab="inicio"] .cover-screen,
   color: #b91c1c;
 }
 
+/* ========================================================================= */
+/* SUGESTÕES DE PROJETOS NO FORMULÁRIO DE NOVA MEDIÇÃO                      */
+/* ========================================================================= */
+.btn-novo-proj-inline {
+  background: none;
+  border: none;
+  color: var(--gold);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: opacity 0.2s ease, text-decoration 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.btn-novo-proj-inline:hover {
+  text-decoration: underline;
+  opacity: 0.9;
+}
+
+.input-with-action-group {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.input-with-action-group .form-control {
+  flex: 1;
+}
+
+.btn-action-input-proj {
+  background: rgba(178, 143, 89, 0.15);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-action-input-proj:hover {
+  background: var(--gold);
+  color: #0E2515;
+}
+
+.sugestoes-projetos-wrapper {
+  margin-top: 6px;
+}
+
+.sugestoes-projetos-header {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.sugestoes-projetos-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 86px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.sugestao-proj-pill {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.sugestao-proj-pill:hover {
+  border-color: var(--gold);
+  background: rgba(178, 143, 89, 0.12);
+  transform: translateY(-1px);
+}
+
+.sugestao-proj-pill.active {
+  background: rgba(178, 143, 89, 0.22);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.sugestao-proj-pill-criar {
+  background: rgba(74, 150, 90, 0.15);
+  border: 1px dashed rgba(74, 150, 90, 0.5);
+  color: #4ade80;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.sugestao-proj-pill-criar:hover {
+  background: rgba(74, 150, 90, 0.3);
+  border-color: #4ade80;
+  transform: translateY(-1px);
+}
+
 /* Grupo de Ações / Botões */
 .cover-actions-group {
   width: 100%;

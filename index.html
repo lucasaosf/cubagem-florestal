@@ -9,19 +9,19 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E2515">
   <meta name="background-color" content="#0E2515">
   <meta name="description" content="Aplicativo florestal para cubagem de caminhões, pilhas e toras. Desenvolvido por Lucas Aøsf para BIOKURI Pesquisa e Soluções Ambientais.">
-  <link rel="manifest" href="manifest.webmanifest?v=2.10.14">
-  <link rel="icon" href="icons/favicon.png?v=2.10.14" type="image/png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.10.14">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.10.14">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.10.14">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.10.14">
+  <link rel="manifest" href="manifest.webmanifest?v=2.10.15">
+  <link rel="icon" href="icons/favicon.png?v=2.10.15" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.10.15">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.10.15">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.10.15">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.10.15">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="#0E2515">
   <meta name="msapplication-TileColor" content="#0E2515">
-  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.10.14">
+  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.10.15">
   <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <script>
@@ -41,7 +41,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css?v=2.10.14">
+  <link rel="stylesheet" href="css/styles.css?v=2.10.15">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -273,7 +273,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill" style="border: 1px solid var(--gold); color: var(--gold);" id="coverVersionBadge">v2.10.14</span>
+            <span class="cover-ver-pill" style="border: 1px solid var(--gold); color: var(--gold);" id="coverVersionBadge">v2.10.15</span>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalComoUsar()">Como usar</button>
@@ -358,8 +358,31 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="cubProjeto">📁 Projeto / Frente da Equipe <span class="required">*</span></label>
-                <input type="text" id="cubProjeto" class="form-control" placeholder="Ex: BR-153 ou Pátio Sul" required onchange="app.sincronizarInputProjetoComApp(this.value)">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                  <label class="form-label" for="cubProjeto" style="margin-bottom: 0;">📁 Projeto / Frente <span class="required">*</span></label>
+                  <button type="button" class="btn-novo-proj-inline" onclick="app.abrirCriacaoNovoProjetoNova()" title="Criar ou adicionar nova frente de trabalho">
+                    ➕ Novo Projeto
+                  </button>
+                </div>
+                <div class="input-with-action-group">
+                  <input type="text" id="cubProjeto" class="form-control" placeholder="Selecione abaixo ou digite..." list="listaSugestoesProjetos" required oninput="app.filtrarSugestoesProjetosNova(this.value)" onchange="app.sincronizarInputProjetoComApp(this.value)">
+                  <button type="button" class="btn-action-input-proj" onclick="app.abrirCriacaoNovoProjetoNova()" title="Criar Novo Projeto">
+                    ➕ Novo
+                  </button>
+                </div>
+                <datalist id="listaSugestoesProjetos">
+                  <!-- Preenchido dinamicamente por app.renderizarSugestoesProjetosNova() -->
+                </datalist>
+
+                <!-- Sugestões visuais em pílulas (chips) dos projetos já criados -->
+                <div class="sugestoes-projetos-wrapper">
+                  <div class="sugestoes-projetos-header">
+                    <span>Projetos existentes (toque para selecionar):</span>
+                  </div>
+                  <div id="containerSugestoesProjetosNova" class="sugestoes-projetos-pills">
+                    <!-- Preenchido dinamicamente por app.renderizarSugestoesProjetosNova() -->
+                  </div>
+                </div>
               </div>
               <div class="form-group">
                 <label class="form-label" for="cubResponsavel">Responsável <span class="required">*</span></label>
@@ -1034,7 +1057,7 @@
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
-            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.10.14</span><br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.10.15</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
@@ -1162,6 +1185,36 @@
         <button type="button" class="btn btn-secondary" onclick="app.fecharModal('modalExcluirProjeto')">Cancelar</button>
         <button type="button" class="btn btn-danger" id="btnConfirmarExcluirProjeto" onclick="app.executarExclusaoProjeto()">
           Sim, Excluir Projeto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CRIAR NOVO PROJETO RÁPIDO NO FORMULÁRIO -->
+  <div id="modalCriarNovoProjetoRapido" class="modal-overlay" onclick="if(event.target===this) app.fecharModal('modalCriarNovoProjetoRapido')">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--gold); display: flex; align-items: center; gap: 6px;">
+          <span>📁</span> Criar Nova Frente de Trabalho
+        </h3>
+        <button class="modal-close-btn" onclick="app.fecharModal('modalCriarNovoProjetoRapido')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--ink); margin-bottom: 12px; line-height: 1.45;">
+          Digite o nome da nova pasta / projeto da equipe. Você será o Criador oficial e poderá registrar cubagens de toras, pilhas e retiradas de caminhão nela.
+        </p>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" for="inputNovoProjetoRapidoNome" style="font-weight: 700;">Nome do Projeto <span class="required">*</span></label>
+          <input type="text" id="inputNovoProjetoRapidoNome" class="form-control" placeholder="Ex: Pátio Norte, Lote 04, Fazenda Santa Fé" style="font-weight: 600;" onkeydown="if(event.key==='Enter'){event.preventDefault(); app.confirmarCriacaoNovoProjetoRapido();}">
+        </div>
+        <div style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 0.78rem; color: var(--muted); line-height: 1.4;">
+          💡 <strong>Trabalho em Equipe:</strong> Ao criar esta frente, ela já ficará selecionada para a sua medição e pronta para sincronizar na nuvem.
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-secondary" onclick="app.fecharModal('modalCriarNovoProjetoRapido')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="app.confirmarCriacaoNovoProjetoRapido()">
+          Criar &amp; Selecionar Frente
         </button>
       </div>
     </div>
@@ -1938,12 +1991,12 @@
   <!-- Scripts -->
   <script src="firebase-config.js"></script>
   <script src="vendor/exceljs.min.js"></script>
-  <script src="js/db.js?v=2.10.14"></script>
-  <script src="js/calculator.js?v=2.10.14"></script>
-  <script src="js/excel-export.js?v=2.10.14"></script>
-  <script src="js/auth.js?v=2.10.14"></script>
-  <script src="js/species-campeiro-data.js?v=2.10.14"></script>
-  <script src="js/species-database.js?v=2.10.14"></script>
-  <script src="js/app.js?v=2.10.14"></script>
+  <script src="js/db.js?v=2.10.15"></script>
+  <script src="js/calculator.js?v=2.10.15"></script>
+  <script src="js/excel-export.js?v=2.10.15"></script>
+  <script src="js/auth.js?v=2.10.15"></script>
+  <script src="js/species-campeiro-data.js?v=2.10.15"></script>
+  <script src="js/species-database.js?v=2.10.15"></script>
+  <script src="js/app.js?v=2.10.15"></script>
 </body>
 </html>
