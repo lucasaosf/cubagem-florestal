@@ -1442,7 +1442,13 @@ class CubagemAuth {
             if (window.app.currentView === 'historico') {
               await window.app.carregarHistorico();
             }
-            window.app.showToast(`📥 ${novos} medições da equipe recebidas no projeto ${nome}!`, 'info');
+            if (typeof window.app.atualizarUIProjeto === 'function') {
+              window.app.atualizarUIProjeto();
+            }
+            const modalProj = document.getElementById('modalProjeto');
+            if (modalProj && modalProj.classList.contains('open') && typeof window.app.renderizarSecaoMembrosProjeto === 'function') {
+              window.app.renderizarSecaoMembrosProjeto(nome);
+            }
           }
         }, (err) => {
           console.warn('[Cloud] Erro no listener em tempo real do projeto:', err);

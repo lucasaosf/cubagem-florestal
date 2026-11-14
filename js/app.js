@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.9';
+    this.appVersion = '2.10.10';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -3716,27 +3716,16 @@ class CubagemApp {
     const modalDisplay = document.getElementById('modalProjetoNomeDisplay');
     if (modalDisplay) modalDisplay.textContent = nome;
 
-    // Atualiza contagem local de medições do projeto
-    if (window.cubagemDB && typeof window.cubagemDB.getAll === 'function') {
-      window.cubagemDB.getAll(false).then((all) => {
-        const projId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
-          ? this.auth.normalizarProjetoId(nome)
-          : String(nome).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
-        
-        const count = all.filter(r => {
-          const rProj = r.projeto || 'BR-153';
-          const rId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
-            ? this.auth.normalizarProjetoId(rProj)
-            : String(rProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
-          return rId === projId;
-        }).length;
-
-        const infoEl = document.getElementById('modalProjetoInfoLocal');
-        if (infoEl) {
-          infoEl.textContent = `${count} ${count === 1 ? 'medição vinculada' : 'medições vinculadas'} a este projeto neste aparelho.`;
-        }
-      }).catch(() => {});
-    }
+    // Atualiza contagem local e da nuvem de medições do projeto
+    this.obterEstatisticasMembrosProjeto(nome).then((statsData) => {
+      const infoEl = document.getElementById('modalProjetoInfoLocal');
+      if (infoEl) {
+        const fNum = (n, d = 3) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
+          ? window.CubagemCalculator.formatNumber(n, d)
+          : Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+        infoEl.innerHTML = `Medições salvas neste aparelho: <strong>${statsData.totalLocalCount}</strong> • Na Nuvem: <strong style="color: var(--gold);">${statsData.totalGeralCount} medições (${fNum(statsData.totalGeralVolume, 3)} m³)</strong>`;
+      }
+    }).catch(() => {});
 
     // Atualiza dados da aba ativa se o modal estiver aberto
     const modalProj = document.getElementById('modalProjeto');
@@ -3932,17 +3921,32 @@ class CubagemApp {
     if (kpiPatio) kpiPatio.textContent = `${torasNoPatioRestante} (${fNum(saldoVolumePatio, 2)} m³)`;
     if (totalCountEl) totalCountEl.textContent = `${records.length}`;
 
-    // Atualiza Resumo de Contribuição da Equipe
+    // Atualiza Resumo de Contribuição da Equipe com dados da Nuvem
     const equipeEl = document.getElementById('projEquipeResumo');
     if (equipeEl) {
-      if (responsaveisMap.size === 0) {
-        equipeEl.innerHTML = `Nenhuma medição registrada nesta frente ainda. As cubagens e retiradas de todos os integrantes autorizados serão integradas aqui em tempo real.`;
-      } else {
+      try {
+        const statsData = await this.obterEstatisticasMembrosProjeto(nome);
         const partes = [];
-        responsaveisMap.forEach((stats, resp) => {
-          partes.push(`<strong>${this.escapeHtml(resp)}:</strong> ${fNum(stats.vol, 2)} m³ (${stats.count} med.)`);
+        Object.values(statsData.porMembro).forEach(s => {
+          const n = s.membro.nome || (s.membro.email ? s.membro.email.split('@')[0] : 'Integrante');
+          partes.push(`<strong>${this.escapeHtml(n)}:</strong> ${s.count} ${s.count === 1 ? 'med.' : 'med.'} (${fNum(s.volume, 2)} m³)`);
         });
-        equipeEl.innerHTML = `<strong>👷 Equipe Ativa na Frente:</strong> ${partes.join(' • ')}`;
+        if (partes.length === 0) {
+          equipeEl.innerHTML = `Nenhuma medição registrada nesta frente ainda. As cubagens e retiradas de todos os integrantes autorizados serão integradas aqui em tempo real.`;
+        } else {
+          equipeEl.innerHTML = `<strong>☁️ Subido na Nuvem por Integrante:</strong> ${partes.join(' • ')}`;
+        }
+      } catch (eEquipe) {
+        console.warn('[Painel] Erro ao carregar resumo de equipe:', eEquipe);
+        if (responsaveisMap.size === 0) {
+          equipeEl.innerHTML = `Nenhuma medição registrada nesta frente ainda.`;
+        } else {
+          const partes = [];
+          responsaveisMap.forEach((stats, resp) => {
+            partes.push(`<strong>${this.escapeHtml(resp)}:</strong> ${fNum(stats.vol, 2)} m³ (${stats.count} med.)`);
+          });
+          equipeEl.innerHTML = `<strong>👷 Equipe Ativa na Frente:</strong> ${partes.join(' • ')}`;
+        }
       }
     }
 
@@ -4413,20 +4417,21 @@ class CubagemApp {
   }
 
   /**
-   * Renderiza a seção de membros com regras estritas: somente o criador pode adicionar contas
+   * Consolida métricas de medições e volume em m³ subidos na nuvem por cada integrante do projeto
    */
-  async renderizarSecaoMembrosProjeto(nomeProjeto) {
-    const container = document.getElementById('containerSecaoMembrosProjeto');
-    if (!container) return;
-
+  async obterEstatisticasMembrosProjeto(nomeProjeto) {
     const nome = (nomeProjeto || this.projetoAtivo || 'BR-153').trim();
-    let meta = null;
+    const projId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+      ? this.auth.normalizarProjetoId(nome)
+      : String(nome).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
 
+    let meta = null;
     if (this.auth && typeof this.auth.obterMetaProjeto === 'function') {
       meta = await this.auth.obterMetaProjeto(nome);
-    } else {
+    }
+    if (!meta) {
       meta = {
-        id: 'br_153',
+        id: projId,
         nome: nome,
         criadorNome: 'Lucas Aøsf',
         criadorEmail: 'lucasaosf@gmail.com',
@@ -4434,9 +4439,132 @@ class CubagemApp {
       };
     }
 
+    const membros = Array.isArray(meta.membros) ? [...meta.membros] : [];
+    const criadorEmail = (meta.criadorEmail || 'lucasaosf@gmail.com').trim().toLowerCase();
+    if (!membros.some(m => (m.email || '').trim().toLowerCase() === criadorEmail)) {
+      membros.unshift({
+        nome: meta.criadorNome || 'Lucas Aøsf',
+        email: meta.criadorEmail || 'lucasaosf@gmail.com',
+        role: 'criador'
+      });
+    }
+
+    // Coleta registros vinculados a esta frente (IndexedDB local + Firestore se online)
+    const recordsMap = new Map();
+    let totalLocalCount = 0;
+
+    if (window.cubagemDB && typeof window.cubagemDB.getAll === 'function') {
+      try {
+        const localAll = await window.cubagemDB.getAll(false);
+        localAll.forEach(r => {
+          const rProj = r.projeto || 'BR-153';
+          const rId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+            ? this.auth.normalizarProjetoId(rProj)
+            : String(rProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+          if (rId === projId && r.id) {
+            recordsMap.set(r.id, r);
+            totalLocalCount++;
+          }
+        });
+      } catch (eLocal) {}
+    }
+
+    // Busca registros sincronizados na nuvem Firestore para ter números em tempo real da equipe
+    if (navigator.onLine && window.firebase && window.firebase.firestore) {
+      try {
+        const snap = await window.firebase.firestore().collection('projects').doc(projId).collection('cubagens').get();
+        snap.forEach(doc => {
+          const d = doc.data();
+          if (d && d.id) {
+            recordsMap.set(d.id, d);
+          }
+        });
+      } catch (eCloud) {
+        console.warn('[Stats] Nuvem indisponível para contagem, usando base local:', eCloud);
+      }
+    }
+
+    const porMembro = {};
+    membros.forEach(m => {
+      const emailChave = (m.email || m.nome || '').trim().toLowerCase();
+      porMembro[emailChave] = {
+        membro: m,
+        count: 0,
+        volume: 0
+      };
+    });
+
+    let totalGeralCount = 0;
+    let totalGeralVolume = 0;
+
+    recordsMap.forEach(r => {
+      let vol = 0;
+      if (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function') {
+        vol = window.CubagemCalculator.obterVolumeEfetivo(r);
+      } else {
+        vol = Number(r.volumeTotal || r.volumeGeometrico || 0);
+      }
+      if (isNaN(vol) || vol < 0) vol = 0;
+
+      const rEmail = (r.autorEmail || '').trim().toLowerCase();
+      const rNome = (r.autorNome || r.responsavel || '').trim().toLowerCase();
+      const rUid = r.autorUid || '';
+
+      // Tenta encontrar o integrante que realizou a medição
+      let matched = membros.find(m => {
+        const mEmail = (m.email || '').trim().toLowerCase();
+        const mNome = (m.nome || '').trim().toLowerCase();
+        return (mEmail && rEmail && mEmail === rEmail) ||
+               (mNome && rNome && mNome === rNome) ||
+               (m.uid && rUid && m.uid === rUid);
+      });
+
+      if (!matched) {
+        // Se sem autor ou legado, atribui ao criador oficial da frente
+        matched = membros.find(m => m.role === 'criador' || (m.email && m.email.toLowerCase() === criadorEmail));
+      }
+
+      if (matched) {
+        const chave = (matched.email || matched.nome || '').trim().toLowerCase();
+        if (!porMembro[chave]) {
+          porMembro[chave] = { membro: matched, count: 0, volume: 0 };
+        }
+        porMembro[chave].count += 1;
+        porMembro[chave].volume += vol;
+      }
+
+      totalGeralCount += 1;
+      totalGeralVolume += vol;
+    });
+
+    return {
+      meta,
+      membros,
+      porMembro,
+      totalLocalCount,
+      totalGeralCount,
+      totalGeralVolume
+    };
+  }
+
+  /**
+   * Renderiza a seção de membros com regras estritas e exibe as medições e m³ de cada um
+   */
+  async renderizarSecaoMembrosProjeto(nomeProjeto) {
+    const container = document.getElementById('containerSecaoMembrosProjeto');
+    if (!container) return;
+
+    const nome = (nomeProjeto || this.projetoAtivo || 'BR-153').trim();
+    const statsData = await this.obterEstatisticasMembrosProjeto(nome);
+    const meta = statsData.meta;
+    const membros = statsData.membros;
+
     const isCriador = this.auth ? this.auth.isUsuarioCriador(meta) : true;
     const isLogado = !!(this.auth && this.auth.user);
-    const membros = (meta && Array.isArray(meta.membros)) ? meta.membros : [];
+
+    const fNum = (n, d = 3) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
+      ? window.CubagemCalculator.formatNumber(n, d)
+      : Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
     // Atualiza badge de papel no cabeçalho do modal
     const roleBadge = document.getElementById('modalProjetoRoleBadge');
@@ -4461,28 +4589,45 @@ class CubagemApp {
       criadorInfoEl.innerHTML = `👑 Criador Oficial: <strong>${this.escapeHtml(criadorNome)}</strong> <span style="color: var(--muted); font-size: 0.74rem;">(${this.escapeHtml(criadorEmail)})</span>`;
     }
 
-    // Constrói lista visual dos integrantes
+    // Constrói lista visual dos integrantes com medições e m³ subidos na nuvem
     let membrosHtml = '';
     if (membros.length === 0) {
-      membrosHtml = `<div style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 12px;">Nenhum integrante adicional cadastrado nesta frente.</div>`;
+      membrosHtml = `<div style="text-align: center; color: var(--muted); font-size: 0.8rem; padding: 12px;">Nenhum integrante cadastrado nesta frente.</div>`;
     } else {
       membrosHtml = membros.map(m => {
         const nomeMembro = m.nome || (m.email ? m.email.split('@')[0] : 'Integrante');
         const isOwner = m.role === 'criador';
         const inicial = (nomeMembro || 'U').charAt(0).toUpperCase();
+        const mKey = (m.email || m.nome || '').trim().toLowerCase();
+        const stats = (statsData.porMembro && statsData.porMembro[mKey]) || { count: 0, volume: 0 };
+        const volFmt = fNum(stats.volume, 3);
 
         return `
-          <div class="project-member-row">
-            <div class="project-member-avatar">${inicial}</div>
-            <div class="project-member-details">
-              <div class="project-member-name">
-                <strong>${this.escapeHtml(nomeMembro)}</strong>
-                ${isOwner ? '<span class="badge-tag-owner">👑 Criador</span>' : '<span class="badge-tag-member">✓ Integrante</span>'}
+          <div class="project-member-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px;">
+              <div class="project-member-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); border: 1.5px solid var(--gold); display: grid; place-items: center; font-weight: 700; color: var(--gold); font-size: 1rem; flex-shrink: 0;">${inicial}</div>
+              <div class="project-member-details" style="flex: 1; min-width: 0;">
+                <div class="project-member-name" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                  <strong style="color: var(--ink); font-size: 0.95rem;">${this.escapeHtml(nomeMembro)}</strong>
+                  ${isOwner ? '<span class="badge-tag-owner" style="background: rgba(178, 143, 89, 0.2); color: var(--gold); padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">👑 Criador</span>' : '<span class="badge-tag-member" style="background: rgba(85, 124, 99, 0.2); color: var(--sage); padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">✓ Integrante</span>'}
+                </div>
+                <div class="project-member-email" style="font-size: 0.76rem; color: var(--muted); margin-top: 2px;">${this.escapeHtml(m.email || '')}</div>
               </div>
-              <div class="project-member-email">${this.escapeHtml(m.email || '')}</div>
             </div>
+
+            <!-- Destaque: Quantas medições e quantos m³ tem subido na nuvem -->
+            <div class="project-member-stats-pill" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(178, 143, 89, 0.12); border: 1px solid var(--gold); border-radius: 8px; padding: 6px 12px; font-size: 0.82rem; white-space: nowrap;">
+              <span style="color: var(--gold); font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                <span>☁️</span> <strong>${stats.count}</strong> ${stats.count === 1 ? 'medição' : 'medições'}
+              </span>
+              <span style="color: var(--gold); opacity: 0.4;">|</span>
+              <span style="color: var(--sage); font-weight: 700;">
+                <strong>${volFmt}</strong> m³
+              </span>
+            </div>
+
             ${(isCriador && !isOwner) ? `
-              <button type="button" class="btn-remove-member" onclick="app.removerMembroProjeto('${this.escapeHtml(m.email)}', '${this.escapeHtml(nomeMembro)}')" title="Remover este integrante do projeto">
+              <button type="button" class="btn-remove-member" onclick="app.removerMembroProjeto('${this.escapeHtml(m.email)}', '${this.escapeHtml(nomeMembro)}')" title="Remover este integrante do projeto" style="background: transparent; border: 1px solid #d9534f; color: #d9534f; border-radius: 4px; padding: 4px 8px; font-size: 0.72rem; cursor: pointer;">
                 Remover
               </button>
             ` : ''}
@@ -4542,6 +4687,18 @@ class CubagemApp {
 
     container.innerHTML = `
       <div class="project-members-wrapper">
+        <div style="background: rgba(14, 37, 21, 0.6); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--muted); font-weight: 700;">Total da Frente na Nuvem</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--gold); font-family: var(--display);">
+              ${statsData.totalGeralCount} ${statsData.totalGeralCount === 1 ? 'medição' : 'medições'} • ${fNum(statsData.totalGeralVolume, 3)} m³
+            </div>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--sage); font-weight: 600;">
+            ☁️ Nuvem Ativa
+          </div>
+        </div>
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <h4 style="font-size: 0.88rem; font-weight: 700; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px;">
             <span>👥</span> Integrantes Autorizados (${membros.length})

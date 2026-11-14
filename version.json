@@ -1,11 +1,10 @@
 {
-  "v": "2.10.9",
-  "nome": "2.10.9",
+  "v": "2.10.10",
+  "nome": "2.10.10",
   "data": "2026-11-14",
   "novidades": [
-    "Sessão e Autenticação na Nuvem Confiável: Validação ativa da sessão do Google Auth para envio direto à nuvem sem erro de permissão",
-    "Isolamento do Envio de Medições: Gravação pessoal independente que não trava caso uma coleção de projeto retorne restrição",
-    "Compartilhamento Direto com 1 Toque: Transferência instantânea via WhatsApp para carregar medições do celular no computador sem depender de nuvem",
-    "Regras Firestore Otimizadas: Compatibilidade aprimorada com regras de segurança no Firebase Console"
+    "Sincronização Silenciosa na Inicialização: Fim dos alertas repetitivos na abertura do app; dados são integrados suavemente em segundo plano",
+    "Métricas na Nuvem por Integrante: Exibição visual do número de medições e volume total em m³ subidos na nuvem ao lado de cada integrante da frente",
+    "Painel Consolidado da Frente: Total geral na nuvem e detalhamento individual em tempo real na aba Integrantes do Projeto"
   ]
 }
