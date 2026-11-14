@@ -2751,6 +2751,41 @@ body[data-active-tab="inicio"] .cover-screen,
   background: rgba(178, 143, 89, 0.3);
 }
 
+.btn-card-proj-del {
+  flex: 0 0 auto;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 7px 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-card-proj-del:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: #ef4444;
+  color: #f87171;
+}
+
+:root[data-theme="light"] .btn-card-proj-del {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+}
+
+:root[data-theme="light"] .btn-card-proj-del:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #b91c1c;
+}
+
 /* Grupo de Ações / Botões */
 .cover-actions-group {
   width: 100%;

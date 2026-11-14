@@ -11,6 +11,7 @@ class CubagemApp {
     this.deferredInstallPrompt = null;
     this.currentDetailItem = null;
     this.itemToDeleteId = null;
+    this.projetoParaExcluir = null;
 
     // Modalidade ativa: 'caminhao' | 'pilha' | 'tora'
     this.tipoCubagem = 'caminhao';
@@ -27,7 +28,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.13';
+    this.appVersion = '2.10.14';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -5038,6 +5039,9 @@ class CubagemApp {
               <button type="button" class="btn-card-proj-members" onclick="app.abrirPastaProjetoCapa('${this.escapeHtml(pNome)}', 'integrantes')" title="Ver integrantes da equipe e métricas de cada um">
                 <span>👥</span> Integrantes (${totalMembros})
               </button>
+              <button type="button" class="btn-card-proj-del" onclick="app.solicitarExclusaoProjeto('${this.escapeHtml(pNome)}', event)" title="Excluir esta pasta de projeto e suas medições">
+                <span>🗑️</span> Excluir
+              </button>
             </div>
           </div>
         `);
@@ -5051,6 +5055,183 @@ class CubagemApp {
           Toque em 📁 <strong>${this.escapeHtml(this.projetoAtivo || 'BR-153')}</strong> no topo para gerenciar medições e equipe.
         </div>
       `;
+    }
+  }
+
+  /**
+   * Abre o modal de confirmação para exclusão de um projeto/frente
+   */
+  async solicitarExclusaoProjeto(nomeProjeto, event = null) {
+    if (event && typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
+
+    const nome = (nomeProjeto || this.projetoAtivo || 'BR-153').trim();
+    this.projetoParaExcluir = nome;
+
+    // Busca estatísticas para exibir no modal de confirmação
+    let totalMedicoes = 0;
+    let volEntrada = 0;
+    let volRetirada = 0;
+    let criadorNome = 'Lucas Aøsf';
+
+    try {
+      const stats = await this.obterEstatisticasMembrosProjeto(nome);
+      totalMedicoes = stats.totalGeralCount || stats.totalLocalCount || 0;
+      volEntrada = stats.totalEntradaVolume || 0;
+      volRetirada = stats.totalRetiradaVolume || 0;
+      if (stats.meta && (stats.meta.criadorNome || stats.meta.criadorEmail)) {
+        criadorNome = stats.meta.criadorNome || stats.meta.criadorEmail.split('@')[0];
+      }
+    } catch (e) {
+      console.warn('[ExcluirProjeto] Erro ao carregar estatísticas:', e);
+    }
+
+    const fNum = (n, d = 2) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
+      ? window.CubagemCalculator.formatNumber(n, d)
+      : Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+    const infoEl = document.getElementById('excluirProjetoInfo');
+    if (infoEl) {
+      infoEl.innerHTML = `
+        <div style="margin-bottom: 6px;">
+          📁 Pasta / Projeto: <strong style="color: var(--gold); font-size: 1.05rem;">${this.escapeHtml(nome)}</strong>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 6px;">
+          👑 Criador Oficial: <strong>${this.escapeHtml(criadorNome)}</strong>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.78rem; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line);">
+          <span>📊 <strong>${totalMedicoes}</strong> mediç${totalMedicoes === 1 ? 'ão' : 'ões'}</span>
+          <span>🟢 Entrada: <strong>${fNum(volEntrada, 2)} m³</strong></span>
+          <span>🚚 Retirada: <strong>${fNum(volRetirada, 2)} m³</strong></span>
+        </div>
+      `;
+    }
+
+    this.abrirModal('modalExcluirProjeto');
+  }
+
+  /**
+   * Executa a exclusão definitiva do projeto selecionado no aparelho e na nuvem
+   */
+  async executarExclusaoProjeto() {
+    const nome = this.projetoParaExcluir;
+    if (!nome) {
+      this.fecharModal('modalExcluirProjeto');
+      return;
+    }
+
+    const projId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+      ? this.auth.normalizarProjetoId(nome)
+      : String(nome).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+
+    const btn = document.getElementById('btnConfirmarExcluirProjeto');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Excluindo projeto...';
+    }
+
+    try {
+      this.showToast(`Excluindo pasta de projeto "${nome}" e suas medições...`, 'info', 4000);
+
+      // 1. Remove medições locais no IndexedDB que pertencem a este projeto
+      let excluidosLocais = 0;
+      if (window.cubagemDB && typeof window.cubagemDB.getAll === 'function') {
+        try {
+          const allRecords = await window.cubagemDB.getAll(false);
+          for (const r of allRecords) {
+            const rProj = r.projeto || 'BR-153';
+            const rId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+              ? this.auth.normalizarProjetoId(rProj)
+              : String(rProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+
+            if (rId === projId || rProj === nome) {
+              if (r.id) {
+                await window.cubagemDB.delete(r.id);
+                excluidosLocais++;
+
+                // Remove da nuvem pessoal do usuário se autenticado
+                if (this.auth && typeof this.auth.deleteRecordFromCloud === 'function') {
+                  this.auth.deleteRecordFromCloud(r.id, nome).catch(() => {});
+                }
+              }
+            }
+          }
+        } catch (eDb) {
+          console.warn('[ExcluirProjeto] Erro ao excluir medições locais:', eDb);
+        }
+      }
+
+      // 2. Remove da nuvem Firestore (coleção compartilhada do projeto e metadados)
+      if (navigator.onLine && window.firebase && window.firebase.firestore) {
+        try {
+          const firestore = window.firebase.firestore();
+          // Remove documentos da subcoleção 'cubagens'
+          const snapMed = await firestore.collection('projects').doc(projId).collection('cubagens').get();
+          if (snapMed && snapMed.docs && snapMed.docs.length > 0) {
+            const batch = firestore.batch();
+            snapMed.docs.forEach(d => batch.delete(d.ref));
+            batch.delete(firestore.collection('projects').doc(projId));
+            await batch.commit();
+          } else {
+            await firestore.collection('projects').doc(projId).delete();
+          }
+          console.log(`[Cloud] Projeto "${nome}" (${projId}) removido do Firestore com sucesso.`);
+        } catch (eCloud) {
+          console.warn('[Cloud] Erro ao excluir projeto do Firestore:', eCloud);
+        }
+      }
+
+      // 3. Remove metadados locais (localStorage)
+      if (this.auth && typeof this.auth.getProjetosMetaLocal === 'function') {
+        try {
+          const metas = this.auth.getProjetosMetaLocal();
+          delete metas[projId];
+          delete metas[nome];
+          this.auth.salvarProjetosMetaLocal(metas);
+        } catch (eMeta) {}
+      }
+
+      // 4. Remove dos projetos recentes
+      if (Array.isArray(this.projetosRecentes)) {
+        this.projetosRecentes = this.projetosRecentes.filter(p => p !== nome && p !== projId);
+        try {
+          localStorage.setItem('cubagem.projetos_recentes', JSON.stringify(this.projetosRecentes));
+        } catch (eRec) {}
+      }
+
+      // 5. Se o projeto excluído for o ativo, define outro projeto ativo
+      if ((this.projetoAtivo || '').trim().toLowerCase() === nome.trim().toLowerCase()) {
+        const restantes = await this.obterProjetosVinculadosUsuario();
+        const proximo = restantes.find(p => p.trim().toLowerCase() !== nome.trim().toLowerCase()) || 'BR-153';
+        this.definirProjetoAtivo(proximo, true);
+      } else {
+        this.atualizarUIProjeto();
+      }
+
+      this.fecharModal('modalExcluirProjeto');
+      const modalProj = document.getElementById('modalProjeto');
+      if (modalProj && modalProj.classList.contains('open')) {
+        this.fecharModal('modalProjeto');
+      }
+
+      this.projetoParaExcluir = null;
+      this.selectedProjectRecordIds.clear();
+
+      await this.atualizarDashboard();
+      if (this.currentView === 'historico') {
+        await this.carregarHistorico();
+      }
+
+      this.showToast(`✓ Projeto "${nome}" excluído com sucesso!`, 'success', 6000);
+    } catch (err) {
+      console.error('[ExcluirProjeto] Falha ao excluir projeto:', err);
+      this.showToast(`Erro ao excluir projeto: ${err.message || err}`, 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Sim, Excluir Projeto';
+      }
     }
   }
 

@@ -1,12 +1,11 @@
 {
-  "v": "2.10.13",
-  "nome": "2.10.13",
+  "v": "2.10.14",
+  "nome": "2.10.14",
   "data": "2026-11-14",
   "novidades": [
-    "Pastas & Projetos da Conta na Capa: Nova seção interativa na tela inicial listando todas as frentes de trabalho vinculadas à sua conta",
-    "Acesso Direto às Medições da Frente: Toque em qualquer projeto para abrir suas cubagens e retiradas consolidadas",
-    "Extração Excel com Seleção de Medições: Escolha medições específicas usando caixas de seleção (checkboxes) para baixar apenas o que você precisa em planilha .xlsx",
-    "Métricas de Integrantes da Equipe: Acompanhe as cubagens de entrada e retiradas de cada colaborador por projeto",
-    "Capa Mais Limpa: Remoção dos botões de aplicativo instalado da tela inicial para priorizar os projetos e medições"
+    "Opção de Excluir Projeto com Confirmação: Botão dedicado de exclusão nos cards de projeto e no painel com pergunta clara de confirmação antes de apagar",
+    "Segurança Operacional: Exibição prévia do volume total, medições e criador da frente com aviso de segurança contra toques acidentais",
+    "Limpeza Integrada no Aparelho e Nuvem: Exclusão completa das medições do projeto no banco local e no Firestore com alternância automática do projeto ativo",
+    "Pastas & Projetos da Conta na Capa: Seção interativa com medições, integrantes e download de planilha Excel customizada"
   ]
 }
