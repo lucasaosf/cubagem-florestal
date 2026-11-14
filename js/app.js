@@ -27,7 +27,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.11';
+    this.appVersion = '2.10.12';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -97,6 +97,8 @@ class CubagemApp {
 
     this.renderizarGridsAlturas();
     this.configurarCalculoTempoReal();
+    this.configurarMonitoramentoRascunho();
+    this.atualizarTextoBotaoSalvar();
 
     if (window.CubagemEspecies && typeof window.CubagemEspecies.initInputs === 'function') {
       try {
@@ -733,9 +735,14 @@ class CubagemApp {
     this.currentView = viewId;
     window.scrollTo(0, 0);
 
-    if (viewId === 'inicio') await this.atualizarDashboard();
-    else if (viewId === 'nova') this.resetarDataHoraAtual();
-    else if (viewId === 'historico') await this.carregarHistorico();
+    if (viewId === 'inicio') {
+      await this.atualizarDashboard();
+      this.verificarRascunhoAtivo();
+    } else if (viewId === 'nova') {
+      this.resetarDataHoraAtual();
+      this.verificarERestaurarRascunhoAoNavegarParaNova();
+      this.atualizarTextoBotaoSalvar();
+    } else if (viewId === 'historico') await this.carregarHistorico();
     else if (viewId === 'relatorios') await this.atualizarRelatorioPeriodo();
     else if (viewId === 'configuracoes') await this.carregarCamposConfiguracoes();
   }
@@ -1208,6 +1215,9 @@ class CubagemApp {
         }
       }
     }
+
+    // Agenda auto-save de rascunho sempre que os cálculos ou medidas forem atualizados
+    this.agendarSalvarRascunho();
   }
 
   // =========================================================================
@@ -1484,15 +1494,16 @@ class CubagemApp {
         await window.cubagemDB.add(record);
       }
 
-      if (this.auth) {
+      const isAuto = this.isAutoSyncAtivo();
+      if (this.auth && isAuto) {
         this.auth.syncRecordToCloud(record);
       }
 
       const vFmt = window.CubagemCalculator.formatNumber(record.volumeGeometrico, record.tipo === 'tora' ? 3 : 2);
       this.showToast(
         isEditing
-          ? `Medição atualizada com sucesso no projeto "${projeto}"! Volume Total: ${vFmt} m³`
-          : `${record.tipo === 'caminhao' ? 'Retirada do Material' : 'Cubagem de ' + record.tipo.toUpperCase()} salva no projeto "${projeto}"! Volume Total: ${vFmt} m³`,
+          ? `Medição atualizada no projeto "${projeto}"! Volume: ${vFmt} m³${isAuto ? ' • Sincronizado na nuvem ☁️' : ''}`
+          : `${record.tipo === 'caminhao' ? 'Retirada do Material' : 'Cubagem de ' + record.tipo.toUpperCase()} finalizada no projeto "${projeto}"! Volume: ${vFmt} m³${isAuto ? ' • Sincronizado na nuvem ☁️' : ''}`,
         'success'
       );
 
@@ -1500,8 +1511,13 @@ class CubagemApp {
       this.mergedSourceRecordIds = [];
       const editBanner = document.getElementById('editBannerNova');
       if (editBanner) editBanner.style.display = 'none';
-      const btnText = document.getElementById('btnSalvarTexto');
-      if (btnText) btnText.textContent = 'Salvar Cubagem';
+
+      // Limpa rascunho de medição em andamento pois acabou de ser finalizada!
+      try { localStorage.removeItem('cubagem.rascunho_ativo'); } catch (e) {}
+      this.verificarRascunhoAtivo();
+      const rascunhoAviso = document.getElementById('rascunhoAvisoNova');
+      if (rascunhoAviso) rascunhoAviso.style.display = 'none';
+      this.atualizarTextoBotaoSalvar();
 
       this.limparApenasMedidas();
       this.resetarDataHoraAtual();
@@ -1558,8 +1574,12 @@ class CubagemApp {
     this.mergedSourceRecordIds = [];
     const editBanner = document.getElementById('editBannerNova');
     if (editBanner) editBanner.style.display = 'none';
-    const btnText = document.getElementById('btnSalvarTexto');
-    if (btnText) btnText.textContent = 'Salvar Cubagem';
+
+    try { localStorage.removeItem('cubagem.rascunho_ativo'); } catch (e) {}
+    this.verificarRascunhoAtivo();
+    const rascunhoAviso = document.getElementById('rascunhoAvisoNova');
+    if (rascunhoAviso) rascunhoAviso.style.display = 'none';
+    this.atualizarTextoBotaoSalvar();
 
     document.getElementById('formNovaCubagem').reset();
     this.setOrigemMadeira('Nativa');
@@ -1582,6 +1602,370 @@ class CubagemApp {
     this.sugerirProximaViagem();
     this.executarCalculoTempoReal();
     this.showToast('Formulário limpo.', 'warning');
+  }
+
+  // =========================================================================
+  // GESTÃO DE RASCUNHO & MEDIÇÃO EM ANDAMENTO (AUTO-SAVE)
+  // =========================================================================
+
+  isAutoSyncAtivo() {
+    try {
+      const val = localStorage.getItem('cubagem.sync.auto');
+      return val === null ? true : (val === 'true' || val === true);
+    } catch (e) {
+      return true;
+    }
+  }
+
+  alternarAutoSync(ativo) {
+    try {
+      localStorage.setItem('cubagem.sync.auto', ativo ? 'true' : 'false');
+    } catch (e) {}
+    this.atualizarTextoBotaoSalvar();
+    this.showToast(
+      ativo
+        ? '✓ Sincronização Automática ATIVADA: medições finalizadas sobem sozinhas para a nuvem.'
+        : '⚠️ Sincronização Automática DESATIVADA: medições ficam salvas apenas neste aparelho até envio manual.',
+      ativo ? 'success' : 'warning',
+      4500
+    );
+    if (this.auth && typeof this.auth.renderizarPainelUsuario === 'function') {
+      this.auth.renderizarPainelUsuario();
+    }
+  }
+
+  atualizarTextoBotaoSalvar() {
+    const btnText = document.getElementById('btnSalvarTexto');
+    if (!btnText) return;
+    const auto = this.isAutoSyncAtivo();
+    if (this.editingRecordId) {
+      btnText.textContent = auto ? 'Salvar Alterações & Sincronizar' : 'Salvar Alterações no Aparelho';
+    } else {
+      btnText.textContent = auto ? 'Finalizar Medição & Enviar para Nuvem' : 'Finalizar Medição (Salvar no Aparelho)';
+    }
+  }
+
+  configurarMonitoramentoRascunho() {
+    const form = document.getElementById('formNovaCubagem');
+    if (form) {
+      form.addEventListener('input', () => this.agendarSalvarRascunho());
+      form.addEventListener('change', () => this.agendarSalvarRascunho());
+    }
+    this.verificarRascunhoAtivo();
+  }
+
+  agendarSalvarRascunho() {
+    if (this.editingRecordId) return;
+    clearTimeout(this._timerRascunho);
+    this._timerRascunho = setTimeout(() => this.salvarRascunhoMedicao(), 350);
+  }
+
+  salvarRascunhoMedicao() {
+    if (this.editingRecordId) return;
+
+    const data = document.getElementById('cubData')?.value || '';
+    const horario = document.getElementById('cubHorario')?.value || '';
+    const rodovia = document.getElementById('cubRodovia')?.value?.trim() || '';
+    const km = document.getElementById('cubKm')?.value?.trim() || '';
+    const zona = document.getElementById('cubZona')?.value?.trim() || '';
+    const latitude = document.getElementById('cubLatitude')?.value?.trim() || '';
+    const longitude = document.getElementById('cubLongitude')?.value?.trim() || '';
+    const utm = document.getElementById('cubUtm')?.value?.trim() || '';
+    const responsavel = document.getElementById('cubResponsavel')?.value?.trim() || '';
+    const observacoes = document.getElementById('cubObservacoes')?.value?.trim() || '';
+    const projeto = document.getElementById('cubProjeto')?.value?.trim() || this.projetoAtivo || 'BR-153';
+
+    let temConteudo = false;
+    let resumo = '';
+    let volumeParcial = 0;
+    let detalhes = '';
+
+    const fNum = (n, d = 3) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
+      ? window.CubagemCalculator.formatNumber(n, d)
+      : Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+    const dados = {
+      tipo: this.tipoCubagem,
+      modoCargaCaminhao: this.modoCargaCaminhao,
+      origemMadeira: this.origemMadeira,
+      projeto, data, horario, rodovia, km, zona, latitude, longitude, utm, responsavel, observacoes
+    };
+
+    if (this.tipoCubagem === 'caminhao') {
+      const placa = document.getElementById('cubPlaca')?.value?.trim().toUpperCase() || '';
+      const comp = document.getElementById('cubComprimentoCam')?.value || '';
+      const larg = document.getElementById('cubLarguraCam')?.value || '';
+      const numeroViagem = this.obterNumeroViagem();
+      const viagemTexto = this.obterViagemTexto();
+
+      dados.placa = placa;
+      dados.numeroViagem = numeroViagem;
+      dados.viagemTexto = viagemTexto;
+      dados.comprimento = comp;
+      dados.largura = larg;
+      dados.alturasLE = [...(this.alturasLE || [])];
+      dados.alturasLD = [...(this.alturasLD || [])];
+      dados.torasCaminhao = [...(this.torasCaminhao || [])];
+
+      if (this.modoCargaCaminhao === 'toras') {
+        if (this.torasCaminhao.length > 0 || placa) {
+          temConteudo = true;
+          const lote = window.CubagemCalculator ? window.CubagemCalculator.calculateLoteToras(this.torasCaminhao) : null;
+          volumeParcial = lote ? (lote.volumeTotal || lote.volumeGeometrico || 0) : 0;
+          resumo = `Retirada Caminhão ${placa || 'S/ Placa'}`;
+          detalhes = `${this.torasCaminhao.length} toras carregadas (${fNum(volumeParcial, 3)} m³) • ${viagemTexto}`;
+        }
+      } else {
+        const temAlturas = (this.alturasLE && this.alturasLE.some(Boolean)) || (this.alturasLD && this.alturasLD.some(Boolean));
+        if (placa || comp || larg || temAlturas) {
+          temConteudo = true;
+          const calc = window.CubagemCalculator ? window.CubagemCalculator.calculateCaminhao({
+            alturasLE: this.alturasLE,
+            alturasLD: this.alturasLD,
+            comprimentoRaw: comp,
+            larguraRaw: larg
+          }) : null;
+          volumeParcial = calc && calc.volumeGeometrico ? calc.volumeGeometrico : 0;
+          resumo = `Retirada Caminhão ${placa || 'S/ Placa'}`;
+          detalhes = `Carga Geométrica (${fNum(volumeParcial, 2)} m³) • ${viagemTexto}`;
+        }
+      }
+    } else if (this.tipoCubagem === 'pilha') {
+      const identPilha = document.getElementById('cubIdentPilha')?.value?.trim() || '';
+      const comp = document.getElementById('cubComprimentoPilha')?.value || '';
+      const larg = document.getElementById('cubLarguraPilha')?.value || '';
+      const temAlturas = this.alturasPilha && this.alturasPilha.some(Boolean);
+
+      dados.identPilha = identPilha;
+      dados.comprimento = comp;
+      dados.largura = larg;
+      dados.alturasPilha = [...(this.alturasPilha || [])];
+
+      if (identPilha || comp || larg || temAlturas) {
+        temConteudo = true;
+        const calc = window.CubagemCalculator ? window.CubagemCalculator.calculatePilha({
+          alturas: this.alturasPilha,
+          comprimentoRaw: comp,
+          larguraRaw: larg
+        }) : null;
+        volumeParcial = calc && calc.volumeGeometrico ? calc.volumeGeometrico : 0;
+        resumo = `Pilha ${identPilha || 'S/ Identificação'}`;
+        detalhes = `Pilha de Madeira (${fNum(volumeParcial, 2)} m³)`;
+      }
+    } else if (this.tipoCubagem === 'tora') {
+      const identTora = document.getElementById('cubIdentPilhaTora')?.value?.trim() || '';
+      const d1 = document.getElementById('cubDiametroPonta1')?.value || '';
+      const d2 = document.getElementById('cubDiametroPonta2')?.value || '';
+      const comp = document.getElementById('cubComprimentoTora')?.value || '';
+      const plaqueta = document.getElementById('cubPlaqueta')?.value?.trim() || '';
+      const especie = document.getElementById('cubEspecieTora')?.value?.trim() || '';
+
+      dados.identPilhaTora = identTora;
+      dados.diametroPonta1 = d1;
+      dados.diametroPonta2 = d2;
+      dados.comprimentoTora = comp;
+      dados.plaqueta = plaqueta;
+      dados.especie = especie;
+      dados.torasPilha = [...(this.torasPilha || [])];
+
+      if (this.torasPilha.length > 0 || plaqueta || d1 || comp || identTora) {
+        temConteudo = true;
+        const lote = window.CubagemCalculator ? window.CubagemCalculator.calculateLoteToras(this.torasPilha) : null;
+        volumeParcial = lote ? (lote.volumeTotal || lote.volumeGeometrico || 0) : 0;
+        resumo = identTora || (this.torasPilha.length > 0 ? `Pilha com ${this.torasPilha.length} Toras` : 'Cubagem de Toras');
+        detalhes = `${this.torasPilha.length} toras adicionadas (${fNum(volumeParcial, 3)} m³) Smalian`;
+      }
+    }
+
+    if (temConteudo) {
+      const draft = {
+        timestamp: Date.now(),
+        tipo: this.tipoCubagem,
+        resumo,
+        detalhes,
+        volumeParcial,
+        dados
+      };
+      try { localStorage.setItem('cubagem.rascunho_ativo', JSON.stringify(draft)); } catch (e) {}
+      this.verificarRascunhoAtivo();
+    } else {
+      try { localStorage.removeItem('cubagem.rascunho_ativo'); } catch (e) {}
+      this.verificarRascunhoAtivo();
+    }
+  }
+
+  verificarRascunhoAtivo() {
+    const banner = document.getElementById('coverRascunhoAlerta');
+    let raw = null;
+    try { raw = localStorage.getItem('cubagem.rascunho_ativo'); } catch (e) {}
+
+    if (!raw) {
+      if (banner) banner.style.display = 'none';
+      return;
+    }
+
+    try {
+      const draft = JSON.parse(raw);
+      if (!draft || !draft.dados) {
+        if (banner) banner.style.display = 'none';
+        return;
+      }
+
+      if (banner) {
+        const descEl = document.getElementById('coverDraftDesc');
+        const subEl = document.getElementById('coverDraftSub');
+        const timeEl = document.getElementById('coverDraftTime');
+
+        const horaFormatada = new Date(draft.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const tipoFmt = draft.tipo === 'caminhao' ? 'Retirada (Caminhão)' : (draft.tipo === 'pilha' ? 'Pilha de Madeira' : 'Cubagem de Toras');
+
+        if (descEl) descEl.innerHTML = `<strong>${this.escapeHtml(draft.resumo || tipoFmt)}</strong>`;
+        if (subEl) subEl.textContent = `${draft.detalhes || 'Dados preservados no aparelho'} • ${draft.dados.projeto ? 'Frente ' + draft.dados.projeto : ''}`;
+        if (timeEl) timeEl.textContent = `Salvo no aparelho às ${horaFormatada}`;
+
+        banner.style.display = 'block';
+      }
+    } catch (e) {
+      if (banner) banner.style.display = 'none';
+    }
+  }
+
+  verificarERestaurarRascunhoAoNavegarParaNova() {
+    let raw = null;
+    try { raw = localStorage.getItem('cubagem.rascunho_ativo'); } catch (e) {}
+
+    const avisoNova = document.getElementById('rascunhoAvisoNova');
+    const avisoTexto = document.getElementById('rascunhoAvisoTexto');
+
+    if (!raw) {
+      if (avisoNova) avisoNova.style.display = 'none';
+      return;
+    }
+
+    try {
+      const draft = JSON.parse(raw);
+      if (!draft || !draft.dados) {
+        if (avisoNova) avisoNova.style.display = 'none';
+        return;
+      }
+
+      if (this.editingRecordId) return;
+
+      const placaInp = document.getElementById('cubPlaca');
+      const identPilha = document.getElementById('cubIdentPilha');
+      const d1 = document.getElementById('cubDiametroPonta1');
+      const precisaRestaurar = (!placaInp || !placaInp.value) &&
+                               (!identPilha || !identPilha.value) &&
+                               (!d1 || !d1.value) &&
+                               this.torasCaminhao.length === 0 &&
+                               this.torasPilha.length === 0;
+
+      if (precisaRestaurar) {
+        this.restaurarDadosDoRascunho(draft);
+      }
+
+      if (avisoNova) {
+        if (avisoTexto) {
+          avisoTexto.textContent = `${draft.resumo || 'Medição'} preservada no aparelho (${draft.detalhes || 'em andamento'}). Preencha e finalize abaixo.`;
+        }
+        avisoNova.style.display = 'flex';
+      }
+    } catch (e) {
+      if (avisoNova) avisoNova.style.display = 'none';
+    }
+  }
+
+  restaurarDadosDoRascunho(draft) {
+    if (!draft || !draft.dados) return;
+    const d = draft.dados;
+
+    this.setTipoCubagem(d.tipo || 'caminhao');
+    if (d.origemMadeira) this.setOrigemMadeira(d.origemMadeira);
+
+    if (d.data) { const el = document.getElementById('cubData'); if (el) el.value = d.data; }
+    if (d.horario) { const el = document.getElementById('cubHorario'); if (el) el.value = d.horario; }
+    if (d.projeto) { const el = document.getElementById('cubProjeto'); if (el) el.value = d.projeto; }
+    if (d.responsavel) { const el = document.getElementById('cubResponsavel'); if (el) el.value = d.responsavel; }
+    if (d.rodovia) { const el = document.getElementById('cubRodovia'); if (el) el.value = d.rodovia; }
+    if (d.km) { const el = document.getElementById('cubKm'); if (el) el.value = d.km; }
+    if (d.zona) { const el = document.getElementById('cubZona'); if (el) el.value = d.zona; }
+    if (d.latitude) { const el = document.getElementById('cubLatitude'); if (el) el.value = d.latitude; }
+    if (d.longitude) { const el = document.getElementById('cubLongitude'); if (el) el.value = d.longitude; }
+    if (d.utm) { const el = document.getElementById('cubUtm'); if (el) el.value = d.utm; }
+    if (d.observacoes) { const el = document.getElementById('cubObservacoes'); if (el) el.value = d.observacoes; }
+
+    if (d.tipo === 'caminhao') {
+      this.setModoCargaCaminhao(d.modoCargaCaminhao || 'geometrica');
+      const plq = document.getElementById('cubPlaca');
+      if (plq && d.placa) plq.value = d.placa;
+
+      if (d.modoCargaCaminhao === 'toras') {
+        this.torasCaminhao = Array.isArray(d.torasCaminhao) ? [...d.torasCaminhao] : [];
+        this.renderizarListaTorasCaminhao();
+      } else {
+        if (Array.isArray(d.alturasLE)) this.alturasLE = [...d.alturasLE];
+        if (Array.isArray(d.alturasLD)) this.alturasLD = [...d.alturasLD];
+        this.renderizarGridsAlturas();
+        const comp = document.getElementById('cubComprimentoCam');
+        const larg = document.getElementById('cubLarguraCam');
+        if (comp && d.comprimento) comp.value = d.comprimento;
+        if (larg && d.largura) larg.value = d.largura;
+      }
+    } else if (d.tipo === 'pilha') {
+      const idEl = document.getElementById('cubIdentPilha');
+      const comp = document.getElementById('cubComprimentoPilha');
+      const larg = document.getElementById('cubLarguraPilha');
+      if (idEl && d.identPilha) idEl.value = d.identPilha;
+      if (comp && d.comprimento) comp.value = d.comprimento;
+      if (larg && d.largura) larg.value = d.largura;
+      if (Array.isArray(d.alturasPilha)) this.alturasPilha = [...d.alturasPilha];
+      this.renderizarGridsAlturas();
+    } else if (d.tipo === 'tora') {
+      const idEl = document.getElementById('cubIdentPilhaTora');
+      if (idEl && d.identPilhaTora) idEl.value = d.identPilhaTora;
+      this.torasPilha = Array.isArray(d.torasPilha) ? [...d.torasPilha] : [];
+      this.renderizarListaTorasPilha();
+      const d1 = document.getElementById('cubDiametroPonta1');
+      const d2 = document.getElementById('cubDiametroPonta2');
+      const comp = document.getElementById('cubComprimentoTora');
+      const plaqueta = document.getElementById('cubPlaqueta');
+      const esp = document.getElementById('cubEspecieTora');
+      if (d1 && d.diametroPonta1) d1.value = d.diametroPonta1;
+      if (d2 && d.diametroPonta2) d2.value = d.diametroPonta2;
+      if (comp && d.comprimentoTora) comp.value = d.comprimentoTora;
+      if (plaqueta && d.plaqueta) plaqueta.value = d.plaqueta;
+      if (esp && d.especie) esp.value = d.especie;
+    }
+
+    this.executarCalculoTempoReal();
+  }
+
+  retomarMedicaoRascunho() {
+    let raw = null;
+    try { raw = localStorage.getItem('cubagem.rascunho_ativo'); } catch (e) {}
+    if (!raw) return;
+
+    try {
+      const draft = JSON.parse(raw);
+      this.restaurarDadosDoRascunho(draft);
+      this.navigate('nova');
+      this.showToast('✓ Medição em andamento restaurada! Continue de onde parou e finalize quando terminar.', 'success', 5000);
+    } catch (err) {
+      console.error('Erro ao retomar rascunho:', err);
+      this.showToast('Não foi possível restaurar os dados.', 'danger');
+    }
+  }
+
+  descartarMedicaoRascunho() {
+    if (!confirm('Deseja realmente descartar a medição em andamento? Todas as medidas não finalizadas deste aparelho serão apagadas.')) {
+      return;
+    }
+    try { localStorage.removeItem('cubagem.rascunho_ativo'); } catch (e) {}
+    this.limparFormularioNova();
+    this.verificarRascunhoAtivo();
+    const avisoNova = document.getElementById('rascunhoAvisoNova');
+    if (avisoNova) avisoNova.style.display = 'none';
+    this.showToast('Medição em andamento descartada com sucesso.', 'info');
   }
 
   // =========================================================================
@@ -1718,7 +2102,7 @@ class CubagemApp {
       }
 
       if (btnTxt) {
-        btnTxt.textContent = 'Salvar Alterações na Cubagem';
+        this.atualizarTextoBotaoSalvar();
       }
 
       this.navigate('nova');
@@ -1737,8 +2121,7 @@ class CubagemApp {
     const banner = document.getElementById('editBannerNova');
     if (banner) banner.style.display = 'none';
 
-    const btnTxt = document.getElementById('btnSalvarTexto');
-    if (btnTxt) btnTxt.textContent = 'Salvar Cubagem';
+    this.atualizarTextoBotaoSalvar();
 
     this.limparFormularioNova();
     this.showToast('Edição cancelada.', 'info');
@@ -2026,7 +2409,7 @@ class CubagemApp {
       if (subEl) subEl.textContent = `Ao salvar, estas medições serão unificadas nesta cubagem definitiva do dia.`;
     }
     if (btnTxt) {
-      btnTxt.textContent = 'Salvar e Unificar Cubagem';
+      btnTxt.textContent = this.isAutoSyncAtivo() ? 'Salvar e Unificar (Sincronizar na Nuvem)' : 'Salvar e Unificar no Aparelho';
     }
 
     this.desmarcarTodasHistorico();
@@ -2040,6 +2423,7 @@ class CubagemApp {
   // =========================================================================
   async atualizarDashboard() {
     try {
+      this.verificarRascunhoAtivo();
       const stats = await window.cubagemDB.getStats();
 
       // Formatação inteligente com precisão de campo (2 ou 3 casas)

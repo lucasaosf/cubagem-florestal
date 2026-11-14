@@ -364,24 +364,24 @@ class CubagemAuth {
         </button>
       </div>
 
-      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-        <button class="btn btn-secondary btn-block" onclick="app.compartilharBackup()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
-          📲 Enviar para o PC via WhatsApp / Arquivo
-        </button>
+      <!-- Opção em forma de chave: Sincronização Automática em tempo real -->
+      <div style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-top: 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 1.1rem;">⚡</span>
+            <strong style="color: var(--ink); font-size: 0.88rem;">Sincronizar Sozinho na Nuvem</strong>
+          </div>
+          <p style="font-size: 0.74rem; color: var(--muted); margin: 3px 0 0 0; line-height: 1.35;">
+            Ao finalizar qualquer medição ou alteração, sincroniza automaticamente na nuvem sem precisar apertar botões.
+          </p>
+        </div>
+        <label class="toggle-switch" title="Ativar ou desativar sincronização automática na nuvem">
+          <input type="checkbox" id="chkAutoSyncNuvem" ${window.app && window.app.isAutoSyncAtivo() ? 'checked' : ''} onchange="window.app && window.app.alternarAutoSync(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
 
-        <button class="btn btn-outline btn-block" onclick="app.selecionarArquivoBackup()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          📥 Receber Dados do Celular no PC (Restaurar Backup)
-        </button>
-
+      <div style="display: flex; flex-direction: column; gap: 8px;">
         <button class="btn btn-secondary btn-block" onclick="app.auth.logout()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>

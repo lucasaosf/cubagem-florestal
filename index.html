@@ -9,19 +9,19 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E2515">
   <meta name="background-color" content="#0E2515">
   <meta name="description" content="Aplicativo florestal para cubagem de caminhões, pilhas e toras. Desenvolvido por Lucas Aøsf para BIOKURI Pesquisa e Soluções Ambientais.">
-  <link rel="manifest" href="manifest.webmanifest?v=2.10.11">
-  <link rel="icon" href="icons/favicon.png?v=2.10.11" type="image/png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.10.11">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.10.11">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.10.11">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.10.11">
+  <link rel="manifest" href="manifest.webmanifest?v=2.10.12">
+  <link rel="icon" href="icons/favicon.png?v=2.10.12" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.10.12">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.10.12">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.10.12">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.10.12">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="#0E2515">
   <meta name="msapplication-TileColor" content="#0E2515">
-  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.10.11">
+  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.10.12">
   <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <script>
@@ -41,7 +41,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css?v=2.10.11">
+  <link rel="stylesheet" href="css/styles.css?v=2.10.12">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -155,6 +155,33 @@
           <p class="cover-app-tagline">DENDROMETRIA · CAMINHÕES · PILHAS · TORAS</p>
         </div>
 
+        <!-- Alerta de Medição em Andamento (Não Finalizada) -->
+        <div id="coverRascunhoAlerta" class="cover-draft-card" style="display: none;">
+          <div class="cover-draft-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="cover-draft-pulse"></span>
+              <strong style="color: var(--gold); font-size: 0.90rem;">⚠️ Medição em Andamento (Não Finalizada)</strong>
+            </div>
+            <span id="coverDraftTime" style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Salvo no aparelho</span>
+          </div>
+          <div class="cover-draft-body">
+            <div id="coverDraftDesc" style="font-size: 0.88rem; color: var(--ink); font-weight: 700; margin-bottom: 3px;">
+              Caminhão - Placa ABC-1234
+            </div>
+            <div id="coverDraftSub" style="font-size: 0.76rem; color: var(--muted); margin-bottom: 10px; line-height: 1.35;">
+              Iniciada recentemente • dados preservados na memória do aparelho.
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-primary btn-sm" style="flex: 2; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="app.retomarMedicaoRascunho()">
+                <span>▶️</span> Continuar Medição
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="app.descartarMedicaoRascunho()">
+                🗑️ Descartar
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Painel de Balanço e Fluxo de Madeira (Entrada, Saída e Falta Retirar) -->
         <div class="cover-stat-panel cover-balanco-panel">
           <!-- 1. Total Cubado (Entrada) -->
@@ -234,7 +261,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill" style="border: 1px solid var(--gold); color: var(--gold);" id="coverVersionBadge">v2.10.11</span>
+            <span class="cover-ver-pill" style="border: 1px solid var(--gold); color: var(--gold);" id="coverVersionBadge">v2.10.12</span>
             <button type="button" class="cover-link-action" id="coverFooterInstallBtn" onclick="app.iniciarInstalacaoApp()">📲 Instalar App</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
@@ -262,6 +289,16 @@
             <div class="edit-mode-sub" id="editBannerSub">Modificando cubagem salva. Altere as medidas e clique em salvar.</div>
           </div>
           <button type="button" class="btn-cancel-edit" onclick="app.cancelarEdicao()">✕ Cancelar</button>
+        </div>
+
+        <!-- Aviso de Medição em Andamento Restaurada -->
+        <div id="rascunhoAvisoNova" class="edit-mode-banner" style="display: none; background: rgba(178, 143, 89, 0.15); border: 1.5px solid var(--gold);">
+          <div class="edit-mode-icon">📝</div>
+          <div class="edit-mode-info">
+            <div class="edit-mode-title" style="color: var(--gold);">Medição em Andamento (Salva no Aparelho)</div>
+            <div class="edit-mode-sub" id="rascunhoAvisoTexto" style="color: var(--ink);">Rascunho ativo. Preencha as medidas e finalize abaixo para subir na nuvem.</div>
+          </div>
+          <button type="button" class="btn-cancel-edit" onclick="app.descartarMedicaoRascunho()" title="Descartar este rascunho e começar do zero">✕ Descartar</button>
         </div>
 
         <!-- Seletor de Tipo / Modalidade -->
@@ -712,13 +749,11 @@
             <button type="button" class="btn btn-secondary" onclick="app.limparFormularioNova()">
               Limpar
             </button>
-            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnSalvarCubagem">
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnSalvarCubagem" style="font-weight: 700; letter-spacing: 0.3px;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/>
-                <polyline points="7 3 7 8 15 8"/>
+                <polyline points="20 6 9 17 4 12"/>
               </svg>
-              <span id="btnSalvarTexto">Salvar Cubagem</span>
+              <span id="btnSalvarTexto">Finalizar Medição & Enviar para Nuvem</span>
             </button>
           </div>
         </form>
@@ -927,23 +962,6 @@
               ⬇️ Baixar Todas as Medições da Nuvem para este PC
             </button>
 
-            <button class="btn btn-secondary btn-block" onclick="app.compartilharBackup()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-              📲 Enviar para o PC via WhatsApp / Arquivo
-            </button>
-
-            <button class="btn btn-secondary btn-block" onclick="document.getElementById('fileInputBackup').click()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              📥 Restaurar Backup a partir de Arquivo (JSON)
-            </button>
-
             <button class="btn btn-secondary btn-block" onclick="app.exportarBackupJSON()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1005,7 +1023,7 @@
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
-            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.10.11</span><br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.10.12</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
@@ -1873,12 +1891,12 @@
   <!-- Scripts -->
   <script src="firebase-config.js"></script>
   <script src="vendor/exceljs.min.js"></script>
-  <script src="js/db.js?v=2.10.11"></script>
-  <script src="js/calculator.js?v=2.10.11"></script>
-  <script src="js/excel-export.js?v=2.10.11"></script>
-  <script src="js/auth.js?v=2.10.11"></script>
-  <script src="js/species-campeiro-data.js?v=2.10.11"></script>
-  <script src="js/species-database.js?v=2.10.11"></script>
-  <script src="js/app.js?v=2.10.11"></script>
+  <script src="js/db.js?v=2.10.12"></script>
+  <script src="js/calculator.js?v=2.10.12"></script>
+  <script src="js/excel-export.js?v=2.10.12"></script>
+  <script src="js/auth.js?v=2.10.12"></script>
+  <script src="js/species-campeiro-data.js?v=2.10.12"></script>
+  <script src="js/species-database.js?v=2.10.12"></script>
+  <script src="js/app.js?v=2.10.12"></script>
 </body>
 </html>

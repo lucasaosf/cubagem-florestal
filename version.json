@@ -1,10 +1,12 @@
 {
-  "v": "2.10.11",
-  "nome": "2.10.11",
+  "v": "2.10.12",
+  "nome": "2.10.12",
   "data": "2026-11-14",
   "novidades": [
-    "Totais de Entrada e Retirada por Integrante: Exibição visual detalhada do volume total de entrada (m³ e medições) e retirada (m³ e cargas) ao lado de cada integrante da frente",
-    "Métricas Consolidadas na Nuvem: Total geral de entrada e retirada exibido nos cabeçalhos da frente e no resumo da equipe",
-    "Sincronização 100% Silenciosa: Atualizações em tempo real sem interrupções visuais na tela"
+    "Sincronizar Sozinho na Nuvem (Chave Liga/Desliga): Opção no perfil para o usuário escolher ativar ou não o envio automático na nuvem em tempo real",
+    "Proteção de Medições em Andamento: Rascunhos salvos no aparelho automaticamente para que nenhuma medida seja perdida se o app for fechado",
+    "Alerta na Capa Inicial: Card destacado na tela inicial mostrando medições não finalizadas com botão de 'Continuar Medição'",
+    "Botão de Finalizar Medição: Conclusão clara do lançamento com envio automático e silencioso para a nuvem",
+    "Interface Mais Limpa: Remoção dos botões manuais legados de WhatsApp e envio para PC"
   ]
 }
