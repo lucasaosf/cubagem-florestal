@@ -9,19 +9,19 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E2515">
   <meta name="background-color" content="#0E2515">
   <meta name="description" content="Aplicativo florestal para cubagem de caminhões, pilhas e toras. Desenvolvido por Lucas Aøsf para BIOKURI Pesquisa e Soluções Ambientais.">
-  <link rel="manifest" href="manifest.webmanifest?v=2.10.15">
-  <link rel="icon" href="icons/favicon.png?v=2.10.15" type="image/png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.10.15">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.10.15">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.10.15">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.10.15">
+  <link rel="manifest" href="manifest.webmanifest?v=2.10.16">
+  <link rel="icon" href="icons/favicon.png?v=2.10.16" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2.10.16">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2.10.16">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png?v=2.10.16">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png?v=2.10.16">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-title" content="Cubagem Florestal">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="#0E2515">
   <meta name="msapplication-TileColor" content="#0E2515">
-  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.10.15">
+  <meta name="msapplication-TileImage" content="icons/icon-192.png?v=2.10.16">
   <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <script>
@@ -41,7 +41,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@400;500;600;700&display=swap">
 
-  <link rel="stylesheet" href="css/styles.css?v=2.10.15">
+  <link rel="stylesheet" href="css/styles.css?v=2.10.16">
 </head>
 <body data-active-tab="inicio">
   <!-- Notificação de Atualização Disponível -->
@@ -273,7 +273,7 @@
           <p class="cover-signature">criado por <b>Lucas Aøsf</b></p>
           <hr class="cover-bottom-rule">
           <div class="cover-footer-links">
-            <span class="cover-ver-pill" style="border: 1px solid var(--gold); color: var(--gold);" id="coverVersionBadge">v2.10.15</span>
+            <span class="cover-ver-pill" style="border: 1px solid var(--gold); color: var(--gold);" id="coverVersionBadge">v2.10.16</span>
             <button type="button" class="cover-link-action" onclick="app.abrirModalNovidades()">Novidades</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalSuporte()">Suporte</button>
             <button type="button" class="cover-link-action" onclick="app.abrirModalComoUsar()">Como usar</button>
@@ -396,9 +396,20 @@
                 <input type="text" id="cubRodovia" class="form-control" placeholder="Ex: BR 153 ou Pátio 02" required>
               </div>
               <div class="form-group" id="grpKm">
-                <label class="form-label" for="cubKm">Km / Localização</label>
-                <input type="text" id="cubKm" class="form-control" placeholder="Ex: 37 + 150 Norte">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="form-label" for="cubKm" style="margin-bottom: 0;">Km / Localização</label>
+                  <span id="kmLiveBadgeHelper" class="badge" style="display: none; font-size: 0.7rem; padding: 2px 6px;"></span>
+                </div>
+                <input type="text" id="cubKm" class="form-control" placeholder="Ex: 37 ou Km 37" list="listaSugestoesKms" autocomplete="off">
+                <datalist id="listaSugestoesKms"></datalist>
+                <!-- Sugestões interativas de KMs já cubados nesta frente -->
+                <div id="containerSugestoesKmsNova" class="sugestoes-kms-pills"></div>
               </div>
+            </div>
+
+            <!-- Card Reativo em Tempo Real de Balanço e Retirada do Km Selecionado -->
+            <div id="boxStatusKmRetirada" class="km-balance-live-card" style="display: none;">
+              <!-- Preenchido em tempo real por app.atualizarStatusKmLive() -->
             </div>
 
             <div class="form-group" style="margin-bottom: 12px;">
@@ -1057,7 +1068,7 @@
 
           <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
             <strong>Aplicação:</strong> Cubagem Florestal (Caminhões, Pilhas e Toras)<br>
-            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.10.15</span><br>
+            <strong>Versão Instalada:</strong> <span class="badge" style="background: var(--surface-2); color: var(--gold); padding: 2px 8px; border-radius: 6px; font-weight: 600;">v2.10.16</span><br>
             <strong>Empresa:</strong> BIOKURI — Pesquisa e Soluções Ambientais<br>
             <strong>Desenvolvido por:</strong> <b style="color: var(--gold);">Lucas Aøsf</b><br>
             <strong>Registro Profissional:</strong> CRBio 127233/01-D<br>
@@ -1800,6 +1811,19 @@
             Carregando dados da frente...
           </div>
 
+          <!-- Balanço e Status de Retirada por Km da Rodovia -->
+          <div class="project-km-section" style="margin-top: 14px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 0.85rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px;">
+                <span>🛣️</span> Balanço &amp; Retiradas por Km:
+              </span>
+              <span id="projKmSummaryBadge" class="badge" style="background: var(--surface-2); color: var(--gold); font-size: 0.72rem; border: 1px solid var(--line);">0 KMs monitorados</span>
+            </div>
+            <div id="projKmBalanceContainer" class="proj-km-grid">
+              <!-- Renderizado dinamicamente por app.renderizarBalancoKmProjeto() -->
+            </div>
+          </div>
+
           <!-- Ações de Extração Excel -->
           <div class="project-export-actions">
             <button type="button" class="btn btn-primary btn-block" onclick="app.extrairDadosGeraisProjeto()" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; padding: 12px; font-size: 0.92rem;">
@@ -1991,12 +2015,12 @@
   <!-- Scripts -->
   <script src="firebase-config.js"></script>
   <script src="vendor/exceljs.min.js"></script>
-  <script src="js/db.js?v=2.10.15"></script>
-  <script src="js/calculator.js?v=2.10.15"></script>
-  <script src="js/excel-export.js?v=2.10.15"></script>
-  <script src="js/auth.js?v=2.10.15"></script>
-  <script src="js/species-campeiro-data.js?v=2.10.15"></script>
-  <script src="js/species-database.js?v=2.10.15"></script>
-  <script src="js/app.js?v=2.10.15"></script>
+  <script src="js/db.js?v=2.10.16"></script>
+  <script src="js/calculator.js?v=2.10.16"></script>
+  <script src="js/excel-export.js?v=2.10.16"></script>
+  <script src="js/auth.js?v=2.10.16"></script>
+  <script src="js/species-campeiro-data.js?v=2.10.16"></script>
+  <script src="js/species-database.js?v=2.10.16"></script>
+  <script src="js/app.js?v=2.10.16"></script>
 </body>
 </html>

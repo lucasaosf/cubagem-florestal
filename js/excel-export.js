@@ -1168,6 +1168,192 @@ class CubagemExcelExport {
       cTotObs.border = doubleBottomBorder;
     }
 
+    // =========================================================================
+    // ABA: BALANÇO DE CUBAGEM E RETIRADA POR KM (LOGÍSTICA FLORESTAL)
+    // =========================================================================
+    const recordsComKm = records.filter(r => r.km && String(r.km).trim());
+    if (recordsComKm.length > 0) {
+      const wsKm = workbook.addWorksheet('Balanço por Km', { views: [{ showGridLines: true }] });
+      wsKm.columns = [
+        { key: 'num', width: 6 },
+        { key: 'km', width: 18 },
+        { key: 'vol_entrada', width: 22 },
+        { key: 'qtd_pilhas', width: 14 },
+        { key: 'qtd_toras', width: 14 },
+        { key: 'vol_retirada', width: 22 },
+        { key: 'qtd_cargas', width: 14 },
+        { key: 'saldo_restante', width: 22 },
+        { key: 'perc_retirado', width: 16 },
+        { key: 'status_km', width: 22 },
+        { key: 'responsaveis', width: 26 }
+      ];
+
+      wsKm.mergeCells('A1:K1');
+      const hKm = wsKm.getCell('A1');
+      hKm.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — BALANÇO DE CUBAGEM & RETIRADA POR KM';
+      hKm.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
+      hKm.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+      hKm.alignment = { vertical: 'middle', horizontal: 'center' };
+      wsKm.getRow(1).height = 32;
+
+      const kmCols = [
+        '#', 'Km / Localização', 'Vol. Cubado Entrada (m³)', 'Qtd. Pilhas', 'Qtd. Toras',
+        'Vol. Retirado Saída (m³)', 'Cargas Caminhão', 'Saldo Restante no Km (m³)',
+        '% Retirado', 'Status de Liberação', 'Equipe / Responsáveis'
+      ];
+
+      const rHdrKm = wsKm.addRow(kmCols);
+      rHdrKm.height = 26;
+      rHdrKm.eachCell(c => {
+        c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde2 } };
+        c.alignment = { vertical: 'middle', horizontal: 'center' };
+        c.border = thinBorder;
+      });
+
+      // Agrupamento por KM normalizado
+      const normKm = (km) => {
+        let s = String(km || '').trim().replace(/\s+/g, ' ');
+        if (/^\d+([.,]\d+)?$/i.test(s)) return `Km ${s.replace(',', '.')}`;
+        if (/^km\s*([0-9].*)$/i.test(s)) return `Km ${s.replace(/^km\s*/i, '').trim()}`;
+        if (/^km\b/i.test(s)) return `Km ${s.slice(2).trim()}`;
+        return s;
+      };
+
+      const kmMap = new Map();
+      recordsComKm.forEach(r => {
+        const dKm = normKm(r.km);
+        const k = dKm.toLowerCase();
+        if (!kmMap.has(k)) {
+          kmMap.set(k, {
+            km: dKm,
+            volEntrada: 0,
+            volRetirada: 0,
+            pilhasCount: 0,
+            torasCount: 0,
+            caminhoesCount: 0,
+            responsaveis: new Set()
+          });
+        }
+        const item = kmMap.get(k);
+        const v = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+          ? window.CubagemCalculator.obterVolumeEfetivo(r)
+          : (Number(r.volumeGeometrico) || 0);
+
+        const resp = r.autorNome || r.responsavel || '';
+        if (resp) item.responsaveis.add(resp);
+
+        if (r.tipo === 'caminhao') {
+          item.volRetirada += v;
+          item.caminhoesCount += 1;
+        } else {
+          item.volEntrada += v;
+          if (r.tipo === 'pilha') item.pilhasCount += 1;
+          if (r.tipo === 'tora') item.torasCount += 1;
+        }
+      });
+
+      const kmList = Array.from(kmMap.values()).map(it => {
+        const saldo = it.volEntrada - it.volRetirada;
+        const perc = it.volEntrada > 0 ? Math.round((it.volRetirada / it.volEntrada) * 100) : (it.volRetirada > 0 ? 100 : 0);
+        const concluido = (it.volEntrada > 0 && saldo <= 0.005) || (it.volEntrada === 0 && it.volRetirada > 0);
+        return {
+          ...it,
+          saldo: Math.max(0, saldo),
+          perc: Math.min(100, Math.max(0, perc)),
+          concluido
+        };
+      });
+
+      kmList.sort((a, b) => {
+        const numA = parseFloat(a.km.replace(/[^\d.]/g, ''));
+        const numB = parseFloat(b.km.replace(/[^\d.]/g, ''));
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return a.km.localeCompare(b.km, 'pt-BR', { numeric: true });
+      });
+
+      let totEntradaKm = 0;
+      let totRetiradaKm = 0;
+      let totPilhasKm = 0;
+      let totTorasKm = 0;
+      let totCaminhoesKm = 0;
+
+      kmList.forEach((it, idx) => {
+        totEntradaKm += it.volEntrada;
+        totRetiradaKm += it.volRetirada;
+        totPilhasKm += it.pilhasCount;
+        totTorasKm += it.torasCount;
+        totCaminhoesKm += it.caminhoesCount;
+
+        const rowKm = wsKm.addRow([
+          idx + 1,
+          it.km,
+          it.volEntrada,
+          it.pilhasCount,
+          it.torasCount,
+          it.volRetirada,
+          it.caminhoesCount,
+          it.saldo,
+          `${it.perc}%`,
+          it.concluido ? '✓ 100% RETIRADO' : 'EM ANDAMENTO',
+          Array.from(it.responsaveis).join(', ') || '-'
+        ]);
+
+        rowKm.height = 20;
+        const bgRow = idx % 2 === 0 ? C.creme : C.creme2;
+        rowKm.eachCell({ includeEmpty: true }, (c, colNum) => {
+          c.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgRow } };
+          c.border = thinBorder;
+          if (colNum === 1) c.alignment = { horizontal: 'center' };
+          if (colNum === 2) { c.alignment = { horizontal: 'center' }; c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: C.verde } }; }
+          if (colNum === 3 || colNum === 6 || colNum === 8) {
+            c.numFmt = '#,##0.000 "m³"';
+            c.alignment = { horizontal: 'right' };
+          }
+          if (colNum === 4 || colNum === 5 || colNum === 7) {
+            c.numFmt = '#,##0';
+            c.alignment = { horizontal: 'center' };
+          }
+          if (colNum === 9) c.alignment = { horizontal: 'center' };
+          if (colNum === 10) {
+            c.alignment = { horizontal: 'center' };
+            c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: it.concluido ? '0E8038' : 'B45309' } };
+          }
+        });
+      });
+
+      // Linha de Totais
+      const totKmRow = wsKm.addRow([
+        'TOTAIS',
+        `${kmList.length} KMs`,
+        totEntradaKm,
+        totPilhasKm,
+        totTorasKm,
+        totRetiradaKm,
+        totCaminhoesKm,
+        Math.max(0, totEntradaKm - totRetiradaKm),
+        totEntradaKm > 0 ? `${Math.min(100, Math.round((totRetiradaKm / totEntradaKm) * 100))}%` : '100%',
+        totEntradaKm > 0 && (totEntradaKm - totRetiradaKm <= 0.005) ? '✓ 100% RETIRADO' : 'EM ANDAMENTO',
+        'Consolidado da Rodovia'
+      ]);
+      totKmRow.height = 24;
+      totKmRow.eachCell({ includeEmpty: true }, (c, colNum) => {
+        c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
+        c.border = doubleBottomBorder;
+        if (colNum === 1 || colNum === 2 || colNum === 9 || colNum === 10) c.alignment = { horizontal: 'center', vertical: 'middle' };
+        if (colNum === 3 || colNum === 6 || colNum === 8) {
+          c.numFmt = '#,##0.000 "m³"';
+          c.alignment = { horizontal: 'right', vertical: 'middle' };
+        }
+        if (colNum === 4 || colNum === 5 || colNum === 7) {
+          c.numFmt = '#,##0';
+          c.alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+      });
+    }
+
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

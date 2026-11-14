@@ -28,7 +28,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.15';
+    this.appVersion = '2.10.16';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -744,6 +744,8 @@ class CubagemApp {
       this.verificarERestaurarRascunhoAoNavegarParaNova();
       this.atualizarTextoBotaoSalvar();
       await this.renderizarSugestoesProjetosNova();
+      await this.renderizarSugestoesKmsNova();
+      this.atualizarStatusKmLive();
     } else if (viewId === 'historico') await this.carregarHistorico();
     else if (viewId === 'relatorios') await this.atualizarRelatorioPeriodo();
     else if (viewId === 'configuracoes') await this.carregarCamposConfiguracoes();
@@ -1058,6 +1060,16 @@ class CubagemApp {
     document.querySelectorAll('.calc-trigger').forEach((inp) => {
       inp.addEventListener('input', () => this.executarCalculoTempoReal());
     });
+    const kmInput = document.getElementById('cubKm');
+    if (kmInput) {
+      kmInput.addEventListener('input', () => {
+        this.atualizarStatusKmLive();
+        this.agendarSalvarRascunho();
+      });
+      kmInput.addEventListener('change', () => {
+        this.atualizarStatusKmLive();
+      });
+    }
   }
 
   executarCalculoTempoReal() {
@@ -1220,6 +1232,7 @@ class CubagemApp {
 
     // Agenda auto-save de rascunho sempre que os cálculos ou medidas forem atualizados
     this.agendarSalvarRascunho();
+    this.atualizarStatusKmLive();
   }
 
   // =========================================================================
@@ -4160,6 +4173,9 @@ class CubagemApp {
     if (sincronizarNuvem && this.auth && typeof this.auth.vincularProjeto === 'function') {
       this.auth.vincularProjeto(limpo);
     }
+
+    this.renderizarSugestoesKmsNova().catch(() => {});
+    this.atualizarStatusKmLive().catch(() => {});
   }
 
   sincronizarInputProjetoComApp(valor) {
@@ -4299,6 +4315,557 @@ class CubagemApp {
     this.fecharModal('modalCriarNovoProjetoRapido');
     await this.renderizarSugestoesProjetosNova();
     this.showToast(`✓ Frente "${nome}" criada e selecionada para esta medição!`, 'success');
+  }
+
+  // =========================================================================
+  // LOGÍSTICA DE QUILOMETRAGEM (KM) & BALANÇO DE RETIRADA 100%
+  // =========================================================================
+
+  /**
+   * Normaliza qualquer entrada de KM (ex: "37", "km 37", "KM 37", "37.5", "37 + 100")
+   * para uma chave legível "Km X".
+   */
+  normalizarChaveKm(km) {
+    if (!km) return '';
+    let str = String(km).trim().replace(/\s+/g, ' ');
+    if (!str) return '';
+    // Se for apenas dígitos e ponto/vírgula: "37" -> "Km 37"
+    if (/^\d+([.,]\d+)?$/i.test(str)) {
+      return `Km ${str.replace(',', '.')}`;
+    }
+    // Se começar com km/KM e números: "km 37" -> "Km 37"
+    if (/^km\s*([0-9].*)$/i.test(str)) {
+      return `Km ${str.replace(/^km\s*/i, '').trim()}`;
+    }
+    // Se começar com km/KM qualquer: "km norte" -> "Km norte"
+    if (/^km\b/i.test(str)) {
+      return `Km ${str.slice(2).trim()}`;
+    }
+    return str;
+  }
+
+  /**
+   * Obtém registros combinados (locais e nuvem) vinculados a uma frente/projeto
+   */
+  async obterRegistrosDoProjeto(nomeProjeto = null) {
+    const projNome = (nomeProjeto || this.projetoAtivo || 'BR-153').trim();
+    const projId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+      ? this.auth.normalizarProjetoId(projNome)
+      : String(projNome).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+
+    let allRecords = [];
+    if (window.cubagemDB && typeof window.cubagemDB.getAll === 'function') {
+      try {
+        allRecords = await window.cubagemDB.getAll(false);
+      } catch (e) {
+        allRecords = [];
+      }
+    }
+
+    const map = new Map();
+    allRecords.forEach(r => map.set(r.id, r));
+    if (Array.isArray(this.registrosProjetoCache)) {
+      this.registrosProjetoCache.forEach(r => {
+        if (!map.has(r.id)) map.set(r.id, r);
+      });
+    }
+
+    const records = Array.from(map.values()).filter(r => {
+      const rProj = r.projeto || 'BR-153';
+      const rId = (this.auth && typeof this.auth.normalizarProjetoId === 'function')
+        ? this.auth.normalizarProjetoId(rProj)
+        : String(rProj).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+      return rId === projId;
+    });
+
+    return records;
+  }
+
+  /**
+   * Consolida o balanço completo de Entrada (Cubagem) vs Retirada (Caminhões)
+   * agrupado por KM para o projeto ativo.
+   */
+  async obterBalancoPorKm(nomeProjeto = null) {
+    const records = await this.obterRegistrosDoProjeto(nomeProjeto);
+    const kmsMap = new Map();
+
+    records.forEach(r => {
+      const rawKm = r.km ? String(r.km).trim() : '';
+      if (!rawKm) return;
+
+      const displayKm = this.normalizarChaveKm(rawKm);
+      const key = displayKm.toLowerCase();
+
+      if (!kmsMap.has(key)) {
+        kmsMap.set(key, {
+          km: displayKm,
+          key: key,
+          volEntrada: 0,
+          volRetirada: 0,
+          countEntrada: 0,
+          countRetirada: 0,
+          pilhasCount: 0,
+          torasCount: 0,
+          caminhoesCount: 0,
+          medicoes: []
+        });
+      }
+
+      const item = kmsMap.get(key);
+      item.medicoes.push(r);
+
+      const vol = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+        ? window.CubagemCalculator.obterVolumeEfetivo(r)
+        : (Number(r.volumeGeometrico) || 0);
+
+      if (r.tipo === 'caminhao') {
+        item.volRetirada += vol;
+        item.countRetirada += 1;
+        item.caminhoesCount += 1;
+      } else {
+        item.volEntrada += vol;
+        item.countEntrada += 1;
+        if (r.tipo === 'pilha') item.pilhasCount += 1;
+        if (r.tipo === 'tora') item.torasCount += 1;
+      }
+    });
+
+    const resultado = [];
+    kmsMap.forEach(item => {
+      const saldo = item.volEntrada - item.volRetirada;
+      let perc = 0;
+      if (item.volEntrada > 0) {
+        perc = Math.round((item.volRetirada / item.volEntrada) * 100);
+      } else if (item.volRetirada > 0) {
+        perc = 100;
+      }
+      const concluido = (item.volEntrada > 0 && saldo <= 0.005) || (item.volEntrada === 0 && item.volRetirada > 0);
+
+      resultado.push({
+        ...item,
+        saldo: Math.max(0, saldo),
+        saldoReal: saldo,
+        percentualRetirado: Math.min(100, Math.max(0, perc)),
+        percentualReal: perc,
+        concluido: concluido
+      });
+    });
+
+    resultado.sort((a, b) => {
+      const numA = parseFloat(a.km.replace(/[^\d.]/g, ''));
+      const numB = parseFloat(b.km.replace(/[^\d.]/g, ''));
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.km.localeCompare(b.km, 'pt-BR', { numeric: true });
+    });
+
+    return resultado;
+  }
+
+  /**
+   * Renderiza as sugestões de KMs no formulário de Nova Medição
+   */
+  async renderizarSugestoesKmsNova() {
+    const container = document.getElementById('containerSugestoesKmsNova');
+    const datalist = document.getElementById('listaSugestoesKms');
+    const cubKmInput = document.getElementById('cubKm');
+    const valorAtual = (cubKmInput ? cubKmInput.value : '').trim();
+
+    try {
+      const balancos = await this.obterBalancoPorKm(this.projetoAtivo);
+
+      if (datalist) {
+        datalist.innerHTML = balancos.map(b => `<option value="${this.escapeHtml(b.km)}">`).join('');
+      }
+
+      if (container) {
+        if (balancos.length === 0) {
+          container.innerHTML = '';
+          return;
+        }
+
+        const fNum = (n, d = 1) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
+          ? window.CubagemCalculator.formatNumber(n, d)
+          : Number(n || 0).toFixed(d);
+
+        const pillsHtml = balancos.map(b => {
+          const isAtivo = (b.key === this.normalizarChaveKm(valorAtual).toLowerCase());
+          const labelInfo = b.concluido
+            ? '✓ 100% limpo'
+            : (this.tipoCubagem === 'caminhao' ? `Falta ${fNum(b.saldo)}m³` : `${fNum(b.saldo)}m³`);
+          return `
+            <button type="button" class="sugestao-km-pill ${isAtivo ? 'active' : ''} ${b.concluido ? 'concluido' : ''}" onclick="app.selecionarKmSugestaoNova('${this.escapeHtml(b.km)}')">
+              <span>${b.concluido ? '✓' : '🛣️'}</span> ${this.escapeHtml(b.km)} <small style="opacity: 0.85;">(${labelInfo})</small>
+            </button>
+          `;
+        });
+
+        container.innerHTML = pillsHtml.join('');
+      }
+    } catch (e) {
+      console.warn('[KM] Erro ao renderizar sugestões de KMs:', e);
+    }
+  }
+
+  /**
+   * Seleciona um KM a partir das sugestões rápidas
+   */
+  selecionarKmSugestaoNova(kmStr) {
+    const input = document.getElementById('cubKm');
+    if (input) {
+      input.value = kmStr;
+      input.classList.add('highlight-glow');
+      setTimeout(() => input.classList.remove('highlight-glow'), 1000);
+    }
+    this.atualizarStatusKmLive();
+    this.renderizarSugestoesKmsNova();
+    this.agendarSalvarRascunho();
+  }
+
+  /**
+   * Retorna o volume numérico atualmente calculado no formulário
+   */
+  obterVolumeFormularioAtual() {
+    const volEl = document.getElementById('liveVolumeDisplay');
+    if (volEl && volEl.textContent) {
+      const rawTxt = volEl.textContent.trim();
+      if (window.CubagemCalculator && typeof window.CubagemCalculator.parseNumber === 'function') {
+        const v = window.CubagemCalculator.parseNumber(rawTxt);
+        if (!isNaN(v) && v > 0) return v;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Atualiza o card reativo de balanço do KM no formulário (boxStatusKmRetirada)
+   */
+  async atualizarStatusKmLive() {
+    const box = document.getElementById('boxStatusKmRetirada');
+    if (!box) return;
+
+    const input = document.getElementById('cubKm');
+    const rawKm = input ? input.value.trim() : '';
+    const helperBadge = document.getElementById('kmLiveBadgeHelper');
+
+    if (!rawKm) {
+      box.style.display = 'none';
+      box.innerHTML = '';
+      if (helperBadge) helperBadge.style.display = 'none';
+      return;
+    }
+
+    const displayKm = this.normalizarChaveKm(rawKm);
+    const keyKm = displayKm.toLowerCase();
+    const projNome = (this.projetoAtivo || 'BR-153').trim();
+    const tipo = this.tipoCubagem; // 'caminhao', 'pilha', 'tora'
+    const volAtual = this.obterVolumeFormularioAtual();
+    const fNum = (n, d = 2) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
+      ? window.CubagemCalculator.formatNumber(n, d)
+      : Number(n || 0).toFixed(d);
+
+    try {
+      const balancos = await this.obterBalancoPorKm(projNome);
+      const kmData = balancos.find(b => b.key === keyKm);
+
+      box.style.display = 'block';
+
+      if (tipo === 'caminhao') {
+        // MODO RETIRADA DE CARGA (CAMINHÃO)
+        if (!kmData) {
+          box.className = 'km-balance-live-card';
+          if (helperBadge) {
+            helperBadge.style.display = 'inline-block';
+            helperBadge.className = 'badge';
+            helperBadge.style.background = 'var(--surface-2)';
+            helperBadge.style.color = 'var(--gold)';
+            helperBadge.textContent = 'Novo Km';
+          }
+          box.innerHTML = `
+            <div class="km-balance-header">
+              <span class="km-balance-title">🚚 Retirada &mdash; <strong>${this.escapeHtml(displayKm)}</strong></span>
+              <span class="badge" style="background: rgba(178,143,89,0.2); color: var(--gold); border: 1px solid var(--gold); font-size: 0.72rem;">Sem Cubagem Prévia</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--muted); line-height: 1.45;">
+              Ainda não constam pilhas ou toras registradas no <strong>${this.escapeHtml(displayKm)}</strong> para a frente <strong>${this.escapeHtml(projNome)}</strong>. 
+              Esta carga de <strong>${fNum(volAtual, 3)} m³</strong> será computada como retirada deste Km.
+            </div>
+          `;
+          return;
+        }
+
+        const volEntrada = kmData.volEntrada;
+        const volRetiradaJa = kmData.volRetirada;
+        const saldoAntes = kmData.saldo;
+        const percAntes = kmData.percentualRetirado;
+
+        const volRetiradaApos = volRetiradaJa + volAtual;
+        const saldoApos = Math.max(0, volEntrada - volRetiradaApos);
+        const percApos = volEntrada > 0 ? Math.min(100, Math.round((volRetiradaApos / volEntrada) * 100)) : 100;
+        const concluiComEstaCarga = (volAtual > 0 && volAtual >= (saldoAntes - 0.005)) || (saldoAntes <= 0.005);
+
+        if (concluiComEstaCarga) {
+          box.className = 'km-balance-live-card concluido';
+          if (helperBadge) {
+            helperBadge.style.display = 'inline-block';
+            helperBadge.className = 'badge-km-concluido';
+            helperBadge.textContent = '✓ 100% RETIRADO';
+          }
+        } else {
+          box.className = 'km-balance-live-card alerta-falta';
+          if (helperBadge) {
+            helperBadge.style.display = 'inline-block';
+            helperBadge.className = 'badge-km-pendente';
+            helperBadge.textContent = `Falta ${fNum(saldoApos)} m³`;
+          }
+        }
+
+        let forecastHtml = '';
+        if (volAtual > 0) {
+          if (volAtual >= (saldoAntes - 0.005)) {
+            forecastHtml = `
+              <div class="km-forecast-callout concluido">
+                🎉 <strong>CONCLUI 100% DA RETIRADA DESTE KM!</strong><br>
+                Esta carga de <strong>${fNum(volAtual, 3)} m³</strong> retira todo o saldo restante do <strong>${this.escapeHtml(displayKm)}</strong>. O trecho ficará 100% limpo e liberado!
+              </div>
+            `;
+          } else {
+            forecastHtml = `
+              <div class="km-forecast-callout">
+                📉 <strong>Carga em Andamento:</strong> Esta viagem retira <strong>${fNum(volAtual, 3)} m³</strong>.<br>
+                Restará ainda um saldo de <strong>${fNum(saldoApos, 3)} m³</strong> no <strong>${this.escapeHtml(displayKm)}</strong> para os próximos caminhões (${percApos}% concluído).
+              </div>
+            `;
+          }
+        } else {
+          forecastHtml = `
+            <div style="font-size: 0.76rem; color: var(--muted); margin-top: 6px;">
+              💡 Preencha as medidas da carga do caminhão acima para prever se a retirada do Km será 100% concluída.
+            </div>
+          `;
+        }
+
+        box.innerHTML = `
+          <div class="km-balance-header">
+            <span class="km-balance-title">
+              <span>🚚</span> Retirada no <strong>${this.escapeHtml(displayKm)}</strong>
+            </span>
+            <span class="${concluiComEstaCarga ? 'badge-km-concluido' : 'badge-km-pendente'}">
+              ${concluiComEstaCarga ? '✓ 100% RETIRADO' : `⏳ Falta ${fNum(volAtual > 0 ? saldoApos : saldoAntes)} m³ (${volAtual > 0 ? percApos : percAntes}%)`}
+            </span>
+          </div>
+
+          <div class="km-balance-grid">
+            <div class="km-stat-box">
+              <div class="km-stat-val verde">${fNum(volEntrada, 2)} m³</div>
+              <div class="km-stat-lbl">📥 Cubado no Km</div>
+            </div>
+            <div class="km-stat-box">
+              <div class="km-stat-val laranja">${fNum(volRetiradaJa, 2)} m³</div>
+              <div class="km-stat-lbl">🚚 Já Retirado</div>
+            </div>
+            <div class="km-stat-box">
+              <div class="km-stat-val ${saldoAntes <= 0.005 ? 'verde' : ''}">${fNum(saldoAntes, 2)} m³</div>
+              <div class="km-stat-lbl">🪵 Saldo no Pátio</div>
+            </div>
+          </div>
+
+          <div class="km-progress-wrapper">
+            <div class="km-progress-bar">
+              <div class="km-progress-fill ${concluiComEstaCarga ? 'concluido' : ''}" style="width: ${volAtual > 0 ? percApos : percAntes}%;"></div>
+            </div>
+          </div>
+
+          ${forecastHtml}
+        `;
+
+      } else {
+        // MODO ENTRADA (PILHA OU TORA)
+        box.className = 'km-balance-live-card';
+        if (helperBadge) {
+          helperBadge.style.display = 'inline-block';
+          helperBadge.className = 'badge';
+          helperBadge.style.background = 'rgba(74, 222, 128, 0.15)';
+          helperBadge.style.color = '#4ade80';
+          helperBadge.style.border = '1px solid rgba(74, 222, 128, 0.4)';
+          helperBadge.textContent = 'Ponto de Cubagem';
+        }
+
+        if (!kmData) {
+          box.innerHTML = `
+            <div class="km-balance-header">
+              <span class="km-balance-title">🌱 Novo Ponto &mdash; <strong>${this.escapeHtml(displayKm)}</strong></span>
+              <span class="badge" style="background: rgba(74,222,128,0.2); color: #4ade80; border: 1px solid rgba(74,222,128,0.4); font-size: 0.72rem;">Primeira Cubagem</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--ink); line-height: 1.45;">
+              Este Km será cadastrado na frente <strong>${this.escapeHtml(projNome)}</strong>. O volume medido aqui (<strong>${fNum(volAtual, 3)} m³</strong>) passará a constar como estoque disponível para controle de retiradas por caminhão!
+            </div>
+          `;
+        } else {
+          const volEntradaJa = kmData.volEntrada;
+          const volRetiradaJa = kmData.volRetirada;
+          const saldoAntes = kmData.saldo;
+          const novoVolEntrada = volEntradaJa + volAtual;
+          const novoSaldo = Math.max(0, novoVolEntrada - volRetiradaJa);
+
+          box.innerHTML = `
+            <div class="km-balance-header">
+              <span class="km-balance-title">
+                <span>🌲</span> Ponto de Acúmulo no <strong>${this.escapeHtml(displayKm)}</strong>
+              </span>
+              <span class="badge" style="background: var(--surface-1); color: var(--gold); border: 1px solid var(--line); font-size: 0.72rem;">
+                ${kmData.countEntrada} medições anteriores
+              </span>
+            </div>
+
+            <div class="km-balance-grid">
+              <div class="km-stat-box">
+                <div class="km-stat-val verde">${fNum(volEntradaJa, 2)} m³</div>
+                <div class="km-stat-lbl">📥 Já Cubado</div>
+              </div>
+              <div class="km-stat-box">
+                <div class="km-stat-val laranja">${fNum(volRetiradaJa, 2)} m³</div>
+                <div class="km-stat-lbl">🚚 Retirado</div>
+              </div>
+              <div class="km-stat-box">
+                <div class="km-stat-val">${fNum(saldoAntes, 2)} m³</div>
+                <div class="km-stat-lbl">🪵 Saldo Anterior</div>
+              </div>
+            </div>
+
+            ${volAtual > 0 ? `
+              <div class="km-forecast-callout">
+                ➕ <strong>Somando ao Km:</strong> Esta medição adiciona <strong>${fNum(volAtual, 3)} m³</strong> ao <strong>${this.escapeHtml(displayKm)}</strong>.<br>
+                Novo estoque total no Km passará para <strong>${fNum(novoVolEntrada, 3)} m³</strong> (Saldo disponível a retirar: <strong>${fNum(novoSaldo, 3)} m³</strong>).
+              </div>
+            ` : ''}
+          `;
+        }
+      }
+    } catch (err) {
+      console.warn('[KM] Erro ao atualizar status live do KM:', err);
+    }
+  }
+
+  /**
+   * Renderiza a seção completa de Balanço por KM no modal de gestão de projeto
+   */
+  async renderizarBalancoKmProjeto(nomeProjeto = null) {
+    const container = document.getElementById('projKmBalanceContainer');
+    const badgeEl = document.getElementById('projKmSummaryBadge');
+    if (!container) return;
+
+    const projNome = (nomeProjeto || this.projetoAtivo || 'BR-153').trim();
+    const fNum = (n, d = 2) => (window.CubagemCalculator && typeof window.CubagemCalculator.formatNumber === 'function')
+      ? window.CubagemCalculator.formatNumber(n, d)
+      : Number(n || 0).toFixed(d);
+
+    try {
+      const balancos = await this.obterBalancoPorKm(projNome);
+
+      if (badgeEl) {
+        const concluidos = balancos.filter(b => b.concluido).length;
+        badgeEl.textContent = `${balancos.length} KMs monitorados (${concluidos} 100% retirados)`;
+      }
+
+      if (balancos.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 14px; font-size: 0.8rem; color: var(--muted); background: var(--surface-1); border-radius: 8px; border: 1px dashed var(--line);">
+            Nenhum KM especificado nas medições deste projeto ainda.<br>
+            Ao cubar pilhas, toras ou registrar saídas com caminhão, informe o Km (ex: 37) para acompanhar o balanço automático!
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = balancos.map(b => {
+        const concl = b.concluido;
+        const cardClass = concl ? 'proj-km-card concluido' : 'proj-km-card';
+        const badgeClass = concl ? 'badge-km-concluido' : 'badge-km-pendente';
+        const badgeText = concl ? '✓ 100% RETIRADO' : `⏳ Falta ${fNum(b.saldo, 2)} m³ (${b.percentualRetirado}%)`;
+
+        const detalhesEntrada = [];
+        if (b.pilhasCount > 0) detalhesEntrada.push(`${b.pilhasCount} ${b.pilhasCount === 1 ? 'pilha' : 'pilhas'}`);
+        if (b.torasCount > 0) detalhesEntrada.push(`${b.torasCount} toras`);
+        const subEntrada = detalhesEntrada.length > 0 ? ` (${detalhesEntrada.join(', ')})` : '';
+
+        return `
+          <div class="${cardClass}">
+            <div class="proj-km-card-top">
+              <span class="proj-km-card-title">
+                <span>🛣️</span> <strong>${this.escapeHtml(b.km)}</strong>
+              </span>
+              <span class="${badgeClass}">${badgeText}</span>
+            </div>
+
+            <div class="km-progress-wrapper" style="margin: 6px 0;">
+              <div class="km-progress-bar">
+                <div class="km-progress-fill ${concl ? 'concluido' : ''}" style="width: ${b.percentualRetirado}%;"></div>
+              </div>
+            </div>
+
+            <div class="proj-km-card-stats">
+              <div>🟢 <strong>Cubado:</strong> ${fNum(b.volEntrada, 2)} m³<small style="opacity:0.8;">${subEntrada}</small></div>
+              <div>🚚 <strong>Retirado:</strong> ${fNum(b.volRetirada, 2)} m³<small style="opacity:0.8;"> (${b.caminhoesCount} carg.)</small></div>
+              <div>🪵 <strong>Saldo:</strong> <strong style="color: ${concl ? '#4ade80' : 'var(--gold)'};">${fNum(b.saldo, 2)} m³</strong></div>
+            </div>
+
+            <div class="proj-km-card-actions">
+              ${!concl ? `
+                <button type="button" class="btn-km-action" onclick="app.iniciarRetiradaKm('${this.escapeHtml(b.km)}')">
+                  <span>🚚</span> Retirar Deste Km (Caminhão)
+                </button>
+              ` : `
+                <button type="button" class="btn-km-action" style="border-color: rgba(74,222,128,0.4); color: #4ade80;" onclick="app.iniciarRetiradaKm('${this.escapeHtml(b.km)}')">
+                  <span>🚚</span> Nova Carga no Km
+                </button>
+              `}
+              <button type="button" class="btn-km-action" onclick="app.iniciarCubagemKm('${this.escapeHtml(b.km)}')">
+                <span>🌲</span> + Cubar Madeira no Km
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      console.warn('[KM] Erro ao renderizar balanço do projeto por KM:', e);
+      container.innerHTML = `<div style="padding: 10px; color: var(--danger); font-size: 0.8rem;">Não foi possível carregar o balanço por KM.</div>`;
+    }
+  }
+
+  /**
+   * Inicia formulário de retirada já apontando para o KM escolhido
+   */
+  iniciarRetiradaKm(kmStr) {
+    this.fecharModal('modalProjeto');
+    this.navigate('cubagem');
+    this.setTipoCubagem('caminhao');
+    const inp = document.getElementById('cubKm');
+    if (inp) {
+      inp.value = kmStr;
+      inp.classList.add('highlight-glow');
+      setTimeout(() => inp.classList.remove('highlight-glow'), 1200);
+    }
+    this.atualizarStatusKmLive();
+    this.renderizarSugestoesKmsNova();
+    this.showToast(`Retirada de madeira selecionada para o ${kmStr}.`, 'info', 2500);
+  }
+
+  /**
+   * Inicia formulário de cubagem (pilha ou tora) no KM escolhido
+   */
+  iniciarCubagemKm(kmStr) {
+    this.fecharModal('modalProjeto');
+    this.navigate('cubagem');
+    this.setTipoCubagem('pilha');
+    const inp = document.getElementById('cubKm');
+    if (inp) {
+      inp.value = kmStr;
+      inp.classList.add('highlight-glow');
+      setTimeout(() => inp.classList.remove('highlight-glow'), 1200);
+    }
+    this.atualizarStatusKmLive();
+    this.renderizarSugestoesKmsNova();
+    this.showToast(`Cubagem de madeira apontada para o ${kmStr}.`, 'info', 2500);
   }
 
   async abrirModalProjeto(nomeProjeto = null, aba = null) {
@@ -4530,6 +5097,9 @@ class CubagemApp {
       }
     }
 
+    // Atualiza Balanço e Status de Retirada por Km da Rodovia
+    await this.renderizarBalancoKmProjeto(nome);
+
     // Renderiza Lista de Medições com Checkboxes
     const container = document.getElementById('projListaMedicoesContainer');
     if (container) {
@@ -4563,6 +5133,7 @@ class CubagemApp {
 
           const volStr = `${fNum(r.volumeGeometrico, 3)} m³`;
           const espStr = r.especie || 'Madeira Nativa Diversa';
+          const kmStr = r.km ? ` • 🛣️ ${this.escapeHtml(this.normalizarChaveKm(r.km))}` : '';
 
           return `
             <div class="proj-medicao-card ${isSelected ? 'selected' : ''}" id="projCard_${this.escapeHtml(r.id)}" onclick="app.toggleSelecaoMedicaoProjeto('${this.escapeHtml(r.id)}', event)">
@@ -4576,7 +5147,7 @@ class CubagemApp {
                   <div class="proj-medicao-vol">${volStr}</div>
                 </div>
                 <div class="proj-medicao-sub">
-                  ${this.escapeHtml(espStr)} • 📅 ${dataStr} • 👤 ${this.escapeHtml(autor)}
+                  ${this.escapeHtml(espStr)} • 📅 ${dataStr} • 👤 ${this.escapeHtml(autor)}${kmStr}
                 </div>
               </div>
             </div>
@@ -5129,6 +5700,14 @@ class CubagemApp {
         const criadorNome = meta.criadorNome || (meta.criadorEmail ? meta.criadorEmail.split('@')[0] : 'Lucas Aøsf');
         const totalMembros = Array.isArray(statsData.membros) && statsData.membros.length > 0 ? statsData.membros.length : 1;
 
+        let totalKms = 0;
+        let totalKms100 = 0;
+        try {
+          const balancoKm = await this.obterBalancoPorKm(pNome);
+          totalKms = balancoKm.length;
+          totalKms100 = balancoKm.filter(b => b.concluido).length;
+        } catch (eKm) {}
+
         cardsHtml.push(`
           <div class="cover-project-card ${isAtivo ? 'active-project' : ''}" onclick="app.abrirPastaProjetoCapa('${this.escapeHtml(pNome)}', 'painel')">
             <div class="cover-project-card-top">
@@ -5161,6 +5740,12 @@ class CubagemApp {
                 <span class="stat-ico">🚚</span>
                 <span class="stat-txt">Retirada: <strong>${fNum(statsData.totalRetiradaVolume, 2)} m³</strong></span>
               </div>
+              ${totalKms > 0 ? `
+                <div class="cover-proj-stat-pill" style="border-color: ${totalKms100 === totalKms ? 'rgba(74, 222, 128, 0.4)' : 'rgba(245, 158, 11, 0.35)'};">
+                  <span class="stat-ico">🛣️</span>
+                  <span class="stat-txt"><strong>${totalKms}</strong> KMs ${totalKms100 > 0 ? `<small style="color:#4ade80;">(${totalKms100} limpos)</small>` : ''}</span>
+                </div>
+              ` : ''}
               <div class="cover-proj-stat-pill">
                 <span class="stat-ico">👥</span>
                 <span class="stat-txt"><strong>${totalMembros}</strong> ${totalMembros === 1 ? 'integrante' : 'integrantes'}</span>
