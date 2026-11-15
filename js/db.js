@@ -327,7 +327,13 @@ class CubagemDB {
     const todayStr = new Date().toISOString().slice(0, 10);
 
     let totalVolumeEntrada = 0; // Pilhas + Toras (Entrada de madeira no pátio)
-    let totalVolumeSaida = 0;   // Retirada do Material / Caminhões (Saída de madeira)
+    let totalVolumeSaida = 0;   // Retirada do Material / Caminhões (Saída total)
+    let totalVolumeSaidaCubada = 0;    // Saída que abate madeira cubada do pátio
+    let totalVolumeSaidaNaoCubada = 0; // Saída avulsa / direta não cubada no app
+    let volumeNoPatioAtivo = 0;        // Volume real das cubagens de entrada ainda no pátio
+    let itensNoPatioCount = 0;         // Quantidade de cubagens ativas no pátio
+    let itensRetiradosCount = 0;       // Quantidade de cubagens marcadas como retiradas
+
     let todayCount = 0;
     let todayVolumeEntrada = 0;
     let todayVolumeSaida = 0;
@@ -340,6 +346,18 @@ class CubagemDB {
     let volPilhas = 0;
     let volToras = 0;
 
+    // Toras já carregadas por plaqueta em caminhões
+    const plaquetasCarregadasSet = new Set();
+    for (const item of all) {
+      if (item.tipo === 'caminhao' && Array.isArray(item.toras)) {
+        item.toras.forEach(t => {
+          if (t && t.plaqueta) {
+            plaquetasCarregadasSet.add(String(t.plaqueta).trim().toLowerCase());
+          }
+        });
+      }
+    }
+
     for (const item of all) {
       const vol = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
         ? window.CubagemCalculator.obterVolumeEfetivo(item)
@@ -350,22 +368,48 @@ class CubagemDB {
         totalCaminhoes++;
         volCaminhoes += vol;
         totalVolumeSaida += vol;
+
+        const isNaoCubada = item.madeiraNaoCubada === true || item.origemCarga === 'nao_cubada';
+        if (isNaoCubada) {
+          totalVolumeSaidaNaoCubada += vol;
+        } else {
+          totalVolumeSaidaCubada += vol;
+        }
+
         if (item.data === todayStr) {
           todayVolumeSaida += vol;
         }
-      } else if (t === 'pilha') {
-        totalPilhas++;
-        volPilhas += vol;
+      } else if (t === 'pilha' || t === 'tora') {
+        if (t === 'pilha') {
+          totalPilhas++;
+          volPilhas += vol;
+        } else {
+          totalToras++;
+          volToras += vol;
+        }
         totalVolumeEntrada += vol;
         if (item.data === todayStr) {
           todayVolumeEntrada += vol;
         }
-      } else if (t === 'tora') {
-        totalToras++;
-        volToras += vol;
-        totalVolumeEntrada += vol;
-        if (item.data === todayStr) {
-          todayVolumeEntrada += vol;
+
+        const isRetirado = item.statusPatio === 'retirado';
+        if (isRetirado) {
+          itensRetiradosCount++;
+        } else {
+          itensNoPatioCount++;
+          // Se for lote de toras onde algumas foram carregadas
+          if (t === 'tora' && Array.isArray(item.toras) && item.toras.length > 0 && plaquetasCarregadasSet.size > 0) {
+            let volRestanteLote = 0;
+            item.toras.forEach(tora => {
+              const pKey = String(tora.plaqueta || '').trim().toLowerCase();
+              if (!pKey || !plaquetasCarregadasSet.has(pKey)) {
+                volRestanteLote += Number(tora.volumeGeometrico) || 0;
+              }
+            });
+            volumeNoPatioAtivo += volRestanteLote;
+          } else {
+            volumeNoPatioAtivo += vol;
+          }
         }
       }
 
@@ -374,7 +418,22 @@ class CubagemDB {
       }
     }
 
-    const saldoPatio = totalVolumeEntrada - totalVolumeSaida;
+    // Cálculo do Saldo Real no Pátio:
+    // Se há cubagens de entrada ativas que não foram marcadas como retiradas,
+    // o saldo NUNCA é zerado falsamente por caminhões que levaram cargas não cubadas!
+    let saldoPatio = 0;
+    if (totalVolumeEntrada > 0) {
+      if (itensRetiradosCount > 0) {
+        saldoPatio = Math.max(0, volumeNoPatioAtivo);
+      } else if (totalVolumeSaidaNaoCubada > 0) {
+        saldoPatio = Math.max(0, totalVolumeEntrada - totalVolumeSaidaCubada);
+      } else if (totalVolumeSaida >= totalVolumeEntrada && itensNoPatioCount > 0) {
+        // Cargas avulsas não cubadas registradas como saída não anulam os materiais no pátio
+        saldoPatio = Math.max(0, volumeNoPatioAtivo);
+      } else {
+        saldoPatio = Math.max(0, totalVolumeEntrada - totalVolumeSaida);
+      }
+    }
     const totalEntradas = totalPilhas + totalToras;
 
     return {
@@ -383,6 +442,11 @@ class CubagemDB {
       totalVolume: totalVolumeEntrada,
       totalVolumeEntrada,
       totalVolumeSaida,
+      totalVolumeSaidaCubada,
+      totalVolumeSaidaNaoCubada,
+      volumeNoPatioAtivo,
+      itensNoPatioCount,
+      itensRetiradosCount,
       saldoPatio,
       todayCount,
       todayVolume: todayVolumeEntrada,

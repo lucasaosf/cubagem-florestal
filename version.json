@@ -1,12 +1,12 @@
 {
-  "v": "2.10.18",
-  "nome": "2.10.18",
+  "v": "2.10.19",
+  "nome": "2.10.19",
   "data": "2026-11-14",
   "novidades": [
-    "Ícone de Medições Atualizado: O indicador de total de medições nos cards dos projetos agora utiliza o emoji oficial 📐 (esquadro)",
-    "Porcentagem de Nativa e Exótica no Saldo por KM: Exibição exata do percentual e volume restante de madeira Nativa e Exótica a retirar em cada Km",
-    "Previsão por Origem na Carga do Caminhão: O card live atualiza quanto restará de madeira nativa e exótica após a saída do caminhão",
-    "Balanço Consolidado no Painel do Projeto: Pílulas destacando '% Nativa' e '% Exótica' em cada trecho monitorado da rodovia",
-    "Aba Excel com % Nativa e % Exótica: Planilha exportada com colunas dedicadas de percentual por origem para cada KM"
+    "Controle Real de Materiais no Pátio: As cubagens não são mais zeradas falsamente por saídas de materiais avulsos que não tinham sido cubados no app",
+    "Botão de Status no Card (🪵 No Pátio / ✓ Retirado): Alterne com 1 toque no histórico e no modal do projeto quais lotes/pilhas continuam fisicamente no pátio",
+    "Origem da Carga no Caminhão: Indique se o caminhão levou 'Madeira Cubada no Pátio' (abate estoque) ou 'Carga Direta / Não Cubada' (avulsa, sem abater cubagens pendentes)",
+    "Falta Retirar Inteligente: A capa e os KPIs exibem o saldo real dos materiais cubados que continuam no pátio, com alerta de cargas avulsas quando as saídas superam as entradas",
+    "Balanço por KM Preciso: Caminhões de madeira não cubada não anulam mais o volume cubado restante do KM correspondente"
   ]
 }

@@ -1552,6 +1552,77 @@ textarea.form-control {
   border-color: var(--rec);
 }
 
+/* Botões Interativos de Status no Pátio e Origem de Carga */
+.btn-status-patio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  font-size: 0.70rem;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+.btn-status-patio.no-patio {
+  background: rgba(34, 197, 94, 0.16);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+}
+.btn-status-patio.no-patio:hover {
+  background: rgba(34, 197, 94, 0.28);
+  border-color: #4ade80;
+  transform: translateY(-1px);
+}
+.btn-status-patio.retirado {
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  opacity: 0.85;
+}
+.btn-status-patio.retirado:hover {
+  opacity: 1;
+  color: var(--gold);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.btn-status-cam {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  font-size: 0.70rem;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+.btn-status-cam.cubada {
+  background: rgba(150, 120, 74, 0.16);
+  color: var(--gold);
+  border: 1px solid rgba(150, 120, 74, 0.45);
+}
+.btn-status-cam.cubada:hover {
+  background: rgba(150, 120, 74, 0.28);
+  transform: translateY(-1px);
+}
+.btn-status-cam.nao-cubada {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+}
+.btn-status-cam.nao-cubada:hover {
+  background: rgba(245, 158, 11, 0.28);
+  transform: translateY(-1px);
+}
+
 /* Badges de Tipo */
 .badge-type {
   font-size: 0.72rem;

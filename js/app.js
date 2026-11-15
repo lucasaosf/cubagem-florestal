@@ -28,7 +28,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.18';
+    this.appVersion = '2.10.19';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -61,6 +61,7 @@ class CubagemApp {
 
     // Modalidade de Carga do Caminhão: 'geometrica' | 'toras'
     this.modoCargaCaminhao = 'geometrica';
+    this.origemCargaCaminhao = 'cubada'; // 'cubada' | 'nao_cubada'
     this.torasCaminhao = [];
     this.modalTorasSelecionadas = new Set();
     this.filtroStatusTorasModal = 'todas';
@@ -1299,6 +1300,8 @@ class CubagemApp {
           id: window.cubagemDB.generateId('CAM'),
           tipo: 'caminhao',
           modoCarga: 'toras',
+          origemCarga: this.origemCargaCaminhao || 'cubada',
+          madeiraNaoCubada: (this.origemCargaCaminhao === 'nao_cubada'),
           origemMadeira: this.origemMadeira || 'Nativa',
           especie: especieFinal,
           projeto, autorNome, autorEmail, autorUid,
@@ -1347,6 +1350,8 @@ class CubagemApp {
           id: window.cubagemDB.generateId('CAM'),
           tipo: 'caminhao',
           modoCarga: 'geometrica',
+          origemCarga: this.origemCargaCaminhao || 'cubada',
+          madeiraNaoCubada: (this.origemCargaCaminhao === 'nao_cubada'),
           origemMadeira: this.origemMadeira || 'Nativa',
           especie: '',
           projeto, autorNome, autorEmail, autorUid,
@@ -1396,6 +1401,7 @@ class CubagemApp {
       record = {
         id: window.cubagemDB.generateId('PILHA'),
         tipo: 'pilha',
+        statusPatio: 'no_patio',
         origemMadeira: this.origemMadeira || 'Nativa',
         especie: '',
         projeto, autorNome, autorEmail, autorUid,
@@ -1468,6 +1474,7 @@ class CubagemApp {
       record = {
         id: window.cubagemDB.generateId('PILHA-TORA'),
         tipo: 'tora',
+        statusPatio: 'no_patio',
         origemMadeira: this.origemMadeira || 'Nativa',
         especie: especieFinal,
         projeto, autorNome, autorEmail, autorUid,
@@ -1491,6 +1498,9 @@ class CubagemApp {
     if (isEditing) {
       record.id = this.editingRecordId;
       record.updatedAt = Date.now();
+      if (this.currentDetailItem && this.currentDetailItem.id === this.editingRecordId) {
+        if (this.currentDetailItem.statusPatio) record.statusPatio = this.currentDetailItem.statusPatio;
+      }
     }
 
     try {
@@ -1562,6 +1572,7 @@ class CubagemApp {
       const plqInp = document.getElementById('cubCamPlaquetasInput');
       if (plqInp) plqInp.value = '';
       this.setModoCargaCaminhao('geometrica');
+      this.setOrigemCargaCaminhao('cubada');
       this.sugerirProximaViagem();
     } else if (this.tipoCubagem === 'pilha') {
       this.alturasPilha = ['', '', '', ''];
@@ -1610,6 +1621,7 @@ class CubagemApp {
     this.torasCaminhao = [];
     this.renderizarListaTorasCaminhao();
     this.setModoCargaCaminhao('geometrica');
+    this.setOrigemCargaCaminhao('cubada');
     const fb = document.getElementById('camToraFeedbackMsg');
     if (fb) fb.style.display = 'none';
     const plqInp = document.getElementById('cubCamPlaquetasInput');
@@ -1722,6 +1734,7 @@ class CubagemApp {
       dados.alturasLE = [...(this.alturasLE || [])];
       dados.alturasLD = [...(this.alturasLD || [])];
       dados.torasCaminhao = [...(this.torasCaminhao || [])];
+      dados.origemCargaCaminhao = this.origemCargaCaminhao || 'cubada';
 
       if (this.modoCargaCaminhao === 'toras') {
         if (this.torasCaminhao.length > 0 || placa) {
@@ -1912,6 +1925,7 @@ class CubagemApp {
 
     if (d.tipo === 'caminhao') {
       this.setModoCargaCaminhao(d.modoCargaCaminhao || 'geometrica');
+      this.setOrigemCargaCaminhao(d.origemCargaCaminhao || d.origemCarga || (d.madeiraNaoCubada ? 'nao_cubada' : 'cubada'));
       const plq = document.getElementById('cubPlaca');
       if (plq && d.placa) plq.value = d.placa;
 
@@ -2045,6 +2059,7 @@ class CubagemApp {
 
         const modo = (item.modoCarga === 'toras' || (Array.isArray(item.toras) && item.toras.length > 0)) ? 'toras' : 'geometrica';
         this.setModoCargaCaminhao(modo);
+        this.setOrigemCargaCaminhao(item.origemCarga || (item.madeiraNaoCubada ? 'nao_cubada' : 'cubada'));
 
         if (modo === 'toras') {
           this.torasCaminhao = Array.isArray(item.toras) ? JSON.parse(JSON.stringify(item.toras)) : [];
@@ -2488,6 +2503,9 @@ class CubagemApp {
       const coverSaldoPatio = document.getElementById('coverSaldoPatio');
       const coverSaldoSub = document.getElementById('coverSaldoSub');
       const saldo = stats.saldoPatio !== undefined ? stats.saldoPatio : (volEntrada - volSaida);
+      const temItensNoPatio = (stats.itensNoPatioCount !== undefined && stats.itensNoPatioCount > 0);
+      const itensNoPatio = stats.itensNoPatioCount || 0;
+      const temCargasNaoCubadas = (stats.totalVolumeSaidaNaoCubada !== undefined && stats.totalVolumeSaidaNaoCubada > 0) || (volSaida > volEntrada);
 
       if (coverSaldoPatio) {
         coverSaldoPatio.textContent = fVol(saldo > 0 ? saldo : 0);
@@ -2495,11 +2513,16 @@ class CubagemApp {
       if (coverSaldoSub) {
         if (volEntrada <= 0) {
           coverSaldoSub.textContent = 'Aguardando medições';
-        } else if (saldo <= 0.001 && volSaida > 0) {
+        } else if (saldo <= 0.001 && (!temItensNoPatio || stats.itensRetiradosCount > 0)) {
           coverSaldoSub.textContent = '✓ Pátio 100% retirado';
         } else {
           const perc = volEntrada > 0 ? Math.min(100, Math.round((saldo / volEntrada) * 100)) : 0;
-          coverSaldoSub.textContent = `${perc}% restante no pátio`;
+          const subLotes = itensNoPatio > 0 ? ` (${itensNoPatio} ${itensNoPatio === 1 ? 'lote no pátio' : 'lotes no pátio'})` : '';
+          if (temCargasNaoCubadas) {
+            coverSaldoSub.textContent = `${perc}% restante${subLotes} • Há cargas não cubadas`;
+          } else {
+            coverSaldoSub.textContent = `${perc}% restante no pátio${subLotes}`;
+          }
         }
       }
 
@@ -2712,12 +2735,30 @@ class CubagemApp {
       subItem = `D: ${dmStr} • L: ${compStr}${espStr}`;
     }
 
+    let statusBtnHtml = '';
+    if (tipo === 'caminhao') {
+      const isNaoCubada = item.madeiraNaoCubada === true || item.origemCarga === 'nao_cubada';
+      statusBtnHtml = `
+        <button type="button" class="btn-status-cam ${isNaoCubada ? 'nao-cubada' : 'cubada'}" onclick="event.stopPropagation(); app.toggleOrigemCargaCaminhao('${esc(item.id)}', event)" title="${isNaoCubada ? 'Carga Não Cubada (material avulso que não abate o pátio). Clique para alternar para Madeira Cubada.' : 'Madeira Cubada (abate do estoque do pátio). Clique para alternar para Carga Não Cubada.'}">
+          ${isNaoCubada ? '🚛 Não Cubada' : '🪵 Do Pátio'}
+        </button>
+      `;
+    } else {
+      const isRetirado = item.statusPatio === 'retirado';
+      statusBtnHtml = `
+        <button type="button" class="btn-status-patio ${isRetirado ? 'retirado' : 'no-patio'}" onclick="event.stopPropagation(); app.toggleStatusPatioCubagem('${esc(item.id)}', event)" title="${isRetirado ? 'Marcado como RETIRADO. Clique para marcar como AINDA NO PÁTIO.' : 'Marcado como NO PÁTIO. Clique para marcar como RETIRADO.'}">
+          ${isRetirado ? '✓ Retirado' : '🪵 No Pátio'}
+        </button>
+      `;
+    }
+
     return `
       <div class="history-item-card ${isSelected ? 'selected-card' : ''}" data-id="${esc(item.id)}">
         <div class="history-card-top">
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
             <input type="checkbox" class="hist-card-checkbox" value="${esc(item.id)}" ${isSelected ? 'checked' : ''} onchange="app.toggleItemSelecionado('${esc(item.id)}', this.checked)" title="Selecionar cubagem">
             <span class="badge-type ${esc(tipo)}">${esc(tagTipo)}</span>
+            ${statusBtnHtml}
           </div>
           <span class="history-tag-date">${esc(dataBR)} • ${esc(item.horario || '')}</span>
         </div>
@@ -2740,6 +2781,103 @@ class CubagemApp {
         </div>
       </div>
     `;
+  }
+
+  async toggleStatusPatioCubagem(id, event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    try {
+      const item = await window.cubagemDB.get(id);
+      if (!item) return;
+
+      const novoStatus = (item.statusPatio === 'retirado') ? 'no_patio' : 'retirado';
+      item.statusPatio = novoStatus;
+      item.atualizadoEm = Date.now();
+
+      await window.cubagemDB.save(item);
+
+      // Sincroniza na nuvem Firestore se autenticado
+      if (this.auth && this.auth.user && item.projeto) {
+        try {
+          const db = window.firebase?.firestore?.();
+          if (db) {
+            const docRef = db.collection('projects').doc(item.projeto).collection('medicoes').doc(item.id);
+            await docRef.set({ statusPatio: novoStatus, atualizadoEm: Date.now() }, { merge: true });
+          }
+        } catch (eCloud) {
+          console.warn('[StatusPátio] Aviso ao sincronizar status na nuvem:', eCloud);
+        }
+      }
+
+      await this.atualizarDashboard();
+      if (this.currentView === 'historico') {
+        await this.carregarHistorico();
+      }
+      const modalProj = document.getElementById('modalProjeto');
+      if (modalProj && modalProj.classList.contains('active')) {
+        await this.renderizarEstatisticasFrente(this.projetoAtivo || item.projeto);
+      }
+
+      const identStr = item.identificacao || (item.plaqueta ? `Plaqueta ${item.plaqueta}` : item.id);
+      const msg = novoStatus === 'retirado'
+        ? `✓ Cubagem "${identStr}" marcada como RETIRADA do pátio!`
+        : `🪵 Cubagem "${identStr}" marcada como NO PÁTIO (pendente de retirada)!`;
+      this.showToast(msg, 'success');
+    } catch (err) {
+      console.error('Erro ao alternar status no pátio:', err);
+      this.showToast('Erro ao atualizar status da cubagem.', 'danger');
+    }
+  }
+
+  async toggleOrigemCargaCaminhao(id, event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    try {
+      const item = await window.cubagemDB.get(id);
+      if (!item) return;
+
+      const novoNaoCubada = !item.madeiraNaoCubada;
+      item.madeiraNaoCubada = novoNaoCubada;
+      item.origemCarga = novoNaoCubada ? 'nao_cubada' : 'cubada';
+      item.atualizadoEm = Date.now();
+
+      await window.cubagemDB.save(item);
+
+      // Sincroniza na nuvem Firestore se autenticado
+      if (this.auth && this.auth.user && item.projeto) {
+        try {
+          const db = window.firebase?.firestore?.();
+          if (db) {
+            const docRef = db.collection('projects').doc(item.projeto).collection('medicoes').doc(item.id);
+            await docRef.set({ madeiraNaoCubada: novoNaoCubada, origemCarga: item.origemCarga, atualizadoEm: Date.now() }, { merge: true });
+          }
+        } catch (eCloud) {
+          console.warn('[OrigemCarga] Aviso ao sincronizar na nuvem:', eCloud);
+        }
+      }
+
+      await this.atualizarDashboard();
+      if (this.currentView === 'historico') {
+        await this.carregarHistorico();
+      }
+      const modalProj = document.getElementById('modalProjeto');
+      if (modalProj && modalProj.classList.contains('active')) {
+        await this.renderizarEstatisticasFrente(this.projetoAtivo || item.projeto);
+      }
+
+      const placaStr = item.placa || item.identificacao || item.id;
+      const msg = novoNaoCubada
+        ? `🚛 Caminhão "${placaStr}" definido como Carga Não Cubada (não abate o pátio)!`
+        : `🪵 Caminhão "${placaStr}" definido como Madeira Cubada (abate do estoque do pátio)!`;
+      this.showToast(msg, 'info');
+    } catch (err) {
+      console.error('Erro ao alternar origem de carga do caminhão:', err);
+      this.showToast('Erro ao atualizar carga do caminhão.', 'danger');
+    }
   }
 
   async abrirDetalhes(id) {
@@ -3450,6 +3588,22 @@ class CubagemApp {
     }
 
     this.executarCalculoTempoReal();
+  }
+
+  setOrigemCargaCaminhao(origem = 'cubada') {
+    this.origemCargaCaminhao = (origem === 'nao_cubada') ? 'nao_cubada' : 'cubada';
+    const btnCub = document.getElementById('btnOrigemCargaCubada');
+    const btnNaoCub = document.getElementById('btnOrigemCargaNaoCubada');
+    const helper = document.getElementById('helperOrigemCargaCam');
+
+    if (btnCub) btnCub.classList.toggle('active', this.origemCargaCaminhao === 'cubada');
+    if (btnNaoCub) btnNaoCub.classList.toggle('active', this.origemCargaCaminhao === 'nao_cubada');
+
+    if (helper) {
+      helper.textContent = (this.origemCargaCaminhao === 'nao_cubada')
+        ? '🚛 Carga Direta / Não Cubada: Material que não passou por cubagem prévia no app. O volume somará no total retirado, mas NÃO abaterá das cubagens que continuam no pátio.'
+        : '🪵 Madeira Cubada no Pátio: Abate do saldo restante das pilhas e toras cubadas no pátio/KM.';
+    }
   }
 
   obterNumeroViagem() {
@@ -4405,6 +4559,8 @@ class CubagemApp {
           volEntradaNativa: 0,
           volEntradaExotica: 0,
           volRetirada: 0,
+          volRetiradaCubada: 0,
+          volRetiradaNaoCubada: 0,
           volRetiradaNativa: 0,
           volRetiradaExotica: 0,
           countEntrada: 0,
@@ -4430,6 +4586,13 @@ class CubagemApp {
         item.volRetirada += vol;
         item.countRetirada += 1;
         item.caminhoesCount += 1;
+
+        const isNaoCubada = r.madeiraNaoCubada === true || r.origemCarga === 'nao_cubada';
+        if (isNaoCubada) {
+          item.volRetiradaNaoCubada += vol;
+        } else {
+          item.volRetiradaCubada += vol;
+        }
 
         if (Array.isArray(r.toras) && r.toras.length > 0) {
           let somouTora = false;
@@ -4484,7 +4647,8 @@ class CubagemApp {
 
     const resultado = [];
     kmsMap.forEach(item => {
-      const saldoTotal = Math.max(0, item.volEntrada - item.volRetirada);
+      const volAbater = (item.volRetiradaNaoCubada > 0) ? item.volRetiradaCubada : item.volRetirada;
+      const saldoTotal = Math.max(0, item.volEntrada - volAbater);
       let saldoNativa = Math.max(0, item.volEntradaNativa - item.volRetiradaNativa);
       let saldoExotica = Math.max(0, item.volEntradaExotica - item.volRetiradaExotica);
 
@@ -5179,8 +5343,50 @@ class CubagemApp {
       responsaveisMap.set(autor, statsAutor);
     });
 
-    const torasNoPatioRestante = Math.max(0, torasCubadasCount - torasCarregadasPlaquetas.size);
-    const saldoVolumePatio = volTotalEntrada - retiradasVolTotal;
+    let volPatioReal = 0;
+    let torasNoPatioCount = 0;
+    let cubagensNoPatioCount = 0;
+    let cubagensRetiradasCount = 0;
+
+    records.forEach(r => {
+      if (r.tipo !== 'caminhao') {
+        const isRet = r.statusPatio === 'retirado';
+        if (isRet) {
+          cubagensRetiradasCount++;
+        } else {
+          cubagensNoPatioCount++;
+          const v = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
+            ? window.CubagemCalculator.obterVolumeEfetivo(r)
+            : (Number(r.volumeGeometrico) || 0);
+
+          if (r.tipo === 'tora' && Array.isArray(r.toras) && r.toras.length > 0 && torasCarregadasPlaquetas.size > 0) {
+            let vLote = 0;
+            r.toras.forEach(t => {
+              const p = String(t.plaqueta || '').trim().toLowerCase();
+              if (!p || !torasCarregadasPlaquetas.has(p)) {
+                vLote += Number(t.volumeGeometrico) || 0;
+                torasNoPatioCount++;
+              }
+            });
+            volPatioReal += vLote;
+          } else {
+            volPatioReal += v;
+            torasNoPatioCount += (Array.isArray(r.toras) && r.toras.length > 0 ? r.toras.length : 1);
+          }
+        }
+      }
+    });
+
+    let saldoVolumePatio = 0;
+    if (volTotalEntrada > 0) {
+      if (cubagensRetiradasCount > 0) {
+        saldoVolumePatio = Math.max(0, volPatioReal);
+      } else if (retiradasVolTotal >= volTotalEntrada && cubagensNoPatioCount > 0) {
+        saldoVolumePatio = Math.max(0, volPatioReal);
+      } else {
+        saldoVolumePatio = Math.max(0, volTotalEntrada - retiradasVolTotal);
+      }
+    }
 
     // Atualiza KPIs
     const kpiVol = document.getElementById('projKpiVolTotal');
@@ -5192,7 +5398,7 @@ class CubagemApp {
     if (kpiVol) kpiVol.textContent = `${fNum(volTotalEntrada, 3)} m³`;
     if (kpiToras) kpiToras.textContent = `${torasCubadasCount}`;
     if (kpiRetiradas) kpiRetiradas.textContent = `${retiradasCargasCount} (${fNum(retiradasVolTotal, 2)} m³)`;
-    if (kpiPatio) kpiPatio.textContent = `${torasNoPatioRestante} (${fNum(saldoVolumePatio, 2)} m³)`;
+    if (kpiPatio) kpiPatio.textContent = `${torasNoPatioCount} (${fNum(saldoVolumePatio, 2)} m³)`;
     if (totalCountEl) totalCountEl.textContent = `${records.length}`;
 
     // Atualiza Resumo de Contribuição da Equipe com dados da Nuvem
@@ -5266,14 +5472,34 @@ class CubagemApp {
           const espStr = r.especie || 'Madeira Nativa Diversa';
           const kmStr = r.km ? ` • 🛣️ ${this.escapeHtml(this.normalizarChaveKm(r.km))}` : '';
 
+          let statusPillHtml = '';
+          if (r.tipo === 'caminhao') {
+            const isNaoCubada = r.madeiraNaoCubada === true || r.origemCarga === 'nao_cubada';
+            statusPillHtml = `
+              <button type="button" class="btn-status-cam ${isNaoCubada ? 'nao-cubada' : 'cubada'}" onclick="event.stopPropagation(); app.toggleOrigemCargaCaminhao('${this.escapeHtml(r.id)}', event)" title="${isNaoCubada ? 'Carga Não Cubada (material avulso que não abate o pátio). Clique para alternar para Madeira Cubada.' : 'Madeira Cubada (abate do estoque do pátio). Clique para alternar para Carga Não Cubada.'}">
+                ${isNaoCubada ? '🚛 Não Cubada' : '🪵 Do Pátio'}
+              </button>
+            `;
+          } else {
+            const isRetirado = r.statusPatio === 'retirado';
+            statusPillHtml = `
+              <button type="button" class="btn-status-patio ${isRetirado ? 'retirado' : 'no-patio'}" onclick="event.stopPropagation(); app.toggleStatusPatioCubagem('${this.escapeHtml(r.id)}', event)" title="${isRetirado ? 'Marcado como RETIRADO. Clique para marcar como AINDA NO PÁTIO.' : 'Marcado como NO PÁTIO. Clique para marcar como RETIRADO.'}">
+                ${isRetirado ? '✓ Retirado' : '🪵 No Pátio'}
+              </button>
+            `;
+          }
+
           return `
             <div class="proj-medicao-card ${isSelected ? 'selected' : ''}" id="projCard_${this.escapeHtml(r.id)}" onclick="app.toggleSelecaoMedicaoProjeto('${this.escapeHtml(r.id)}', event)">
               <input type="checkbox" class="proj-medicao-checkbox" id="projChk_${this.escapeHtml(r.id)}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); app.toggleSelecaoMedicaoProjeto('${this.escapeHtml(r.id)}', event)">
               <div class="proj-medicao-info">
                 <div class="proj-medicao-top">
-                  <div class="proj-medicao-title">
-                    <span>${icone}</span> <strong>${this.escapeHtml(titulo)}</strong>
-                    <span style="font-size: 0.72rem; color: var(--gold); margin-left: 4px;">(${tipoBadge})</span>
+                  <div class="proj-medicao-title" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                      <span>${icone}</span> <strong>${this.escapeHtml(titulo)}</strong>
+                      <span style="font-size: 0.72rem; color: var(--gold); margin-left: 4px;">(${tipoBadge})</span>
+                    </div>
+                    ${statusPillHtml}
                   </div>
                   <div class="proj-medicao-vol">${volStr}</div>
                 </div>

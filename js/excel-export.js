@@ -224,10 +224,12 @@ class CubagemExcelExport {
     }, 0);
 
     const vCam = sumVol(caminhoes);
+    const vCamNaoCubada = sumVol(caminhoes.filter(c => c.madeiraNaoCubada === true || c.origemCarga === 'nao_cubada'));
+    const vCamCubada = vCam - vCamNaoCubada;
     const vPil = sumVol(pilhas);
     const vTor = sumVol(toras);
     const vTotEntrada = vPil + vTor;
-    const vSaldoPatio = vTotEntrada - vCam;
+    const vSaldoPatio = Math.max(0, vTotEntrada - vCamCubada);
     const vTot = sumVol(records);
 
     // Extração padronizada de informações de viagem
