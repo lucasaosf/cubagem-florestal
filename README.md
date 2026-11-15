@@ -45,6 +45,29 @@ As medições ficam salvas no celular (IndexedDB offline) e o app funciona sem i
 
 <sub>Dados mostrados nas imagens são de exemplo.</sub>
 
+## Citation
+
+Se você utilizar este software em suas pesquisas, projetos florestais ou trabalhos de campo, por favor cite:
+
+```bibtex
+@misc{aosf2026biokuricubagem,
+  title={Biokuri Cubagem Florestal: Aplicação Web Progressiva (PWA) Offline-First para Dendrometria, Controle Logístico de Pátio e Cadeia de Custódia da Madeira},
+  author={Lucas Aøsf},
+  year={2026},
+  publisher={GitHub},
+  howpublished={\url{https://github.com/lucasaosf/cubagem-florestal}},
+  url={https://lucasaosf.github.io/cubagem-florestal/}
+}
+```
+
+```text
+AØSF, Lucas. Biokuri Cubagem Florestal: Aplicação Web Progressiva (PWA) Offline-First para Dendrometria, Controle Logístico de Pátio e Cadeia de Custódia da Madeira. Repositório GitHub, 2026. Disponível em: <https://github.com/lucasaosf/cubagem-florestal>. Acesso em: 15 nov. 2026.
+```
+
+## License
+
+Distribuído sob a licença [MIT](LICENSE).
+
 ---
 
 <p align="center"><sub><i>BIOKURI · Pesquisa e Soluções Ambientais</i> · ciência aplicada à conservação</sub></p>

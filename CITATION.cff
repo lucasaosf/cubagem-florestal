@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "Se você utilizar este software em suas pesquisas, projetos florestais ou trabalhos de campo, por favor cite conforme abaixo:"
+authors:
+  - family-names: "Aøsf"
+    given-names: "Lucas"
+title: "Biokuri Cubagem Florestal: Aplicação Web Progressiva (PWA) Offline-First para Dendrometria, Controle Logístico de Pátio e Cadeia de Custódia da Madeira"
+version: 2.10.19
+date-released: 2026-11-15
+url: "https://lucasaosf.github.io/cubagem-florestal/"
+repository-code: "https://github.com/lucasaosf/cubagem-florestal"
+license: MIT
+keywords:
+  - "cubagem florestal"
+  - "dendrometria"
+  - "metodo de smalian"
+  - "silvicultura 4.0"
+  - "pwa"
+  - "offline-first"
+  - "cadeia de custodia"

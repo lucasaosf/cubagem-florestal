@@ -7,4 +7,6 @@ desktop.ini
 App Dev/
 *.docx
 *.pdf
-
+scripts/
+docs/figures/
+docs/artigo_cientifico*
