@@ -45,6 +45,14 @@ As medições ficam salvas no celular (IndexedDB offline) e o app funciona sem i
 
 <sub>Dados mostrados nas imagens são de exemplo.</sub>
 
+## Material Suplementar do Artigo
+
+Os scripts reprodutíveis em R, os conjuntos de dados de validação e as figuras de alta resolução (300 DPI) para o artigo científico do aplicativo estão disponíveis no diretório [`supplementary/`](supplementary/):
+- **Script R:** [`supplementary/scripts/analise_eficacia_biometria.R`](supplementary/scripts/analise_eficacia_biometria.R)
+- **Dados:** [`supplementary/data/`](supplementary/data/)
+- **Figuras (300 DPI):** [`supplementary/figures/`](supplementary/figures/)
+- **Apêndice S1:** [`supplementary/Apendice_S1_Formulacao_Matematica_e_Metodologia.md`](supplementary/Apendice_S1_Formulacao_Matematica_e_Metodologia.md)
+
 ## Citation
 
 Se você utilizar este software em suas pesquisas, projetos florestais ou trabalhos de campo, por favor cite:
