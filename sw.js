@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cubagem-florestal-v2.10.19';
+const CACHE_NAME = 'cubagem-florestal-v2.10.20';
 const CORE = [
   './',
   './index.html',
@@ -73,7 +73,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navegação: Network-first com fallback para cache local do index.html
+  // Navegação: Network-first com fallback para cache local do index.html (blindado contra captive portals)
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
@@ -81,6 +81,8 @@ self.addEventListener('fetch', (event) => {
           if (
             networkResponse &&
             networkResponse.ok &&
+            !networkResponse.redirected &&
+            (networkResponse.headers.get('content-type') || '').includes('text/html') &&
             (url.pathname.endsWith('/') ||
              url.pathname.endsWith('/index.html') ||
              url.pathname.includes('/cubagem-florestal'))

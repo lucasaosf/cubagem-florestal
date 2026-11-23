@@ -28,7 +28,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.19';
+    this.appVersion = '2.10.20';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -6889,7 +6889,7 @@ class CubagemApp {
           'IC': { label: '🛡️ Imune de Corte (MG)', cls: 'threat-ic' }
         };
         const m = ameacaMap[sp.ameaca] || { label: sp.ameaca, cls: 'threat-vu' };
-        badgeAmeacaHtml = `<span class="species-threat-pill ${m.cls}">${m.label}</span>`;
+        badgeAmeacaHtml = `<span class="species-threat-pill ${this.escapeHtml(m.cls)}">${this.escapeHtml(m.label)}</span>`;
       }
 
       // Imagem da prancha / miniatura
@@ -7759,7 +7759,7 @@ class CubagemApp {
             <tr style="background: rgba(140, 74, 55, 0.12); font-weight: 700;">
               <td class="excel-row-num" style="background: #e2dccb;">•</td>
               <td colspan="9" class="excel-cell-text" style="color: #8C4A37; font-size: 0.78rem;">
-                🚚 RETIRADAS SEPARADAS POR VIAGEM (${viagensList.length} ${viagensList.length === 1 ? 'VIAGEM' : 'VIAGENS'}): ${viagensList.map(v => `<b>${v.label}</b>: ${fNum(v.volumeTotal, 2)} m³ (${v.placas.size > 0 ? [...v.placas].join(', ') : 'S/P'})`).join(' &bull; ')}
+                🚚 RETIRADAS SEPARADAS POR VIAGEM (${viagensList.length} ${viagensList.length === 1 ? 'VIAGEM' : 'VIAGENS'}): ${viagensList.map(v => `<b>${this.escapeHtml(v.label)}</b>: ${fNum(v.volumeTotal, 2)} m³ (${v.placas.size > 0 ? this.escapeHtml([...v.placas].join(', ')) : 'S/P'})`).join(' &bull; ')}
               </td>
               <td class="excel-cell-num" style="font-weight: 800; color: #8C4A37;">
                 ${fNum(vCam, 2)} m³
@@ -7948,17 +7948,17 @@ class CubagemApp {
               <tr>
                 <td class="excel-row-num">2</td>
                 <td colspan="10" class="excel-brand-sub-cell">
-                  Planilha Oficial de Carga por Toras Rastreáveis (Fórmula de Smalian) &bull; Placa: ${item.placa || 'SEM PLACA'}
+                  Planilha Oficial de Carga por Toras Rastreáveis (Fórmula de Smalian) &bull; Placa: ${this.escapeHtml(item.placa || 'SEM PLACA')}
                 </td>
               </tr>
               <tr>
                 <td class="excel-row-num">3</td>
                 <td colspan="10" class="excel-meta-cell">
-                  <strong>Data:</strong> ${dataBR} &bull; 
-                  <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
-                  <strong>Caminhão:</strong> ${item.placa || 'Sem placa'} &bull; 
-                  <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
-                  <strong>Resp:</strong> ${item.responsavel || '-'}
+                  <strong>Data:</strong> ${this.escapeHtml(dataBR)} &bull; 
+                  <strong>Horário:</strong> ${this.escapeHtml(item.horario || '--:--')} &bull; 
+                  <strong>Caminhão:</strong> ${this.escapeHtml(item.placa || 'Sem placa')} &bull; 
+                  <strong>Local:</strong> ${this.escapeHtml(item.rodovia || 'Pátio')} ${item.km ? 'km ' + this.escapeHtml(item.km) : ''} &bull; 
+                  <strong>Resp:</strong> ${this.escapeHtml(item.responsavel || '-')}
                 </td>
               </tr>
               <tr>
@@ -8038,12 +8038,12 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">3</td>
               <td colspan="11" class="excel-meta-cell">
-                <strong>Data:</strong> ${dataBR} &bull; 
-                <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
-                ${item.projeto ? `<strong>Projeto:</strong> ${item.projeto} &bull; ` : ''}
-                <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
-                <strong>UTM:</strong> ${item.utm || 'Não reg.'} &bull; 
-                <strong>Resp:</strong> ${item.responsavel || '-'}
+                <strong>Data:</strong> ${this.escapeHtml(dataBR)} &bull; 
+                <strong>Horário:</strong> ${this.escapeHtml(item.horario || '--:--')} &bull; 
+                ${item.projeto ? `<strong>Projeto:</strong> ${this.escapeHtml(item.projeto)} &bull; ` : ''}
+                <strong>Local:</strong> ${this.escapeHtml(item.rodovia || 'Pátio')} ${item.km ? 'km ' + this.escapeHtml(item.km) : ''} &bull; 
+                <strong>UTM:</strong> ${this.escapeHtml(item.utm || 'Não reg.')} &bull; 
+                <strong>Resp:</strong> ${this.escapeHtml(item.responsavel || '-')}
               </td>
             </tr>
             <tr>
@@ -8067,8 +8067,8 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">6</td>
               <td class="excel-cell-center font-mono">1</td>
-              <td class="excel-cell-center font-mono" style="font-weight: 700;">${item.placa || 'SEM PLACA'}</td>
-              <td class="excel-cell-center">${item.origemMadeira || 'Nativa'}</td>
+              <td class="excel-cell-center font-mono" style="font-weight: 700;">${this.escapeHtml(item.placa || 'SEM PLACA')}</td>
+              <td class="excel-cell-center">${this.escapeHtml(item.origemMadeira || 'Nativa')}</td>
               <td class="excel-cell-center font-mono">${leStr}</td>
               <td class="excel-cell-center font-mono">${ldStr}</td>
               <td class="excel-cell-num">${fNum(hm)}</td>
@@ -8135,10 +8135,10 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">3</td>
               <td colspan="10" class="excel-meta-cell">
-                <strong>Data:</strong> ${dataBR} &bull; 
-                <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
-                <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
-                <strong>Resp:</strong> ${item.responsavel || '-'}
+                <strong>Data:</strong> ${this.escapeHtml(dataBR)} &bull; 
+                <strong>Horário:</strong> ${this.escapeHtml(item.horario || '--:--')} &bull; 
+                <strong>Local:</strong> ${this.escapeHtml(item.rodovia || 'Pátio')} ${item.km ? 'km ' + this.escapeHtml(item.km) : ''} &bull; 
+                <strong>Resp:</strong> ${this.escapeHtml(item.responsavel || '-')}
               </td>
             </tr>
             <tr>
@@ -8161,8 +8161,8 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">6</td>
               <td class="excel-cell-center font-mono">1</td>
-              <td class="excel-cell-center font-mono" style="font-weight: 700;">${item.identificacao || item.placa || 'PILHA'}</td>
-              <td class="excel-cell-center">${item.origemMadeira || 'Nativa'}</td>
+              <td class="excel-cell-center font-mono" style="font-weight: 700;">${this.escapeHtml(item.identificacao || item.placa || 'PILHA')}</td>
+              <td class="excel-cell-center">${this.escapeHtml(item.origemMadeira || 'Nativa')}</td>
               <td class="excel-cell-center font-mono">${altStr}</td>
               <td class="excel-cell-num">${fNum(hm)}</td>
               <td class="excel-cell-num">${fNum(comp)}</td>
@@ -8225,8 +8225,8 @@ class CubagemApp {
           <tr>
             <td class="excel-row-num">${rowNum}</td>
             <td class="excel-cell-center font-mono">${idx + 1}</td>
-            <td class="excel-cell-center font-mono" style="font-weight: 700;">${t.plaqueta || 'S/P'}</td>
-            <td class="excel-cell-text" style="font-style: italic;">${t.especie || item.especie || '-'}</td>
+            <td class="excel-cell-center font-mono" style="font-weight: 700;">${this.escapeHtml(t.plaqueta || 'S/P')}</td>
+            <td class="excel-cell-text" style="font-style: italic;">${this.escapeHtml(t.especie || item.especie || '-')}</td>
             <td class="excel-cell-num">${fNum(d1, 1)}</td>
             <td class="excel-cell-num">${fNum(d2, 1)}</td>
             <td class="excel-cell-num font-mono" style="font-weight: 600;">${fNum(dm, 1)}</td>
@@ -8275,11 +8275,11 @@ class CubagemApp {
             <tr>
               <td class="excel-row-num">3</td>
               <td colspan="10" class="excel-meta-cell">
-                <strong>Data:</strong> ${dataBR} &bull; 
-                <strong>Horário:</strong> ${item.horario || '--:--'} &bull; 
-                <strong>Local:</strong> ${item.rodovia || 'Pátio'} ${item.km ? 'km ' + item.km : ''} &bull; 
-                <strong>Resp:</strong> ${item.responsavel || '-'} &bull; 
-                <strong>Lote:</strong> ${item.identificacao || item.placa || 'Pilha de Toras'}
+                <strong>Data:</strong> ${this.escapeHtml(dataBR)} &bull; 
+                <strong>Horário:</strong> ${this.escapeHtml(item.horario || '--:--')} &bull; 
+                <strong>Local:</strong> ${this.escapeHtml(item.rodovia || 'Pátio')} ${item.km ? 'km ' + this.escapeHtml(item.km) : ''} &bull; 
+                <strong>Resp:</strong> ${this.escapeHtml(item.responsavel || '-')} &bull; 
+                <strong>Lote:</strong> ${this.escapeHtml(item.identificacao || item.placa || 'Pilha de Toras')}
               </td>
             </tr>
             <tr>

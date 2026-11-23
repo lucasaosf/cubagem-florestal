@@ -1,12 +1,12 @@
 {
-  "v": "2.10.19",
-  "nome": "2.10.19",
-  "data": "2026-11-14",
+  "v": "2.10.20",
+  "nome": "2.10.20",
+  "data": "2026-11-22",
   "novidades": [
-    "Controle Real de Materiais no Pátio: As cubagens não são mais zeradas falsamente por saídas de materiais avulsos que não tinham sido cubados no app",
-    "Botão de Status no Card (🪵 No Pátio / ✓ Retirado): Alterne com 1 toque no histórico e no modal do projeto quais lotes/pilhas continuam fisicamente no pátio",
-    "Origem da Carga no Caminhão: Indique se o caminhão levou 'Madeira Cubada no Pátio' (abate estoque) ou 'Carga Direta / Não Cubada' (avulsa, sem abater cubagens pendentes)",
-    "Falta Retirar Inteligente: A capa e os KPIs exibem o saldo real dos materiais cubados que continuam no pátio, com alerta de cargas avulsas quando as saídas superam as entradas",
-    "Balanço por KM Preciso: Caminhões de madeira não cubada não anulam mais o volume cubado restante do KM correspondente"
+    "Blindagem de Segurança & Regras Firestore: Isolamento criptográfico por UID no backup pessoal e controle estrito de leitura/escrita por equipe em projetos compartilhados",
+    "Content Security Policy (CSP) & Headers: Implementação de cabeçalhos de segurança contra injeção de scripts (XSS), framing não autorizado e clickjacking",
+    "Sanitização DOM e Escapamento HTML: Blindagem contra injeção em todas as prévias de planilhas e romaneios analíticos",
+    "Proteção de Cache PWA (Anti-Poisoning): Validação de integridade contra interceptação por redes públicas e portais cativos no Service Worker",
+    "Mitigação contra CSV/Formula Injection: Proteção nativa de células geradas na exportação para o Excel"
   ]
 }
