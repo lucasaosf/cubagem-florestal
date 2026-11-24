@@ -211,10 +211,17 @@ class CubagemExcelExport {
       right: { style: 'thin', color: { argb: C.linha } }
     };
 
-    // Separar registros por tipo
+    // Separar registros por tipo e modalidade
     const caminhoes = records.filter(r => (r.tipo || 'caminhao') === 'caminhao');
     const pilhas = records.filter(r => r.tipo === 'pilha');
     const toras = records.filter(r => r.tipo === 'tora');
+
+    const caminhoesComToras = caminhoes.filter(c => c.modoCarga === 'toras' || (Array.isArray(c.toras) && c.toras.length > 0));
+    const caminhoesComPilhas = caminhoes.filter(c => c.modoCarga !== 'toras' && (!Array.isArray(c.toras) || c.toras.length === 0));
+
+    // Conjuntos completos para as abas especializadas (contemplando tanto entrada quanto retirada)
+    const todasTorasParaAba = [...toras, ...caminhoesComToras];
+    const todasPilhasParaAba = [...pilhas, ...caminhoesComPilhas];
 
     const sumVol = arr => arr.reduce((acc, x) => {
       const v = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function')
@@ -224,6 +231,8 @@ class CubagemExcelExport {
     }, 0);
 
     const vCam = sumVol(caminhoes);
+    const vCamToras = sumVol(caminhoesComToras);
+    const vCamPilhas = sumVol(caminhoesComPilhas);
     const vCamNaoCubada = sumVol(caminhoes.filter(c => c.madeiraNaoCubada === true || c.origemCarga === 'nao_cubada'));
     const vCamCubada = vCam - vCamNaoCubada;
     const vPil = sumVol(pilhas);
@@ -314,9 +323,15 @@ class CubagemExcelExport {
     wsResumo.mergeCells('A2:D2');
     const r2 = wsResumo.getCell('A2');
     const partesResumo = [];
-    if (pilhas.length > 0) partesResumo.push(`🪵 Pilhas: ${vPil.toFixed(2)} m³ (${pilhas.length})`);
-    if (toras.length > 0) partesResumo.push(`🌲 Toras: ${vTor.toFixed(3)} m³ (${toras.length})`);
-    if (caminhoes.length > 0) partesResumo.push(`🚚 Retiradas: ${vCam.toFixed(2)} m³ (${caminhoes.length})`);
+    if (pilhas.length > 0) partesResumo.push(`🪵 Pilhas Pátio: ${vPil.toFixed(2)} m³ (${pilhas.length})`);
+    if (toras.length > 0) partesResumo.push(`🌲 Toras Pátio: ${vTor.toFixed(3)} m³ (${toras.length})`);
+    if (caminhoes.length > 0) {
+      const partsCam = [];
+      if (caminhoesComPilhas.length > 0) partsCam.push(`🪵 ${vCamPilhas.toFixed(2)} m³ pilhas [${caminhoesComPilhas.length}]`);
+      if (caminhoesComToras.length > 0) partsCam.push(`🌲 ${vCamToras.toFixed(3)} m³ toras [${caminhoesComToras.length}]`);
+      const detCam = partsCam.length > 0 ? ` (${partsCam.join(' • ')})` : ` (${caminhoes.length})`;
+      partesResumo.push(`🚚 Retiradas: ${vCam.toFixed(2)} m³${detCam}`);
+    }
     if (vSaldoPatio > 0 && caminhoes.length > 0) partesResumo.push(`Saldo: ${vSaldoPatio.toFixed(2)} m³`);
 
     const detalheVolTxt = partesResumo.length > 0 ? `  •  ${partesResumo.join('  •  ')}` : '';
@@ -346,11 +361,24 @@ class CubagemExcelExport {
       cell.border = thinBorder;
     });
 
-    const resRows = [
-      ['🪵 Cubagem de Pilhas de Madeira (Entrada)', pilhas.length, vPil, pilhas.length > 0 ? vPil / pilhas.length : 0],
-      ['🌲 Cubagem de Toras Individuais / Lotes (Entrada)', toras.length, vTor, toras.length > 0 ? vTor / toras.length : 0],
-      ['🚚 Retirada do Material (Saída / Caminhões)', caminhoes.length, vCam, caminhoes.length > 0 ? vCam / caminhoes.length : 0]
-    ];
+    const resRows = [];
+    if (pilhas.length > 0) {
+      resRows.push(['🪵 Cubagem de Pilhas no Pátio (Entrada)', pilhas.length, vPil, vPil / pilhas.length]);
+    }
+    if (toras.length > 0) {
+      resRows.push(['🌲 Cubagem de Toras no Pátio (Entrada)', toras.length, vTor, vTor / toras.length]);
+    }
+    if (caminhoesComPilhas.length > 0) {
+      resRows.push(['🪵 Retirada de Pilhas no Caminhão (Saída)', caminhoesComPilhas.length, vCamPilhas, vCamPilhas / caminhoesComPilhas.length]);
+    }
+    if (caminhoesComToras.length > 0) {
+      resRows.push(['🌲 Retirada de Toras Smalian no Caminhão (Saída)', caminhoesComToras.length, vCamToras, vCamToras / caminhoesComToras.length]);
+    }
+    if (resRows.length === 0) {
+      resRows.push(['🪵 Cubagem de Pilhas de Madeira', 0, 0, 0]);
+      resRows.push(['🌲 Cubagem de Toras Individuais / Lotes', 0, 0, 0]);
+      resRows.push(['🚚 Retirada do Material (Caminhões)', 0, 0, 0]);
+    }
 
     let rowIdx = 5;
     resRows.forEach(row => {
@@ -581,29 +609,44 @@ class CubagemExcelExport {
         r.height = 20;
         const bg = idx % 2 === 0 ? C.creme : C.creme2;
         const isCamRec = (rec.tipo || 'caminhao') === 'caminhao';
-        const isToraRec = rec.tipo === 'tora';
-        const isPilhaRec = rec.tipo === 'pilha';
+        const isCamTorasRec = isCamRec && (rec.modoCarga === 'toras' || (Array.isArray(rec.toras) && rec.toras.length > 0));
+        const isCamPilhaRec = isCamRec && !isCamTorasRec;
+        const isToraEntrada = rec.tipo === 'tora';
+        const isPilhaEntrada = rec.tipo === 'pilha';
 
         let tipoLabel = '🚚 RETIRADA (CAMINHÃO)';
         let tipoFill = 'F9EBE7';
         let tipoColor = '8C4A37';
-        if (isToraRec) {
-          tipoLabel = '🌲 CUBAGEM DE TORA (SMALIAN)';
+        if (isToraEntrada) {
+          tipoLabel = '🌲 CUBAGEM DE TORA (ENTRADA)';
           tipoFill = 'DDEEE0';
           tipoColor = '0E3D19';
-        } else if (isPilhaRec) {
-          tipoLabel = '🪵 CUBAGEM DE PILHA';
+        } else if (isPilhaEntrada) {
+          tipoLabel = '🪵 CUBAGEM DE PILHA (ENTRADA)';
           tipoFill = 'F2E8D5';
           tipoColor = '5C3D1E';
+        } else if (isCamPilhaRec) {
+          tipoLabel = '🪵 RETIRADA (CUBAGEM DE PILHA)';
+          tipoFill = 'F5EFE3';
+          tipoColor = '5C3D1E';
+        } else if (isCamTorasRec) {
+          tipoLabel = '🌲 RETIRADA (TORAS SMALIAN)';
+          tipoFill = 'EAF2EC';
+          tipoColor = '0E3D19';
         }
 
         let identStr = rec.placa || rec.identificacao || rec.plaqueta || `Medição ${idx + 1}`;
         if (isCamRec) {
           const trip = getTripInfo(rec);
-          identStr = `${rec.placa || 'Sem placa'} (${trip.label})`;
-        } else if (isToraRec && rec.plaqueta) {
+          if (isCamPilhaRec) {
+            identStr = `${rec.placa || 'Sem placa'} (${trip.label}) • Pilha no Caminhão`;
+          } else {
+            const nT = rec.totalToras || (Array.isArray(rec.toras) ? rec.toras.length : 0);
+            identStr = `${rec.placa || 'Sem placa'} (${trip.label})${nT > 0 ? ' • ' + nT + ' toras' : ''}`;
+          }
+        } else if (isToraEntrada && rec.plaqueta) {
           identStr = `Plaqueta ${rec.plaqueta}${rec.identificacao ? ' • ' + rec.identificacao : ''}`;
-        } else if (isPilhaRec && rec.identificacao) {
+        } else if (isPilhaEntrada && rec.identificacao) {
           identStr = `Pilha ${rec.identificacao}`;
         }
 
@@ -636,20 +679,20 @@ class CubagemExcelExport {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: tipoFill } };
           } else {
             cell.alignment = { horizontal: 'right', vertical: 'middle' };
-            cell.numFmt = isToraRec ? '#,##0.000' : '#,##0.00';
+            cell.numFmt = (isToraEntrada || isCamTorasRec) ? '#,##0.000' : '#,##0.00';
             cell.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
           }
         });
         rowIdx++;
       });
 
-      // 1. Subtotal Cubagem de Pilhas (se houver pilhas selecionadas)
+      // 1. Subtotal Cubagem de Pilhas de Entrada (se houver pilhas selecionadas)
       if (pilhas.length > 0) {
         const rSubPil = wsResumo.getRow(rowIdx);
         rSubPil.height = 24;
         wsResumo.mergeCells(`A${rowIdx}:C${rowIdx}`);
         const cSubPilTit = rSubPil.getCell(1);
-        cSubPilTit.value = `🪵 TOTAL CUBAGEM DE PILHAS (${pilhas.length} ${pilhas.length === 1 ? 'PILHA' : 'PILHAS'} NO PÁTIO):`;
+        cSubPilTit.value = `🪵 TOTAL CUBAGEM DE PILHAS (ENTRADA / PÁTIO) (${pilhas.length} ${pilhas.length === 1 ? 'PILHA' : 'PILHAS'}):`;
         cSubPilTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: '5C3D1E' } };
         cSubPilTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EFE4D0' } };
         cSubPilTit.alignment = { horizontal: 'right', vertical: 'middle' };
@@ -665,7 +708,7 @@ class CubagemExcelExport {
         rowIdx++;
       }
 
-      // 2. Subtotal Cubagem de Toras (se houver toras selecionadas)
+      // 2. Subtotal Cubagem de Toras de Entrada (se houver toras selecionadas)
       if (toras.length > 0) {
         const totalTorasIndiv = toras.reduce((acc, t) => acc + (Array.isArray(t.toras) && t.toras.length > 0 ? t.toras.length : (Number(t.totalToras) || 1)), 0);
         const rSubTor = wsResumo.getRow(rowIdx);
@@ -675,7 +718,7 @@ class CubagemExcelExport {
         const torasCountLabel = totalTorasIndiv !== toras.length
           ? `${toras.length} ${toras.length === 1 ? 'LOTE' : 'LOTES'} • ${totalTorasIndiv} TORAS`
           : `${toras.length} ${toras.length === 1 ? 'TORA' : 'TORAS'}`;
-        cSubTorTit.value = `🌲 TOTAL CUBAGEM DE TORAS (${torasCountLabel} SMALIAN):`;
+        cSubTorTit.value = `🌲 TOTAL CUBAGEM DE TORAS (ENTRADA / PÁTIO) (${torasCountLabel} SMALIAN):`;
         cSubTorTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: '0E3D19' } };
         cSubTorTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'DDEEE0' } };
         cSubTorTit.alignment = { horizontal: 'right', vertical: 'middle' };
@@ -691,13 +734,59 @@ class CubagemExcelExport {
         rowIdx++;
       }
 
-      // 3. Subtotal Retiradas com Caminhão (se houver caminhões selecionados)
-      if (caminhoes.length > 0) {
+      // 3. Subtotal Retirada de Pilhas no Caminhão (se houver)
+      if (caminhoesComPilhas.length > 0) {
+        const rSubCamPil = wsResumo.getRow(rowIdx);
+        rSubCamPil.height = 24;
+        wsResumo.mergeCells(`A${rowIdx}:C${rowIdx}`);
+        const cSubTit = rSubCamPil.getCell(1);
+        cSubTit.value = `🪵 TOTAL RETIRADAS EM PILHA NO CAMINHÃO (${caminhoesComPilhas.length} ${caminhoesComPilhas.length === 1 ? 'CARGA' : 'CARGAS'}):`;
+        cSubTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: '5C3D1E' } };
+        cSubTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5EFE3' } };
+        cSubTit.alignment = { horizontal: 'right', vertical: 'middle' };
+        cSubTit.border = thinBorder;
+
+        const cSubVal = rSubCamPil.getCell(4);
+        cSubVal.value = vCamPilhas;
+        cSubVal.numFmt = '#,##0.00 "m³"';
+        cSubVal.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: '5C3D1E' } };
+        cSubVal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5EFE3' } };
+        cSubVal.alignment = { horizontal: 'right', vertical: 'middle' };
+        cSubVal.border = thinBorder;
+        rowIdx++;
+      }
+
+      // 4. Subtotal Retirada de Toras Smalian no Caminhão (se houver)
+      if (caminhoesComToras.length > 0) {
+        const totalTorasCam = caminhoesComToras.reduce((acc, c) => acc + (Array.isArray(c.toras) && c.toras.length > 0 ? c.toras.length : (Number(c.totalToras) || 0)), 0);
+        const rSubCamTor = wsResumo.getRow(rowIdx);
+        rSubCamTor.height = 24;
+        wsResumo.mergeCells(`A${rowIdx}:C${rowIdx}`);
+        const cSubTit = rSubCamTor.getCell(1);
+        const countTxt = totalTorasCam > 0 ? `${caminhoesComToras.length} CARGAS • ${totalTorasCam} TORAS` : `${caminhoesComToras.length} CARGAS`;
+        cSubTit.value = `🌲 TOTAL RETIRADAS EM TORAS SMALIAN NO CAMINHÃO (${countTxt}):`;
+        cSubTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: '0E3D19' } };
+        cSubTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'DDEEE0' } };
+        cSubTit.alignment = { horizontal: 'right', vertical: 'middle' };
+        cSubTit.border = thinBorder;
+
+        const cSubVal = rSubCamTor.getCell(4);
+        cSubVal.value = vCamToras;
+        cSubVal.numFmt = '#,##0.000 "m³"';
+        cSubVal.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: '0E3D19' } };
+        cSubVal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'DDEEE0' } };
+        cSubVal.alignment = { horizontal: 'right', vertical: 'middle' };
+        cSubVal.border = thinBorder;
+        rowIdx++;
+      }
+
+      // 5. Totalizador Consolidado de Retiradas (se houver mais de um tipo de caminhão)
+      if (caminhoesComPilhas.length > 0 && caminhoesComToras.length > 0) {
         const rSubCam = wsResumo.getRow(rowIdx);
         rSubCam.height = 24;
         wsResumo.mergeCells(`A${rowIdx}:C${rowIdx}`);
         const cSubCamTit = rSubCam.getCell(1);
-        cSubCamTit.value = `🚚 TOTAL RETIRADAS COM CAMINHÃO (${caminhoes.length} ${caminhoes.length === 1 ? 'CARGA' : 'CARGAS'} RETIRADAS):`;
+        cSubCamTit.value = `🚚 TOTAL GERAL DE RETIRADAS (${caminhoes.length} ${caminhoes.length === 1 ? 'CARGA' : 'CARGAS'} TOTAIS):`;
         cSubCamTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
         cSubCamTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8C4A37' } };
         cSubCamTit.alignment = { horizontal: 'right', vertical: 'middle' };
@@ -933,23 +1022,26 @@ class CubagemExcelExport {
     }
 
     // =========================================================================
-    // ABA 3: PILHAS DE MADEIRA (1 face)
+    // ABA 3: CUBAGEM DE PILHAS (Entrada no Pátio & Retirada no Caminhão)
     // =========================================================================
-    if (pilhas.length > 0) {
+    if (todasPilhasParaAba.length > 0) {
       const wsPil = workbook.addWorksheet('Cubagem de Pilhas', { views: [{ showGridLines: true }] });
       wsPil.columns = [
         { key: 'num', width: 6 },
         { key: 'id', width: 22 },
+        { key: 'operacao', width: 22 },
         { key: 'data', width: 12 },
         { key: 'horario', width: 9 },
+        { key: 'identificacao', width: 22 },
         { key: 'rodovia', width: 16 },
         { key: 'km', width: 14 },
         { key: 'lat', width: 16 },
         { key: 'long', width: 16 },
-        { key: 'identificacao', width: 16 },
-        { key: 'origem', width: 15 },
         { key: 'responsavel', width: 20 },
-        { key: 'alturasFace', width: 26 },
+        { key: 'origem', width: 18 },
+        { key: 'alturasLE', width: 28 },
+        { key: 'alturasLD', width: 28 },
+        { key: 'totalAlt', width: 20 },
         { key: 'soma', width: 14 },
         { key: 'hm', width: 14 },
         { key: 'comp', width: 14 },
@@ -958,41 +1050,74 @@ class CubagemExcelExport {
         { key: 'obs', width: 26 }
       ];
 
-      wsPil.mergeCells('A1:R1');
+      wsPil.mergeCells('A1:U1');
       const hPil = wsPil.getCell('A1');
-      hPil.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE PILHAS DE MADEIRA';
+      hPil.value = '   BIOKURI PESQUISA E SOLUÇÕES AMBIENTAIS — CUBAGEM DE PILHAS DE MADEIRA (ENTRADA & RETIRADA)';
       hPil.font = { name: FONT_NAME, size: 13, bold: true, color: { argb: C.creme } };
       hPil.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
       hPil.alignment = { vertical: 'middle', horizontal: 'center' };
       wsPil.getRow(1).height = 32;
 
       const pilCols = [
-        '#', 'ID Registro', 'Data', 'Horário', 'Local / Pátio', 'Km',
-        'Latitude', 'Longitude',
-        'Identificação Pilha', 'Origem da Madeira', 'Responsável',
-        'Alturas Medidas na Face (m)', 'Soma Alt. (m)', 'Hm Média (m)', 'Comprimento (m)', 'Profundidade (m)',
-        'Vol. Estéreo (m³)', 'Observações'
+        '#', 'ID Registro', 'Operação / Movimento', 'Data', 'Horário', 'Identificação / Placa', 'Local / Pátio', 'Km',
+        'Latitude', 'Longitude', 'Responsável', 'Origem da Madeira',
+        'Alturas LE / Face (m)', 'Alturas LD (m)', 'Total de Medidas', 'Soma Alt. (m)', 'Hm Média (m)', 'Comprimento (m)', 'Largura / Prof. (m)',
+        'Vol. Geométrico (m³)', 'Observações'
       ];
-      const zonaPil = CubagemExcelExport.obterZonaPadrao(pilhas);
-      CubagemExcelExport.renderMultiHeader(wsPil, pilCols, 7, zonaPil, C, FONT_NAME, thinBorder);
+      const zonaPil = CubagemExcelExport.obterZonaPadrao(todasPilhasParaAba);
+      CubagemExcelExport.renderMultiHeader(wsPil, pilCols, 8, zonaPil, C, FONT_NAME, thinBorder);
 
       let rPilIdx = 4;
-      pilhas.forEach((item, idx) => {
+      todasPilhasParaAba.forEach((item, idx) => {
         const row = wsPil.getRow(rPilIdx);
         row.height = 19;
         const bg = idx % 2 === 1 ? C.creme2 : C.creme;
-        const altStr = Array.isArray(item.alturas) ? item.alturas.map(v => Number(v).toFixed(2)).join('; ') : '';
+        const isCamItem = (item.tipo || 'caminhao') === 'caminhao';
+
+        let opLabel = '🪵 Entrada (Pátio)';
+        let opColor = '5C3D1E';
+        let opFill = 'F5EFE3';
+        if (isCamItem) {
+          opLabel = '🚚 Retirada (Caminhão)';
+          opColor = '8C4A37';
+          opFill = 'FAEDE9';
+        }
+
+        const trip = isCamItem ? getTripInfo(item) : null;
+        let identStr = item.identificacao || item.placa || `Pilha ${idx + 1}`;
+        if (isCamItem) {
+          identStr = `${item.placa || 'Sem placa'}${trip ? ' (' + trip.label + ')' : ''}`;
+        }
+
+        let leStr = '';
+        let ldStr = '';
+        let totalAlturasStr = '';
+        if (isCamItem) {
+          const leArr = Array.isArray(item.alturasLE) ? item.alturasLE : (item.le1 ? [item.le1, item.le2, item.le3] : []);
+          const ldArr = Array.isArray(item.alturasLD) ? item.alturasLD : (item.ld1 ? [item.ld1, item.ld2, item.ld3] : []);
+          leStr = leArr.map(v => Number(v).toFixed(2)).join('; ');
+          ldStr = ldArr.map(v => Number(v).toFixed(2)).join('; ');
+          totalAlturasStr = `${leArr.length + ldArr.length} tomadas (${leArr.length} LE + ${ldArr.length} LD)`;
+        } else {
+          const faceArr = Array.isArray(item.alturas) ? item.alturas : [];
+          leStr = faceArr.map(v => Number(v).toFixed(2)).join('; ');
+          ldStr = '- [Face Única]';
+          totalAlturasStr = `${faceArr.length} tomadas (Face)`;
+        }
+
         const origBasePil = item.origemMadeira || 'Nativa';
         const origFinalPil = item.especie ? `${origBasePil} (${item.especie})` : origBasePil;
-
         const coords = CubagemExcelExport.extrairCoordenadas(item);
+        const volVal = (window.CubagemCalculator && typeof window.CubagemCalculator.obterVolumeEfetivo === 'function' ? window.CubagemCalculator.obterVolumeEfetivo(item) : (Number(item.volumeGeometrico) || 0));
+
         const vals = [
-          idx + 1, item.id, this.formatDateBR(item.data), item.horario, item.rodovia, item.km || '',
-          coords.latitude, coords.longitude,
-          item.identificacao || item.placa || `Pilha ${idx + 1}`, origFinalPil, item.responsavel,
-          altStr, Number(item.somaAlturas) || 0, Number(item.alturaMedia) || 0,
+          idx + 1, item.id, opLabel, this.formatDateBR(item.data), item.horario, identStr,
+          item.rodovia, item.km || '', coords.latitude, coords.longitude,
+          item.responsavel, origFinalPil,
+          leStr, ldStr, totalAlturasStr,
+          Number(item.somaAlturas) || 0, Number(item.alturaMedia) || 0,
           Number(item.comprimento) || 0, Number(item.largura) || 0,
-          Number(item.volumeGeometrico) || 0, item.observacoes || ''
+          volVal, item.observacoes || ''
         ];
 
         vals.forEach((v, vi) => {
@@ -1000,37 +1125,89 @@ class CubagemExcelExport {
           c.value = CubagemExcelExport.sanitizeCellValue(v);
           c.font = { name: FONT_NAME, size: 9, color: { argb: C.texto } };
           c.border = thinBorder;
-          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 16 ? 'D6C7A1' : bg } };
-          if (vi === 0 || vi === 2 || vi === 3 || vi === 4 || vi === 5 || vi === 6 || vi === 7 || vi === 8 || vi === 10) c.alignment = { horizontal: 'center', vertical: 'middle' };
-          else if (vi >= 12 && vi <= 16) {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: vi === 19 ? 'D6C7A1' : bg } };
+          if (vi === 2) {
+            c.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: opColor } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opFill } };
+            c.alignment = { horizontal: 'center', vertical: 'middle' };
+          } else if (vi === 0 || vi === 3 || vi === 4 || vi === 5 || vi === 6 || vi === 7 || vi === 8 || vi === 9 || vi === 10 || vi === 14) {
+            c.alignment = { horizontal: 'center', vertical: 'middle' };
+          } else if (vi >= 15 && vi <= 19) {
             c.alignment = { horizontal: 'right', vertical: 'middle' };
-            c.numFmt = vi === 13 ? '#,##0.0000' : '#,##0.00';
-            if (vi === 16) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
-          } else c.alignment = { horizontal: 'left', vertical: 'middle' };
+            c.numFmt = vi === 16 ? '#,##0.0000' : '#,##0.00';
+            if (vi === 19) c.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.verde } };
+          } else {
+            c.alignment = { horizontal: 'left', vertical: 'middle' };
+          }
         });
         rPilIdx++;
       });
 
+      const totPilhasEntrada = todasPilhasParaAba.filter(p => p.tipo === 'pilha');
+      const totPilhasRetirada = todasPilhasParaAba.filter(p => (p.tipo || 'caminhao') === 'caminhao');
+
+      if (totPilhasEntrada.length > 0 && totPilhasRetirada.length > 0) {
+        // Subtotal Entrada
+        const rSubEnt = wsPil.getRow(rPilIdx);
+        rSubEnt.height = 22;
+        wsPil.mergeCells(`A${rPilIdx}:S${rPilIdx}`);
+        const cSubEntTit = rSubEnt.getCell(1);
+        cSubEntTit.value = `🪵 TOTAL CUBAGEM DE PILHAS (ENTRADA / PÁTIO) (${totPilhasEntrada.length} PILHAS):`;
+        cSubEntTit.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: '5C3D1E' } };
+        cSubEntTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5EFE3' } };
+        cSubEntTit.alignment = { horizontal: 'right', vertical: 'middle' };
+        cSubEntTit.border = thinBorder;
+
+        const cSubEntVol = rSubEnt.getCell(20);
+        cSubEntVol.value = sumVol(totPilhasEntrada);
+        cSubEntVol.numFmt = '#,##0.00 "m³"';
+        cSubEntVol.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: '5C3D1E' } };
+        cSubEntVol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5EFE3' } };
+        cSubEntVol.alignment = { horizontal: 'right', vertical: 'middle' };
+        cSubEntVol.border = thinBorder;
+        rPilIdx++;
+
+        // Subtotal Retirada
+        const rSubRet = wsPil.getRow(rPilIdx);
+        rSubRet.height = 22;
+        wsPil.mergeCells(`A${rPilIdx}:S${rPilIdx}`);
+        const cSubRetTit = rSubRet.getCell(1);
+        cSubRetTit.value = `🚚 TOTAL CUBAGEM DE PILHAS (RETIRADA / CAMINHÃO) (${totPilhasRetirada.length} CARGAS):`;
+        cSubRetTit.font = { name: FONT_NAME, size: 9, bold: true, color: { argb: '8C4A37' } };
+        cSubRetTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FAEDE9' } };
+        cSubRetTit.alignment = { horizontal: 'right', vertical: 'middle' };
+        cSubRetTit.border = thinBorder;
+
+        const cSubRetVol = rSubRet.getCell(20);
+        cSubRetVol.value = sumVol(totPilhasRetirada);
+        cSubRetVol.numFmt = '#,##0.00 "m³"';
+        cSubRetVol.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: '8C4A37' } };
+        cSubRetVol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FAEDE9' } };
+        cSubRetVol.alignment = { horizontal: 'right', vertical: 'middle' };
+        cSubRetVol.border = thinBorder;
+        rPilIdx++;
+      }
+
       // Linha de TOTAL GERAL de Pilhas
       const totPilRow = wsPil.getRow(rPilIdx);
       totPilRow.height = 26;
-      wsPil.mergeCells(`A${rPilIdx}:P${rPilIdx}`);
+      wsPil.mergeCells(`A${rPilIdx}:S${rPilIdx}`);
       const cTotPilTit = totPilRow.getCell(1);
-      cTotPilTit.value = `TOTAL GERAL DE PILHAS DE MADEIRA (${pilhas.length} PILHAS MEDIDAS):`;
+      cTotPilTit.value = `TOTAL GERAL DE PILHAS MEDIDAS (${todasPilhasParaAba.length} MEDIÇÕES CONSOLIDADAS):`;
       cTotPilTit.font = { name: FONT_NAME, size: 10, bold: true, color: { argb: C.creme } };
       cTotPilTit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
       cTotPilTit.alignment = { horizontal: 'right', vertical: 'middle' };
       cTotPilTit.border = doubleBottomBorder;
 
-      const cTotPilVol = totPilRow.getCell(17);
-      cTotPilVol.value = vPil;
+      const cTotPilVol = totPilRow.getCell(20);
+      cTotPilVol.value = sumVol(todasPilhasParaAba);
       cTotPilVol.numFmt = '#,##0.00 "m³"';
       cTotPilVol.font = { name: FONT_NAME, size: 11, bold: true, color: { argb: C.creme } };
       cTotPilVol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.ouro } };
       cTotPilVol.alignment = { horizontal: 'right', vertical: 'middle' };
       cTotPilVol.border = doubleBottomBorder;
 
-      const cTotPilObs = totPilRow.getCell(18);
+      const cTotPilObs = totPilRow.getCell(21);
       cTotPilObs.value = 'Volume Total Homologado';
       cTotPilObs.font = { name: FONT_NAME, size: 9, bold: true, italic: true, color: { argb: C.creme } };
       cTotPilObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.verde } };
@@ -1041,9 +1218,6 @@ class CubagemExcelExport {
     // =========================================================================
     // ABA 4: TORAS (Smalian)
     // =========================================================================
-    const caminhoesComToras = caminhoes.filter(c => c.modoCarga === 'toras' || (Array.isArray(c.toras) && c.toras.length > 0));
-    const todasTorasParaAba = [...toras, ...caminhoesComToras];
-
     if (todasTorasParaAba.length > 0) {
       const wsTor = workbook.addWorksheet('Cubagem de Toras', { views: [{ showGridLines: true }] });
       wsTor.columns = [

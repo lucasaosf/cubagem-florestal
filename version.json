@@ -1,12 +1,12 @@
 {
-  "v": "2.10.21",
-  "nome": "2.10.21",
+  "v": "2.10.22",
+  "nome": "2.10.22",
   "data": "2026-11-24",
   "novidades": [
-    "Discriminação Clara de Cubagens Selecionadas: Planilha e prévias agora mostram com exatidão quais medições foram Cubagem de Pilha e quais foram Cubagem de Tora (Smalian)",
-    "Subtotais Separados por Modalidade: Linhas dedicadas de subtotal para Pilhas de Madeira e Toras Individuais/Lotes antes do Total Geral consolidado",
-    "Badges e Destaques Visuais no Excel: Diferenciação cromática e etiquetas nítidas (🪵 Cubagem de Pilha / 🌲 Cubagem de Tora / 🚚 Retirada Caminhão)",
-    "Balanço por Km Detalhado: Colunas distintas de volume e quantidade para Pilhas e Toras por Km na rodovia",
-    "Abas Nomeadas com Precisão: Planilhas do Excel agora trazem as abas 'Cubagem de Pilhas' e 'Cubagem de Toras' de fácil identificação"
+    "Aba Especializada de Cubagem de Pilhas na Planilha Consolidada: Agora inclui todas as pilhas tanto de entrada no pátio quanto de retiradas com caminhão",
+    "Medidas Completas do Caminhão de Pilha: Exibição detalhada das 3 alturas de cada lado (LE e LD), comprimento, largura, Hm e volume geométrico",
+    "Navegação por Abas na Prévia do App: Abas dinâmicas '📋 Resumo Consolidado', '🪵 Cubagem de Pilhas', '🌲 Cubagem de Toras' e '📐 Memórias de Cálculo'",
+    "Subtotais Segmentados para Retiradas: Subtotais dedicados para retiradas em pilha e retiradas em toras no demonstrativo e no resumo consolidado",
+    "Identificação Clara no Histórico: Cards de caminhão agora identificam explicitamente cargas de pilha com contagem de alturas LE e LD"
   ]
 }
