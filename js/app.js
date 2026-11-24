@@ -28,7 +28,7 @@ class CubagemApp {
     this.historyFilterTipo = 'todos';
 
     // Versão oficial do aplicativo e gestão de atualizações
-    this.appVersion = '2.10.20';
+    this.appVersion = '2.10.21';
     this.swRegistration = null;
     this.updateChecking = false;
     this.updateAvailable = null;
@@ -7625,6 +7625,9 @@ class CubagemApp {
                 <strong>Registro:</strong> CRBio 127233/01-D &bull; 
                 <strong>Total de Cubagens:</strong> ${records.length} &bull; 
                 <strong>Volume Total Consolidado:</strong> ${fNum(totalVol, 2)} m³
+                ${pilhas.length > 0 ? ` &bull; <strong>🪵 Pilhas:</strong> ${fNum(vPil, 2)} m³ (${pilhas.length})` : ''}
+                ${toras.length > 0 ? ` &bull; <strong>🌲 Toras:</strong> ${fNum(vTor, 3)} m³ (${toras.length})` : ''}
+                ${caminhoes.length > 0 ? ` &bull; <strong>🚚 Retiradas:</strong> ${fNum(vCam, 2)} m³ (${caminhoes.length})` : ''}
               </td>
             </tr>
             <tr>
@@ -7638,9 +7641,15 @@ class CubagemApp {
             ${records.map((r, idx) => {
               const dtBR = window.CubagemExcelExport.formatDateBR(r.data);
               const isCam = (r.tipo || 'caminhao') === 'caminhao';
+              const isTora = r.tipo === 'tora';
+              const isPilha = r.tipo === 'pilha';
               const tripNum = r.numeroViagem || (r.viagem ? parseInt(String(r.viagem).replace(/\D+/g, ''), 10) : 0);
               const tripStr = tripNum > 0 ? `${tripNum}ª Viagem` : (r.viagem || '');
-              const ident = isCam ? `${r.placa || 'Sem placa'}${tripStr ? ' (' + tripStr + ')' : ''}` : (r.placa || r.identificacao || r.plaqueta || `Medição ${idx + 1}`);
+              let ident = isCam ? `${r.placa || 'Sem placa'}${tripStr ? ' (' + tripStr + ')' : ''}` : (r.placa || r.identificacao || r.plaqueta || `Medição ${idx + 1}`);
+              if (isTora) ident = `🌲 ${ident}`;
+              else if (isPilha) ident = `🪵 ${ident}`;
+              else if (isCam) ident = `🚚 ${ident}`;
+
               const mem = r.memoriaCalculo || `V = C × L × Hm (${r.volumeGeometrico} m³)`;
               const vol = fNum(r.volumeGeometrico, r.tipo === 'tora' ? 3 : 2);
               return `
@@ -7654,8 +7663,41 @@ class CubagemApp {
                 </tr>
               `;
             }).join('')}
+            ${pilhas.length > 0 ? `
+              <tr style="background: rgba(168, 133, 82, 0.16); font-weight: 700;">
+                <td class="excel-row-num" style="background: #e2dccb;">•</td>
+                <td colspan="4" class="excel-cell-text" style="color: #5C3D1E; font-size: 0.82rem; font-weight: 800;">
+                  🪵 TOTAL CUBAGEM DE PILHAS (${pilhas.length} ${pilhas.length === 1 ? 'PILHA' : 'PILHAS'} NO PÁTIO):
+                </td>
+                <td class="excel-cell-num" style="font-weight: 800; color: #5C3D1E; font-size: 0.96rem;">
+                  ${fNum(vPil, 2)} m³
+                </td>
+              </tr>
+            ` : ''}
+            ${toras.length > 0 ? `
+              <tr style="background: rgba(22, 62, 28, 0.14); font-weight: 700;">
+                <td class="excel-row-num" style="background: #e2dccb;">•</td>
+                <td colspan="4" class="excel-cell-text" style="color: #0E3D19; font-size: 0.82rem; font-weight: 800;">
+                  🌲 TOTAL CUBAGEM DE TORAS (${toras.length} ${toras.length === 1 ? 'LOTE/TORA' : 'LOTES/TORAS'} SMALIAN):
+                </td>
+                <td class="excel-cell-num" style="font-weight: 800; color: #0E3D19; font-size: 0.96rem;">
+                  ${fNum(vTor, 3)} m³
+                </td>
+              </tr>
+            ` : ''}
+            ${caminhoes.length > 0 ? `
+              <tr style="background: rgba(140, 74, 55, 0.12); font-weight: 700;">
+                <td class="excel-row-num" style="background: #e2dccb;">•</td>
+                <td colspan="4" class="excel-cell-text" style="color: #8C4A37; font-size: 0.78rem; font-weight: 800;">
+                  🚚 TOTAL RETIRADAS COM CAMINHÃO (${caminhoes.length} ${caminhoes.length === 1 ? 'CARGA' : 'CARGAS'}):
+                </td>
+                <td class="excel-cell-num" style="font-weight: 800; color: #8C4A37;">
+                  ${fNum(vCam, 2)} m³
+                </td>
+              </tr>
+            ` : ''}
             <tr class="excel-total-row">
-              <td class="excel-row-num">${records.length + 5}</td>
+              <td class="excel-row-num">${records.length + 5 + (pilhas.length > 0 ? 1 : 0) + (toras.length > 0 ? 1 : 0) + (caminhoes.length > 0 ? 1 : 0)}</td>
               <td colspan="4" class="excel-cell-text" style="font-weight: 800; text-transform: uppercase;">
                 ${titTotal}
               </td>
@@ -7677,8 +7719,8 @@ class CubagemApp {
             <th class="excel-col-head" style="width: 35px;">A</th>
             <th class="excel-col-head" style="width: 85px;">B</th>
             <th class="excel-col-head" style="width: 55px;">C</th>
-            <th class="excel-col-head" style="width: 95px;">D</th>
-            <th class="excel-col-head" style="width: 120px;">E</th>
+            <th class="excel-col-head" style="width: 140px;">D</th>
+            <th class="excel-col-head" style="width: 130px;">E</th>
             <th class="excel-col-head" style="width: 130px;">F</th>
             <th class="excel-col-head" style="width: 110px;">G</th>
             <th class="excel-col-head" style="width: 90px;">H</th>
@@ -7704,8 +7746,11 @@ class CubagemApp {
             <td colspan="10" class="excel-meta-cell">
               <strong>Período:</strong> ${periodoStr} &bull; 
               <strong>Total de Medições:</strong> ${records.length} &bull; 
-              <strong>Volume Geral do Dia:</strong> ${fNum(totalVol, 2)} m³
-              ${caminhoes.length > 0 ? ` &bull; <strong>Retiradas:</strong> ${fNum(vCam, 2)} m³ (${viagensList.length} viagens) &bull; <strong>Entrada:</strong> ${fNum(vTotEntrada, 2)} m³ &bull; <strong>Saldo Pátio:</strong> ${fNum(vSaldoPatio, 2)} m³` : ''} &bull; 
+              <strong>Volume Total:</strong> ${fNum(totalVol, 2)} m³
+              ${pilhas.length > 0 ? ` &bull; <strong>🪵 Cubagem de Pilhas:</strong> ${fNum(vPil, 2)} m³ (${pilhas.length} ${pilhas.length === 1 ? 'pilha' : 'pilhas'})` : ''}
+              ${toras.length > 0 ? ` &bull; <strong>🌲 Cubagem de Toras:</strong> ${fNum(vTor, 3)} m³ (${toras.length} ${toras.length === 1 ? 'lote/tora' : 'lotes/toras'})` : ''}
+              ${caminhoes.length > 0 ? ` &bull; <strong>🚚 Retiradas:</strong> ${fNum(vCam, 2)} m³ (${viagensList.length} viagens)` : ''}
+              ${caminhoes.length > 0 && vTotEntrada > 0 ? ` &bull; <strong>Saldo Pátio:</strong> ${fNum(vSaldoPatio, 2)} m³` : ''} &bull; 
               <strong>Responsável:</strong> ${this.escapeHtml(records[0]?.responsavel || 'Lucas Aøsf')} &bull; 
               <strong>CRBio:</strong> 127233/01-D
             </td>
@@ -7715,8 +7760,8 @@ class CubagemApp {
             <td class="excel-header-col">#</td>
             <td class="excel-header-col">Data</td>
             <td class="excel-header-col">Hora</td>
-            <td class="excel-header-col">Modalidade</td>
-            <td class="excel-header-col">Placa / Ident.</td>
+            <td class="excel-header-col">Modalidade de Cubagem</td>
+            <td class="excel-header-col">Identificação / Lote</td>
             <td class="excel-header-col">Local / Rodovia</td>
             <td class="excel-header-col">Origem / Espécie</td>
             <td class="excel-header-col">Dimensões</td>
@@ -7726,11 +7771,28 @@ class CubagemApp {
           ${records.map((r, idx) => {
             const dtBR = window.CubagemExcelExport.formatDateBR(r.data);
             const tipo = r.tipo || 'caminhao';
-            const tipoLabel = tipo === 'caminhao' ? 'Caminhão' : (tipo === 'pilha' ? 'Pilha' : 'Toras');
             const isCam = tipo === 'caminhao';
+            const isTora = tipo === 'tora';
+            const isPilha = tipo === 'pilha';
+
+            let tipoBadgeHtml = `<span class="badge-type caminhao" style="font-size: 0.72rem; padding: 2px 7px; font-weight: 700;">🚚 Retirada Caminhão</span>`;
+            if (isPilha) {
+              tipoBadgeHtml = `<span class="badge-type pilha" style="font-size: 0.72rem; padding: 2px 7px; font-weight: 700; background: #D9C3A3; color: #3B2A15; border: 1px solid #B89C76;">🪵 Cubagem de Pilha</span>`;
+            } else if (isTora) {
+              tipoBadgeHtml = `<span class="badge-type tora" style="font-size: 0.72rem; padding: 2px 7px; font-weight: 700; background: #C5DAC8; color: #0E2515; border: 1px solid #7FA785;">🌲 Cubagem de Tora</span>`;
+            }
+
             const tripNum = r.numeroViagem || (r.viagem ? parseInt(String(r.viagem).replace(/\D+/g, ''), 10) : 0);
             const tripStr = tripNum > 0 ? `${tripNum}ª Viagem` : (r.viagem || '');
-            const ident = isCam ? `${r.placa || 'Sem placa'}${tripStr ? ' (' + tripStr + ')' : ''}` : (r.placa || r.identificacao || r.plaqueta || '-');
+            let ident = r.placa || r.identificacao || r.plaqueta || '-';
+            if (isCam) {
+              ident = `${r.placa || 'Sem placa'}${tripStr ? ' (' + tripStr + ')' : ''}`;
+            } else if (isTora && r.plaqueta) {
+              ident = `Plaqueta ${r.plaqueta}${r.identificacao ? ' (' + r.identificacao + ')' : ''}`;
+            } else if (isPilha && r.identificacao) {
+              ident = `Pilha ${r.identificacao}`;
+            }
+
             const loc = `${r.rodovia || '-'}${r.km ? ' km ' + r.km : ''}`;
             const espOrig = r.especie ? `${r.origemMadeira || 'Nativa'} (${r.especie})` : (r.origemMadeira || 'Nativa');
             const dimStr = tipo === 'tora'
@@ -7745,7 +7807,7 @@ class CubagemApp {
                 <td class="excel-cell-center" style="font-weight: 700;">${idx + 1}</td>
                 <td class="excel-cell-center">${this.escapeHtml(dtBR)}</td>
                 <td class="excel-cell-center">${this.escapeHtml(r.horario || '-')}</td>
-                <td class="excel-cell-center"><span class="badge-type ${this.escapeHtml(tipo)}" style="font-size: 0.7rem; padding: 2px 6px;">${this.escapeHtml(tipoLabel)}</span></td>
+                <td class="excel-cell-center">${tipoBadgeHtml}</td>
                 <td class="excel-cell-center" style="font-weight: 700;">${this.escapeHtml(ident)}</td>
                 <td class="excel-cell-text">${this.escapeHtml(loc)}</td>
                 <td class="excel-cell-text" style="font-size: 0.75rem;">${this.escapeHtml(espOrig)}</td>
@@ -7755,11 +7817,33 @@ class CubagemApp {
               </tr>
             `;
           }).join('')}
+          ${pilhas.length > 0 ? `
+            <tr style="background: rgba(168, 133, 82, 0.16); font-weight: 700;">
+              <td class="excel-row-num" style="background: #e2dccb;">•</td>
+              <td colspan="9" class="excel-cell-text" style="color: #5C3D1E; font-size: 0.82rem; font-weight: 800;">
+                🪵 TOTAL CUBAGEM DE PILHAS (${pilhas.length} ${pilhas.length === 1 ? 'PILHA' : 'PILHAS'} NO PÁTIO):
+              </td>
+              <td class="excel-cell-num" style="font-weight: 800; color: #5C3D1E; font-size: 0.96rem;">
+                ${fNum(vPil, 2)} m³
+              </td>
+            </tr>
+          ` : ''}
+          ${toras.length > 0 ? `
+            <tr style="background: rgba(22, 62, 28, 0.14); font-weight: 700;">
+              <td class="excel-row-num" style="background: #e2dccb;">•</td>
+              <td colspan="9" class="excel-cell-text" style="color: #0E3D19; font-size: 0.82rem; font-weight: 800;">
+                🌲 TOTAL CUBAGEM DE TORAS (${toras.length} ${toras.length === 1 ? 'LOTE/TORA' : 'LOTES/TORAS'} SMALIAN):
+              </td>
+              <td class="excel-cell-num" style="font-weight: 800; color: #0E3D19; font-size: 0.96rem;">
+                ${fNum(vTor, 3)} m³
+              </td>
+            </tr>
+          ` : ''}
           ${viagensList.length > 0 ? `
             <tr style="background: rgba(140, 74, 55, 0.12); font-weight: 700;">
               <td class="excel-row-num" style="background: #e2dccb;">•</td>
               <td colspan="9" class="excel-cell-text" style="color: #8C4A37; font-size: 0.78rem;">
-                🚚 RETIRADAS SEPARADAS POR VIAGEM (${viagensList.length} ${viagensList.length === 1 ? 'VIAGEM' : 'VIAGENS'}): ${viagensList.map(v => `<b>${this.escapeHtml(v.label)}</b>: ${fNum(v.volumeTotal, 2)} m³ (${v.placas.size > 0 ? this.escapeHtml([...v.placas].join(', ')) : 'S/P'})`).join(' &bull; ')}
+                🚚 TOTAL RETIRADAS POR VIAGEM (${viagensList.length} ${viagensList.length === 1 ? 'VIAGEM' : 'VIAGENS'}): ${viagensList.map(v => `<b>${this.escapeHtml(v.label)}</b>: ${fNum(v.volumeTotal, 2)} m³ (${v.placas.size > 0 ? this.escapeHtml([...v.placas].join(', ')) : 'S/P'})`).join(' &bull; ')}
               </td>
               <td class="excel-cell-num" style="font-weight: 800; color: #8C4A37;">
                 ${fNum(vCam, 2)} m³
@@ -7767,7 +7851,7 @@ class CubagemApp {
             </tr>
           ` : ''}
           <tr class="excel-total-row">
-            <td class="excel-row-num">${records.length + 5 + (viagensList.length > 0 ? 1 : 0)}</td>
+            <td class="excel-row-num">${records.length + 5 + (pilhas.length > 0 ? 1 : 0) + (toras.length > 0 ? 1 : 0) + (viagensList.length > 0 ? 1 : 0)}</td>
             <td colspan="9" class="excel-cell-text" style="font-weight: 800; text-transform: uppercase;">
               ${titTotal}
             </td>

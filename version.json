@@ -1,12 +1,12 @@
 {
-  "v": "2.10.20",
-  "nome": "2.10.20",
-  "data": "2026-11-22",
+  "v": "2.10.21",
+  "nome": "2.10.21",
+  "data": "2026-11-24",
   "novidades": [
-    "Blindagem de Segurança & Regras Firestore: Isolamento criptográfico por UID no backup pessoal e controle estrito de leitura/escrita por equipe em projetos compartilhados",
-    "Content Security Policy (CSP) & Headers: Implementação de cabeçalhos de segurança contra injeção de scripts (XSS), framing não autorizado e clickjacking",
-    "Sanitização DOM e Escapamento HTML: Blindagem contra injeção em todas as prévias de planilhas e romaneios analíticos",
-    "Proteção de Cache PWA (Anti-Poisoning): Validação de integridade contra interceptação por redes públicas e portais cativos no Service Worker",
-    "Mitigação contra CSV/Formula Injection: Proteção nativa de células geradas na exportação para o Excel"
+    "Discriminação Clara de Cubagens Selecionadas: Planilha e prévias agora mostram com exatidão quais medições foram Cubagem de Pilha e quais foram Cubagem de Tora (Smalian)",
+    "Subtotais Separados por Modalidade: Linhas dedicadas de subtotal para Pilhas de Madeira e Toras Individuais/Lotes antes do Total Geral consolidado",
+    "Badges e Destaques Visuais no Excel: Diferenciação cromática e etiquetas nítidas (🪵 Cubagem de Pilha / 🌲 Cubagem de Tora / 🚚 Retirada Caminhão)",
+    "Balanço por Km Detalhado: Colunas distintas de volume e quantidade para Pilhas e Toras por Km na rodovia",
+    "Abas Nomeadas com Precisão: Planilhas do Excel agora trazem as abas 'Cubagem de Pilhas' e 'Cubagem de Toras' de fácil identificação"
   ]
 }
